@@ -1,396 +1,359 @@
-#!/usr/bin/env python3
 """
-Configuration for ML Router and CSP Network Integration
+AI Network Integration Configuration
+Manages network-wide AI service integration and routing
 """
 
 import os
-from pathlib import Path
-from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
 import json
+import logging
+from typing import Dict, List, Optional, Any
+from dataclasses import dataclass, field
+from enum import Enum
+
+logger = logging.getLogger(__name__)
+
+class NetworkServiceType(Enum):
+    """Types of AI services in the network"""
+    ML_ROUTER = "ml_router"
+    INFERENCE_ENGINE = "inference_engine"
+    MODEL_REGISTRY = "model_registry"
+    VECTOR_DATABASE = "vector_database"
+    CACHE_SERVICE = "cache_service"
+    MONITORING = "monitoring"
+    GATEWAY = "gateway"
+    LOAD_BALANCER = "load_balancer"
+
+@dataclass
+class NetworkService:
+    """Network service configuration"""
+    id: str
+    name: str
+    type: NetworkServiceType
+    host: str
+    port: int
+    protocol: str = "http"
+    health_endpoint: str = "/health"
+    api_version: str = "v1"
+    authentication: Dict[str, Any] = field(default_factory=dict)
+    capabilities: List[str] = field(default_factory=list)
+    priority: int = 1
+    timeout: int = 30
+    retry_count: int = 3
+    is_active: bool = True
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @property
+    def base_url(self) -> str:
+        """Get the base URL for the service"""
+        return f"{self.protocol}://{self.host}:{self.port}"
+    
+    @property
+    def health_url(self) -> str:
+        """Get the health check URL"""
+        return f"{self.base_url}{self.health_endpoint}"
 
 @dataclass
 class NetworkIntegrationConfig:
-    """Configuration for network integration"""
+    """Complete network integration configuration"""
     
-    # CSP Network Configuration
-    csp_network_enabled: bool = True
-    csp_network_port: int = 30405
-    csp_network_node_name: str = "ml-router-bridge"
-    csp_network_node_type: str = "ai_service"
-    csp_network_data_dir: str = "./ml_router_network_data"
+    # Network Identity
+    network_id: str = "ai_network"
+    cluster_name: str = "ml_cluster"
+    environment: str = "production"
     
-    # Genesis and Bootstrap Configuration
-    genesis_host: str = "genesis.peoplesainetwork.com"
-    genesis_port: int = 30300
-    bootstrap_nodes: List[str] = field(default_factory=lambda: [
-        "/ip4/genesis.peoplesainetwork.com/tcp/30300",
-        "/ip4/127.0.0.1/tcp/30301",
-        "/ip4/127.0.0.1/tcp/30302",
-        "/ip4/127.0.0.1/tcp/30303"
-    ])
-    dns_seed_domain: str = "peoplesainetwork.com"
+    # Service Discovery
+    service_discovery_enabled: bool = True
+    service_registry_host: str = "localhost"
+    service_registry_port: int = 8500
+    service_registry_protocol: str = "http"
+    auto_register: bool = True
+    registration_interval: int = 30
     
-    # ML Router Configuration
-    ml_router_enabled: bool = True
-    ml_router_port: int = 5000
-    ml_router_host: str = "0.0.0.0"
-    ml_router_debug: bool = False
+    # Load Balancing
+    load_balancer_enabled: bool = True
+    load_balancer_algorithm: str = "round_robin"  # round_robin, least_connections, weighted
+    health_check_interval: int = 10
+    health_check_timeout: int = 5
+    circuit_breaker_enabled: bool = True
+    circuit_breaker_threshold: int = 5
+    circuit_breaker_timeout: int = 60
     
-    # Database Configuration
-    database_url: str = "sqlite:///ml_router_network.db"
+    # Security
+    mutual_tls_enabled: bool = False
+    api_key_enabled: bool = True
+    jwt_enabled: bool = True
+    network_encryption: bool = True
+    allowed_networks: List[str] = field(default_factory=lambda: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"])
     
-    # Session Configuration
-    session_secret: str = "ml-router-network-secret-change-in-production"
-    
-    # Feature Flags
-    enable_dht: bool = True
-    enable_mesh: bool = True
-    enable_dns: bool = True
-    enable_adaptive_routing: bool = True
-    enable_ml_prediction: bool = True
-    enable_real_time_learning: bool = True
-    enable_metrics_collection: bool = True
-    
-    # Network Capabilities
-    enable_ai_capability: bool = True
-    enable_compute_capability: bool = True
-    enable_relay_capability: bool = True
-    enable_storage_capability: bool = False
-    enable_quantum_capability: bool = False
-    
-    # Security Configuration
-    enable_encryption: bool = True
-    enable_authentication: bool = True
-    key_size: int = 2048
-    
-    # Connection Configuration
-    max_connections: int = 50
-    connection_timeout: int = 30
-    enable_mdns: bool = True
-    enable_upnp: bool = True
-    enable_nat_traversal: bool = True
-    
-    # Mesh Configuration
-    enable_super_peers: bool = True
-    max_peers: int = 50
-    topology_type: str = "dynamic_partial"
-    enable_multi_hop: bool = True
-    max_hop_count: int = 10
-    
-    # ML Configuration
-    training_data_size: int = 1000
-    retrain_interval_hours: int = 24
-    prediction_horizon_minutes: int = 30
-    min_samples_for_training: int = 100
-    model_accuracy_threshold: float = 0.8
-    enable_ensemble_models: bool = True
-    
-    # Logging Configuration
+    # Monitoring and Logging
+    monitoring_enabled: bool = True
+    metrics_endpoint: str = "/metrics"
     log_level: str = "INFO"
-    log_file: str = "ml_router_network.log"
-    enable_structured_logging: bool = True
+    distributed_tracing: bool = True
+    telemetry_endpoint: str = ""
     
-    # Performance Configuration
-    thread_pool_size: int = 10
-    enable_async_processing: bool = True
-    query_timeout_seconds: int = 60
+    # Caching
+    distributed_cache_enabled: bool = True
+    cache_ttl: int = 3600
+    cache_replication_factor: int = 2
     
-    # Monitoring Configuration
-    enable_prometheus_metrics: bool = False
-    prometheus_port: int = 9090
-    metrics_update_interval: int = 30
+    # Resource Management
+    max_concurrent_requests: int = 1000
+    request_timeout: int = 120
+    memory_limit: str = "2Gi"
+    cpu_limit: str = "2000m"
     
-    # AI Provider Configuration (from environment)
-    openai_api_key: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-    xai_api_key: Optional[str] = None
-    perplexity_api_key: Optional[str] = None
-    
-    # Redis Configuration (optional)
-    redis_url: Optional[str] = None
-    redis_enabled: bool = False
+    # Network Services
+    services: Dict[str, NetworkService] = field(default_factory=dict)
     
     @classmethod
     def from_env(cls) -> 'NetworkIntegrationConfig':
-        """Create configuration from environment variables"""
-        
+        """Load configuration from environment variables"""
         config = cls()
         
-        # CSP Network Configuration
-        config.csp_network_enabled = os.getenv('CSP_NETWORK_ENABLED', 'true').lower() == 'true'
-        config.csp_network_port = int(os.getenv('CSP_NETWORK_PORT', '30405'))
-        config.csp_network_node_name = os.getenv('CSP_NETWORK_NODE_NAME', 'ml-router-bridge')
-        config.csp_network_node_type = os.getenv('CSP_NETWORK_NODE_TYPE', 'ai_service')
-        config.csp_network_data_dir = os.getenv('CSP_NETWORK_DATA_DIR', './ml_router_network_data')
+        # Network Identity
+        config.network_id = os.getenv("NETWORK_ID", config.network_id)
+        config.cluster_name = os.getenv("CLUSTER_NAME", config.cluster_name)
+        config.environment = os.getenv("ENVIRONMENT", config.environment)
         
-        # Genesis Configuration
-        config.genesis_host = os.getenv('CSP_NETWORK_GENESIS_HOST', 'genesis.peoplesainetwork.com')
-        config.genesis_port = int(os.getenv('CSP_NETWORK_GENESIS_PORT', '30300'))
+        # Service Discovery
+        config.service_discovery_enabled = os.getenv("SERVICE_DISCOVERY_ENABLED", "true").lower() == "true"
+        config.service_registry_host = os.getenv("SERVICE_REGISTRY_HOST", config.service_registry_host)
+        config.service_registry_port = int(os.getenv("SERVICE_REGISTRY_PORT", str(config.service_registry_port)))
+        config.auto_register = os.getenv("AUTO_REGISTER", "true").lower() == "true"
         
-        # ML Router Configuration
-        config.ml_router_enabled = os.getenv('ML_ROUTER_ENABLED', 'true').lower() == 'true'
-        config.ml_router_port = int(os.getenv('ML_ROUTER_PORT', '5000'))
-        config.ml_router_host = os.getenv('ML_ROUTER_HOST', '0.0.0.0')
-        config.ml_router_debug = os.getenv('ML_ROUTER_DEBUG', 'false').lower() == 'true'
+        # Load Balancing
+        config.load_balancer_enabled = os.getenv("LOAD_BALANCER_ENABLED", "true").lower() == "true"
+        config.load_balancer_algorithm = os.getenv("LOAD_BALANCER_ALGORITHM", config.load_balancer_algorithm)
+        config.health_check_interval = int(os.getenv("HEALTH_CHECK_INTERVAL", str(config.health_check_interval)))
+        config.circuit_breaker_enabled = os.getenv("CIRCUIT_BREAKER_ENABLED", "true").lower() == "true"
         
-        # Database Configuration
-        config.database_url = os.getenv('DATABASE_URL', 'sqlite:///ml_router_network.db')
+        # Security
+        config.mutual_tls_enabled = os.getenv("MUTUAL_TLS_ENABLED", "false").lower() == "true"
+        config.api_key_enabled = os.getenv("API_KEY_ENABLED", "true").lower() == "true"
+        config.jwt_enabled = os.getenv("JWT_ENABLED", "true").lower() == "true"
+        config.network_encryption = os.getenv("NETWORK_ENCRYPTION", "true").lower() == "true"
         
-        # Session Configuration
-        config.session_secret = os.getenv('SESSION_SECRET', 'ml-router-network-secret-change-in-production')
+        # Monitoring
+        config.monitoring_enabled = os.getenv("MONITORING_ENABLED", "true").lower() == "true"
+        config.log_level = os.getenv("LOG_LEVEL", config.log_level)
+        config.distributed_tracing = os.getenv("DISTRIBUTED_TRACING", "true").lower() == "true"
+        config.telemetry_endpoint = os.getenv("TELEMETRY_ENDPOINT", config.telemetry_endpoint)
         
-        # Feature Flags
-        config.enable_dht = os.getenv('ENABLE_DHT', 'true').lower() == 'true'
-        config.enable_mesh = os.getenv('ENABLE_MESH', 'true').lower() == 'true'
-        config.enable_dns = os.getenv('ENABLE_DNS', 'true').lower() == 'true'
-        config.enable_adaptive_routing = os.getenv('ENABLE_ADAPTIVE_ROUTING', 'true').lower() == 'true'
-        config.enable_ml_prediction = os.getenv('ENABLE_ML_PREDICTION', 'true').lower() == 'true'
+        # Caching
+        config.distributed_cache_enabled = os.getenv("DISTRIBUTED_CACHE_ENABLED", "true").lower() == "true"
+        config.cache_ttl = int(os.getenv("CACHE_TTL", str(config.cache_ttl)))
         
-        # Logging Configuration
-        config.log_level = os.getenv('LOG_LEVEL', 'INFO')
-        config.log_file = os.getenv('LOG_FILE', 'ml_router_network.log')
+        # Resource Management
+        config.max_concurrent_requests = int(os.getenv("MAX_CONCURRENT_REQUESTS", str(config.max_concurrent_requests)))
+        config.request_timeout = int(os.getenv("REQUEST_TIMEOUT", str(config.request_timeout)))
+        config.memory_limit = os.getenv("MEMORY_LIMIT", config.memory_limit)
+        config.cpu_limit = os.getenv("CPU_LIMIT", config.cpu_limit)
         
-        # AI Provider Configuration
-        config.openai_api_key = os.getenv('OPENAI_API_KEY')
-        config.anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
-        config.gemini_api_key = os.getenv('GEMINI_API_KEY')
-        config.xai_api_key = os.getenv('XAI_API_KEY')
-        config.perplexity_api_key = os.getenv('PERPLEXITY_API_KEY')
-        
-        # Redis Configuration
-        config.redis_url = os.getenv('REDIS_URL')
-        config.redis_enabled = config.redis_url is not None
-        
-        # Connection Configuration
-        config.max_connections = int(os.getenv('MAX_CONNECTIONS', '50'))
-        config.connection_timeout = int(os.getenv('CONNECTION_TIMEOUT', '30'))
-        
-        # Performance Configuration
-        config.thread_pool_size = int(os.getenv('THREAD_POOL_SIZE', '10'))
-        config.query_timeout_seconds = int(os.getenv('QUERY_TIMEOUT_SECONDS', '60'))
-        
-        # Bootstrap nodes from environment (comma-separated)
-        bootstrap_env = os.getenv('BOOTSTRAP_NODES')
-        if bootstrap_env:
-            config.bootstrap_nodes = [node.strip() for node in bootstrap_env.split(',')]
+        # Load services from environment
+        config._load_services_from_env()
         
         return config
+    
+    def _load_services_from_env(self):
+        """Load service configurations from environment variables"""
+        services_config = os.getenv("NETWORK_SERVICES")
+        if services_config:
+            try:
+                services_data = json.loads(services_config)
+                for service_data in services_data:
+                    service = NetworkService(
+                        id=service_data.get("id"),
+                        name=service_data.get("name"),
+                        type=NetworkServiceType(service_data.get("type")),
+                        host=service_data.get("host"),
+                        port=service_data.get("port"),
+                        protocol=service_data.get("protocol", "http"),
+                        health_endpoint=service_data.get("health_endpoint", "/health"),
+                        api_version=service_data.get("api_version", "v1"),
+                        authentication=service_data.get("authentication", {}),
+                        capabilities=service_data.get("capabilities", []),
+                        priority=service_data.get("priority", 1),
+                        timeout=service_data.get("timeout", 30),
+                        retry_count=service_data.get("retry_count", 3),
+                        is_active=service_data.get("is_active", True),
+                        metadata=service_data.get("metadata", {})
+                    )
+                    self.services[service.id] = service
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse NETWORK_SERVICES: {e}")
+    
+    def add_service(self, service: NetworkService):
+        """Add a network service"""
+        self.services[service.id] = service
+        logger.info(f"Added service: {service.name} ({service.id})")
+    
+    def remove_service(self, service_id: str):
+        """Remove a network service"""
+        if service_id in self.services:
+            service = self.services.pop(service_id)
+            logger.info(f"Removed service: {service.name} ({service_id})")
+    
+    def get_service(self, service_id: str) -> Optional[NetworkService]:
+        """Get a service by ID"""
+        return self.services.get(service_id)
+    
+    def get_services_by_type(self, service_type: NetworkServiceType) -> List[NetworkService]:
+        """Get services by type"""
+        return [service for service in self.services.values() if service.type == service_type]
+    
+    def get_active_services(self) -> List[NetworkService]:
+        """Get all active services"""
+        return [service for service in self.services.values() if service.is_active]
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary"""
         return {
-            'csp_network': {
-                'enabled': self.csp_network_enabled,
-                'port': self.csp_network_port,
-                'node_name': self.csp_network_node_name,
-                'node_type': self.csp_network_node_type,
-                'data_dir': self.csp_network_data_dir,
-                'genesis_host': self.genesis_host,
-                'genesis_port': self.genesis_port,
-                'bootstrap_nodes': self.bootstrap_nodes,
-                'dns_seed_domain': self.dns_seed_domain
-            },
-            'ml_router': {
-                'enabled': self.ml_router_enabled,
-                'port': self.ml_router_port,
-                'host': self.ml_router_host,
-                'debug': self.ml_router_debug
-            },
-            'database': {
-                'url': self.database_url
-            },
-            'security': {
-                'session_secret': self.session_secret,
-                'enable_encryption': self.enable_encryption,
-                'enable_authentication': self.enable_authentication,
-                'key_size': self.key_size
-            },
-            'features': {
-                'enable_dht': self.enable_dht,
-                'enable_mesh': self.enable_mesh,
-                'enable_dns': self.enable_dns,
-                'enable_adaptive_routing': self.enable_adaptive_routing,
-                'enable_ml_prediction': self.enable_ml_prediction,
-                'enable_real_time_learning': self.enable_real_time_learning,
-                'enable_metrics_collection': self.enable_metrics_collection
-            },
-            'capabilities': {
-                'ai': self.enable_ai_capability,
-                'compute': self.enable_compute_capability,
-                'relay': self.enable_relay_capability,
-                'storage': self.enable_storage_capability,
-                'quantum': self.enable_quantum_capability
-            },
-            'connection': {
-                'max_connections': self.max_connections,
-                'connection_timeout': self.connection_timeout,
-                'enable_mdns': self.enable_mdns,
-                'enable_upnp': self.enable_upnp,
-                'enable_nat_traversal': self.enable_nat_traversal
-            },
-            'mesh': {
-                'enable_super_peers': self.enable_super_peers,
-                'max_peers': self.max_peers,
-                'topology_type': self.topology_type,
-                'enable_multi_hop': self.enable_multi_hop,
-                'max_hop_count': self.max_hop_count
-            },
-            'ml': {
-                'training_data_size': self.training_data_size,
-                'retrain_interval_hours': self.retrain_interval_hours,
-                'prediction_horizon_minutes': self.prediction_horizon_minutes,
-                'min_samples_for_training': self.min_samples_for_training,
-                'model_accuracy_threshold': self.model_accuracy_threshold,
-                'enable_ensemble_models': self.enable_ensemble_models
-            },
-            'logging': {
-                'log_level': self.log_level,
-                'log_file': self.log_file,
-                'enable_structured_logging': self.enable_structured_logging
-            },
-            'performance': {
-                'thread_pool_size': self.thread_pool_size,
-                'enable_async_processing': self.enable_async_processing,
-                'query_timeout_seconds': self.query_timeout_seconds
-            },
-            'monitoring': {
-                'enable_prometheus_metrics': self.enable_prometheus_metrics,
-                'prometheus_port': self.prometheus_port,
-                'metrics_update_interval': self.metrics_update_interval
-            },
-            'ai_providers': {
-                'openai_configured': self.openai_api_key is not None,
-                'anthropic_configured': self.anthropic_api_key is not None,
-                'gemini_configured': self.gemini_api_key is not None,
-                'xai_configured': self.xai_api_key is not None,
-                'perplexity_configured': self.perplexity_api_key is not None
-            },
-            'redis': {
-                'enabled': self.redis_enabled,
-                'configured': self.redis_url is not None
+            "network_id": self.network_id,
+            "cluster_name": self.cluster_name,
+            "environment": self.environment,
+            "service_discovery_enabled": self.service_discovery_enabled,
+            "service_registry_host": self.service_registry_host,
+            "service_registry_port": self.service_registry_port,
+            "auto_register": self.auto_register,
+            "load_balancer_enabled": self.load_balancer_enabled,
+            "load_balancer_algorithm": self.load_balancer_algorithm,
+            "health_check_interval": self.health_check_interval,
+            "circuit_breaker_enabled": self.circuit_breaker_enabled,
+            "mutual_tls_enabled": self.mutual_tls_enabled,
+            "api_key_enabled": self.api_key_enabled,
+            "jwt_enabled": self.jwt_enabled,
+            "network_encryption": self.network_encryption,
+            "allowed_networks": self.allowed_networks,
+            "monitoring_enabled": self.monitoring_enabled,
+            "log_level": self.log_level,
+            "distributed_tracing": self.distributed_tracing,
+            "distributed_cache_enabled": self.distributed_cache_enabled,
+            "cache_ttl": self.cache_ttl,
+            "max_concurrent_requests": self.max_concurrent_requests,
+            "request_timeout": self.request_timeout,
+            "memory_limit": self.memory_limit,
+            "cpu_limit": self.cpu_limit,
+            "services": {
+                service_id: {
+                    "id": service.id,
+                    "name": service.name,
+                    "type": service.type.value,
+                    "host": service.host,
+                    "port": service.port,
+                    "protocol": service.protocol,
+                    "health_endpoint": service.health_endpoint,
+                    "api_version": service.api_version,
+                    "authentication": service.authentication,
+                    "capabilities": service.capabilities,
+                    "priority": service.priority,
+                    "timeout": service.timeout,
+                    "retry_count": service.retry_count,
+                    "is_active": service.is_active,
+                    "metadata": service.metadata
+                }
+                for service_id, service in self.services.items()
             }
         }
     
     def save_to_file(self, filepath: str):
-        """Save configuration to JSON file"""
-        config_dict = self.to_dict()
-        # Remove sensitive information before saving
-        if 'security' in config_dict:
-            config_dict['security']['session_secret'] = '[REDACTED]'
-        
+        """Save configuration to file"""
         with open(filepath, 'w') as f:
-            json.dump(config_dict, f, indent=2)
+            json.dump(self.to_dict(), f, indent=2)
+        logger.info(f"Configuration saved to {filepath}")
     
-    def validate(self) -> List[str]:
-        """Validate configuration and return list of issues"""
-        issues = []
+    @classmethod
+    def load_from_file(cls, filepath: str) -> 'NetworkIntegrationConfig':
+        """Load configuration from file"""
+        with open(filepath, 'r') as f:
+            data = json.load(f)
         
-        # Validate ports
-        if not (1024 <= self.csp_network_port <= 65535):
-            issues.append(f"CSP Network port {self.csp_network_port} is not in valid range (1024-65535)")
+        config = cls()
         
-        if not (1024 <= self.ml_router_port <= 65535):
-            issues.append(f"ML Router port {self.ml_router_port} is not in valid range (1024-65535)")
+        # Load basic configuration
+        for key, value in data.items():
+            if key != "services" and hasattr(config, key):
+                setattr(config, key, value)
         
-        if self.csp_network_port == self.ml_router_port:
-            issues.append("CSP Network port and ML Router port cannot be the same")
+        # Load services
+        for service_id, service_data in data.get("services", {}).items():
+            service = NetworkService(
+                id=service_data["id"],
+                name=service_data["name"],
+                type=NetworkServiceType(service_data["type"]),
+                host=service_data["host"],
+                port=service_data["port"],
+                protocol=service_data.get("protocol", "http"),
+                health_endpoint=service_data.get("health_endpoint", "/health"),
+                api_version=service_data.get("api_version", "v1"),
+                authentication=service_data.get("authentication", {}),
+                capabilities=service_data.get("capabilities", []),
+                priority=service_data.get("priority", 1),
+                timeout=service_data.get("timeout", 30),
+                retry_count=service_data.get("retry_count", 3),
+                is_active=service_data.get("is_active", True),
+                metadata=service_data.get("metadata", {})
+            )
+            config.services[service_id] = service
         
-        # Validate data directory
-        try:
-            data_dir = Path(self.csp_network_data_dir)
-            data_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            issues.append(f"Cannot create data directory {self.csp_network_data_dir}: {e}")
-        
-        # Validate genesis configuration
-        if not self.genesis_host:
-            issues.append("Genesis host cannot be empty")
-        
-        if not (1 <= self.genesis_port <= 65535):
-            issues.append(f"Genesis port {self.genesis_port} is not valid")
-        
-        # Validate ML configuration
-        if self.training_data_size < 100:
-            issues.append("Training data size should be at least 100")
-        
-        if self.retrain_interval_hours < 1:
-            issues.append("Retrain interval should be at least 1 hour")
-        
-        # Validate connection configuration
-        if self.max_connections < 1:
-            issues.append("Max connections should be at least 1")
-        
-        if self.connection_timeout < 5:
-            issues.append("Connection timeout should be at least 5 seconds")
-        
-        # Validate performance configuration
-        if self.thread_pool_size < 1:
-            issues.append("Thread pool size should be at least 1")
-        
-        if self.query_timeout_seconds < 1:
-            issues.append("Query timeout should be at least 1 second")
-        
-        return issues
+        logger.info(f"Configuration loaded from {filepath}")
+        return config
 
-def load_config_from_file(filepath: str) -> NetworkIntegrationConfig:
-    """Load configuration from JSON file"""
-    if not os.path.exists(filepath):
-        raise FileNotFoundError(f"Configuration file not found: {filepath}")
+
+# Default network integration configuration
+def get_default_config() -> NetworkIntegrationConfig:
+    """Get default network integration configuration"""
+    config = NetworkIntegrationConfig()
     
-    with open(filepath, 'r') as f:
-        config_dict = json.load(f)
+    # Add default services
+    config.add_service(NetworkService(
+        id="ml_router_main",
+        name="ML Router Main",
+        type=NetworkServiceType.ML_ROUTER,
+        host="localhost",
+        port=5000,
+        capabilities=["query_routing", "model_management", "collaborative_ai"],
+        priority=1
+    ))
     
-    # Create config from environment first, then override with file values
-    config = NetworkIntegrationConfig.from_env()
+    config.add_service(NetworkService(
+        id="redis_cache",
+        name="Redis Cache",
+        type=NetworkServiceType.CACHE_SERVICE,
+        host="localhost",
+        port=6379,
+        protocol="redis",
+        health_endpoint="/info",
+        capabilities=["caching", "session_storage"],
+        priority=2
+    ))
     
-    # Override with file values (this is a simplified version)
-    # In a real implementation, you'd want more sophisticated merging
-    if 'csp_network' in config_dict:
-        net_config = config_dict['csp_network']
-        config.csp_network_enabled = net_config.get('enabled', config.csp_network_enabled)
-        config.csp_network_port = net_config.get('port', config.csp_network_port)
-        config.csp_network_node_name = net_config.get('node_name', config.csp_network_node_name)
-        config.genesis_host = net_config.get('genesis_host', config.genesis_host)
-        config.genesis_port = net_config.get('genesis_port', config.genesis_port)
-    
-    if 'ml_router' in config_dict:
-        ml_config = config_dict['ml_router']
-        config.ml_router_enabled = ml_config.get('enabled', config.ml_router_enabled)
-        config.ml_router_port = ml_config.get('port', config.ml_router_port)
-        config.ml_router_debug = ml_config.get('debug', config.ml_router_debug)
+    config.add_service(NetworkService(
+        id="postgresql_db",
+        name="PostgreSQL Database",
+        type=NetworkServiceType.VECTOR_DATABASE,
+        host="localhost",
+        port=5432,
+        protocol="postgresql",
+        health_endpoint="/health",
+        capabilities=["data_storage", "vector_search"],
+        priority=3
+    ))
     
     return config
 
-def create_example_config():
-    """Create an example configuration file"""
-    config = NetworkIntegrationConfig()
-    config.save_to_file('example_integration_config.json')
-    print("Example configuration saved to: example_integration_config.json")
 
-if __name__ == "__main__":
-    # Create example configuration
-    create_example_config()
-    
-    # Load configuration from environment
-    config = NetworkIntegrationConfig.from_env()
-    
-    # Validate configuration
-    issues = config.validate()
-    if issues:
-        print("Configuration issues found:")
-        for issue in issues:
-            print(f"  - {issue}")
-    else:
-        print("Configuration is valid")
-    
-    # Print configuration summary
-    print("\nConfiguration Summary:")
-    print(f"  CSP Network: {'Enabled' if config.csp_network_enabled else 'Disabled'} (Port: {config.csp_network_port})")
-    print(f"  ML Router: {'Enabled' if config.ml_router_enabled else 'Disabled'} (Port: {config.ml_router_port})")
-    print(f"  Genesis: {config.genesis_host}:{config.genesis_port}")
-    print(f"  Data Directory: {config.csp_network_data_dir}")
-    print(f"  Database: {config.database_url}")
-    print(f"  Redis: {'Enabled' if config.redis_enabled else 'Disabled'}")
-    print(f"  AI Providers: {sum([config.openai_api_key is not None, config.anthropic_api_key is not None, config.gemini_api_key is not None])} configured")
+# Global configuration instance
+_config_instance = None
+
+def get_network_config() -> NetworkIntegrationConfig:
+    """Get global network configuration instance"""
+    global _config_instance
+    if _config_instance is None:
+        _config_instance = NetworkIntegrationConfig.from_env()
+    return _config_instance
+
+def set_network_config(config: NetworkIntegrationConfig):
+    """Set global network configuration instance"""
+    global _config_instance
+    _config_instance = config
