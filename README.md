@@ -30,11 +30,25 @@ A Flask-based Collaborative AI Routing Platform that enables intelligent, real-t
 - **Performance Monitoring**: Real-time metrics, statistics, and health monitoring
 - **Configuration Management**: Export/import configurations for deployment
 
+### Network Integration
+- **AI Network Compatibility**: Seamless integration with AI network infrastructure
+- **Service Discovery**: Automatic service registration and discovery
+- **Load Balancing**: Intelligent load distribution with circuit breaker patterns
+- **Network Security**: Mutual TLS, JWT authentication, and network encryption
+- **Distributed Caching**: Redis-based caching across network nodes
+- **Network Monitoring**: Real-time network metrics and health monitoring
+
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Flask Web Application                        │
+├─────────────────────────────────────────────────────────────────┤
+│  Network Integration Layer                                      │
+│  ├── Integration Config (Service Discovery)                    │
+│  ├── Network Bridge (CSP Network Connection)                   │
+│  ├── Load Balancer (Circuit Breaker, Health Checks)           │
+│  └── Security Layer (mTLS, JWT, Encryption)                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  Collaborative AI Router                                        │
 │  ├── Agent Manager (5 Specialized Agents)                      │
@@ -68,26 +82,103 @@ A Flask-based Collaborative AI Routing Platform that enables intelligent, real-t
 - Python 3.8+
 - PostgreSQL (optional, SQLite by default)
 - Redis (optional, for distributed caching)
+- Docker & Docker Compose (for containerized deployment)
+- Kubernetes (for production network deployment)
 
-### Setup
+### Quick Start
+
+#### Option 1: Automated Setup (Recommended)
+```bash
+# Clone the repository
+git clone <your-repo> ml-router
+cd ml-router
+
+# Run automated setup script
+chmod +x setup.sh
+./setup.sh
+
+# Follow the interactive prompts to choose:
+# 1. Docker Compose deployment
+# 2. Kubernetes deployment  
+# 3. Direct server installation
+# 4. Systemd service setup
+```
+
+#### Option 2: Manual Installation
 1. Clone the repository
 2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
-3. Set environment variables:
+
+3. Configure environment variables:
    ```bash
-   export DATABASE_URL="your_database_url"
-   export SESSION_SECRET="your_session_secret"
-   # Add API keys for AI providers
-   export OPENAI_API_KEY="your_openai_key"
-   export ANTHROPIC_API_KEY="your_anthropic_key"
-   # ... other API keys
+   cp .env.example .env
+   # Edit .env with your API keys and configuration
    ```
-4. Run the application:
+
+4. Initialize the database:
    ```bash
-   python main.py
+   python -c "from app import db; db.create_all()"
    ```
+
+5. Start the application:
+   ```bash
+   gunicorn --bind 0.0.0.0:5000 --workers 4 main:app
+   ```
+
+### Network Integration Setup
+
+#### For AI Network Deployment
+```bash
+# Use the network integration startup script
+./startup_script.sh start
+
+# Or run the network-enabled ML Router directly
+python ml_router_network.py
+```
+
+#### Network Configuration
+Edit `integration_config.py` to configure:
+- **Service Discovery**: Automatic service registration
+- **Load Balancing**: Circuit breaker patterns and health checks
+- **Security**: Mutual TLS and JWT authentication
+- **Monitoring**: Network metrics and telemetry
+
+#### Network Environment Variables
+```bash
+# Network Identity
+NETWORK_ID=ai_network
+CLUSTER_NAME=ml_cluster
+ENVIRONMENT=production
+
+# Service Discovery
+SERVICE_DISCOVERY_ENABLED=true
+SERVICE_REGISTRY_HOST=localhost
+SERVICE_REGISTRY_PORT=8500
+
+# Load Balancing
+LOAD_BALANCER_ENABLED=true
+CIRCUIT_BREAKER_ENABLED=true
+HEALTH_CHECK_INTERVAL=10
+
+# Security
+MUTUAL_TLS_ENABLED=false
+JWT_ENABLED=true
+NETWORK_ENCRYPTION=true
+
+# Monitoring
+MONITORING_ENABLED=true
+DISTRIBUTED_TRACING=true
+```
+
+#### Network API Endpoints
+- `POST /api/network/query` - Submit query through network
+- `GET /api/network/status` - Get network status
+- `GET /api/network/health` - Network health check
+- `GET /api/network/peers` - Get connected peers
+- `GET /api/network/metrics` - Network performance metrics
+- `GET /network-dashboard` - Network integration dashboard
 
 ## 🔑 API Keys
 
@@ -126,6 +217,7 @@ The system supports the following AI providers:
 ### API Documentation
 - Interactive API docs: `/api/docs`
 - OpenAPI specification: `/api/openapi.json`
+- Network integration dashboard: `/network-dashboard`
 
 ## 🔗 API Endpoints
 
@@ -149,6 +241,13 @@ The system supports the following AI providers:
 - `POST /api/auth/token` - Generate JWT token
 - `GET /api/auth/users` - List users
 - `POST /api/auth/regenerate` - Regenerate API key
+
+### Network Integration
+- `POST /api/network/query` - Submit query through network
+- `GET /api/network/status` - Get network status
+- `GET /api/network/health` - Network health check
+- `GET /api/network/peers` - Get connected peers
+- `GET /api/network/metrics` - Network performance metrics
 
 ## 🔍 Monitoring
 

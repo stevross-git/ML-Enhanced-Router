@@ -1,7 +1,7 @@
 # Network Deployment Guide
 
 ## Overview
-This guide explains how to deploy the ML Router application to your network infrastructure.
+This guide explains how to deploy the ML Router application to your AI network infrastructure with full network integration capabilities including service discovery, load balancing, and distributed caching.
 
 ## Deployment Options
 
@@ -11,23 +11,105 @@ This guide explains how to deploy the ML Router application to your network infr
 - Docker and Docker Compose installed
 - Access to your network environment
 - SSL certificates (optional, for HTTPS)
+- Network access to service registry (if using external Consul)
 
-#### Quick Start
+#### Quick Start with Automated Setup
 ```bash
 # Clone or copy the application to your server
 git clone <your-repo> ml-router
 cd ml-router
 
-# Build and run with Docker Compose
-docker-compose up -d
+# Run automated setup script
+chmod +x setup.sh
+./setup.sh
+
+# Choose option 1 for Docker Compose deployment
+# The script will:
+# 1. Create necessary directories
+# 2. Generate secrets
+# 3. Configure environment variables
+# 4. Build and start Docker containers
 ```
 
-#### Configuration
+#### Manual Docker Setup
+```bash
+# Create .env file from template
+cp .env.example .env
+# Edit .env with your configuration
+
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Check status
+docker-compose ps
+docker-compose logs -f
+```
+
+#### Docker Compose Configuration
 Edit `docker-compose.yml` to customize:
 - Database connection (PostgreSQL recommended for production)
 - Redis cache (optional but recommended)
 - API keys and secrets
 - Network ports and domains
+- Service discovery endpoints
+- Network security settings
+
+## Network Integration Startup Methods
+
+### Using Network Integration Scripts
+
+#### Option 1: Network-Enabled ML Router
+```bash
+# Start with network integration
+python ml_router_network.py
+
+# Or use the startup script
+./startup_script.sh start
+
+# Check network status
+./startup_script.sh status
+
+# View network logs
+./startup_script.sh logs
+```
+
+#### Option 2: Network Bridge Mode
+```bash
+# Start network bridge directly
+python -c "
+import asyncio
+from network_bridge import NetworkBridge
+
+async def start_bridge():
+    bridge = NetworkBridge()
+    await bridge.start_bridge()
+    print('Network bridge started successfully')
+
+asyncio.run(start_bridge())
+"
+```
+
+#### Network Configuration Files
+- **`integration_config.py`**: Network service configuration
+- **`network_bridge.py`**: Network bridge implementation
+- **`ml_router_network.py`**: Network-enabled ML router
+- **`startup_script.sh`**: Automated startup script
+
+### Network API Endpoints
+Once deployed, the following network integration endpoints are available:
+
+#### Status and Health
+- `GET /api/network/status` - Network integration status
+- `GET /api/network/health` - Network health check
+- `GET /network-dashboard` - Network integration dashboard
+
+#### Query Processing
+- `POST /api/network/query` - Submit query through network
+- `GET /api/network/peers` - Get connected peers
+- `GET /api/network/metrics` - Network performance metrics
+
+#### Management
+- `POST /api/network/shutdown` - Gracefully shutdown network components
 
 ### 2. Direct Server Deployment
 
@@ -52,8 +134,26 @@ export ANTHROPIC_API_KEY="your-anthropic-key"
 # Initialize database
 python -c "from app import db; db.create_all()"
 
-# Run with Gunicorn
+# Run with Gunicorn (standard mode)
 gunicorn --bind 0.0.0.0:5000 --workers 4 main:app
+
+# Or run with network integration
+python ml_router_network.py
+```
+
+#### Network-Enabled Direct Deployment
+```bash
+# Set additional network environment variables
+export NETWORK_ID=ai_network
+export SERVICE_DISCOVERY_ENABLED=true
+export LOAD_BALANCER_ENABLED=true
+export MONITORING_ENABLED=true
+
+# Start with network integration
+python ml_router_network.py
+
+# Or use the startup script
+./startup_script.sh start --environment=production
 ```
 
 ### 3. Kubernetes Deployment
@@ -65,14 +165,111 @@ gunicorn --bind 0.0.0.0:5000 --workers 4 main:app
 
 #### Deploy to Kubernetes
 ```bash
+# Create namespace
+kubectl create namespace ml-router
+
+# Create secrets (edit with your values)
+kubectl create secret generic ml-router-secrets \
+  --from-literal=DATABASE_URL="postgresql://user:pass@db:5432/mlrouter" \
+  --from-literal=SESSION_SECRET="your-secret-key" \
+  --from-literal=OPENAI_API_KEY="your-openai-key" \
+  --from-literal=ANTHROPIC_API_KEY="your-anthropic-key" \
+  -n ml-router
+
 # Apply Kubernetes manifests
-kubectl apply -f k8s/
+kubectl apply -f k8s/ -n ml-router
+
+# Check deployment status
+kubectl get pods -n ml-router
+kubectl get svc -n ml-router
+
+# Access logs
+kubectl logs -f deployment/ml-router -n ml-router
 ```
+
+#### Network Integration in Kubernetes
+The Kubernetes deployment includes:
+- Service mesh integration
+- Network policies for secure communication
+- Health checks and readiness probes
+- Horizontal pod autoscaling
+- Network service discovery
+- Load balancing across pods
+
+## Network Integration Features
+
+### Service Discovery
+- **Automatic Registration**: Services automatically register with the network
+- **Health Monitoring**: Continuous health checks and service availability tracking
+- **Service Registry**: Consul or similar service discovery backend support
+
+### Load Balancing
+- **Circuit Breaker**: Automatic failover when services become unhealthy
+- **Round Robin**: Distributes requests evenly across available services
+- **Weighted Routing**: Priority-based routing for optimal performance
+
+### Security
+- **Mutual TLS**: Secure service-to-service communication
+- **JWT Authentication**: Token-based authentication across network services
+- **Network Encryption**: End-to-end encryption for all network traffic
+
+### Monitoring
+- **Distributed Tracing**: Track requests across multiple services
+- **Network Metrics**: Real-time performance and health metrics
+- **Telemetry**: Comprehensive logging and monitoring integration
 
 ## Network Configuration
 
 ### Port Configuration
 - **Web Interface**: Port 5000 (HTTP)
+- **Network Bridge**: Port 8080 (Network Integration)
+- **Service Registry**: Port 8500 (Consul)
+- **Database**: Port 5432 (PostgreSQL)
+- **Cache**: Port 6379 (Redis)
+
+### Network Environment Variables
+```bash
+# Network Identity
+NETWORK_ID=ai_network
+CLUSTER_NAME=ml_cluster
+ENVIRONMENT=production
+
+# Service Discovery
+SERVICE_DISCOVERY_ENABLED=true
+SERVICE_REGISTRY_HOST=localhost
+SERVICE_REGISTRY_PORT=8500
+AUTO_REGISTER=true
+
+# Load Balancing
+LOAD_BALANCER_ENABLED=true
+LOAD_BALANCER_ALGORITHM=round_robin
+HEALTH_CHECK_INTERVAL=10
+CIRCUIT_BREAKER_ENABLED=true
+CIRCUIT_BREAKER_THRESHOLD=5
+
+# Security
+MUTUAL_TLS_ENABLED=false
+JWT_ENABLED=true
+NETWORK_ENCRYPTION=true
+API_KEY_ENABLED=true
+
+# Monitoring
+MONITORING_ENABLED=true
+DISTRIBUTED_TRACING=true
+LOG_LEVEL=INFO
+TELEMETRY_ENDPOINT=http://monitoring:8080/metrics
+
+# Caching
+DISTRIBUTED_CACHE_ENABLED=true
+CACHE_TTL=3600
+CACHE_REPLICATION_FACTOR=2
+
+# Resource Management
+MAX_CONCURRENT_REQUESTS=1000
+REQUEST_TIMEOUT=120
+MEMORY_LIMIT=2Gi
+CPU_LIMIT=2000m
+```
 - **API Endpoints**: Port 5000 (same as web)
 - **Health Check**: GET /api/health
 - **Metrics**: Port 9090 (optional)
