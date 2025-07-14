@@ -44,7 +44,14 @@ except ImportError as e:
     print(f"⚠️  ML Router app not available: {e}")
     # Create minimal Flask app if original not available
     app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///network_bridge.db')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.secret_key = os.environ.get('SESSION_SECRET', 'network-bridge-secret')
     ML_ROUTER_AVAILABLE = False
+    
+    # Create a minimal db object for compatibility
+    from flask_sqlalchemy import SQLAlchemy
+    db = SQLAlchemy(app)
 
 # Configure logging
 logging.basicConfig(

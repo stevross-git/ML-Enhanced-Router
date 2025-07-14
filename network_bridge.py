@@ -33,6 +33,14 @@ except ImportError as e:
     print(f"⚠️  ML Router not available: {e}")
     ML_ROUTER_AVAILABLE = False
 
+# Import integration config
+try:
+    from integration_config import get_network_config, NetworkIntegrationConfig
+    INTEGRATION_CONFIG_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Integration config not available: {e}")
+    INTEGRATION_CONFIG_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 class NetworkBridge:
@@ -46,6 +54,14 @@ class NetworkBridge:
         self.ml_predictor: Optional[MLRoutePredictor] = None
         self.is_running = False
         self.start_time = time.time()
+        
+        # Load integration config
+        self.integration_config = None
+        if INTEGRATION_CONFIG_AVAILABLE:
+            try:
+                self.integration_config = get_network_config()
+            except Exception as e:
+                logger.warning(f"Failed to load integration config: {e}")
         
         # Network statistics
         self.queries_processed = 0
