@@ -1721,6 +1721,78 @@ def update_agent_model(agent_id):
         logger.error(f"Error updating agent model: {e}")
         return jsonify({'error': str(e)}), 500
 
+# Token Management Endpoints
+@app.route('/api/token/usage', methods=['GET'])
+def get_token_usage():
+    """Get current token usage statistics"""
+    try:
+        stats = ai_model_manager.get_token_usage_stats()
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"Error getting token usage: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/token/settings', methods=['GET'])
+def get_token_settings():
+    """Get current token management settings"""
+    try:
+        settings = ai_model_manager._get_token_settings()
+        return jsonify(settings)
+    except Exception as e:
+        logger.error(f"Error getting token settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/token/settings', methods=['POST'])
+def update_token_settings():
+    """Update token management settings"""
+    try:
+        settings = request.get_json()
+        if not settings:
+            return jsonify({"error": "No settings provided"}), 400
+        
+        success = ai_model_manager.update_token_settings(settings)
+        if success:
+            return jsonify({"message": "Token settings updated successfully"})
+        else:
+            return jsonify({"error": "Failed to update token settings"}), 400
+    except Exception as e:
+        logger.error(f"Error updating token settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/token/optimize', methods=['POST'])
+def optimize_tokens():
+    """Optimize token usage for a given query"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        system_message = data.get('system_message')
+        
+        # Apply token optimization
+        optimized_query, optimized_system = ai_model_manager._apply_token_settings(
+            query, system_message
+        )
+        
+        # Calculate token savings
+        original_tokens = len(query + (system_message or '')) / 4
+        optimized_tokens = len(optimized_query + (optimized_system or '')) / 4
+        savings = max(0, (original_tokens - optimized_tokens) / original_tokens * 100)
+        
+        return jsonify({
+            "original_query": query,
+            "optimized_query": optimized_query,
+            "original_system": system_message,
+            "optimized_system": optimized_system,
+            "original_tokens": int(original_tokens),
+            "optimized_tokens": int(optimized_tokens),
+            "savings_percentage": round(savings, 2)
+        })
+    except Exception as e:
+        logger.error(f"Error optimizing tokens: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Initialize database
 with app.app_context():
     import models

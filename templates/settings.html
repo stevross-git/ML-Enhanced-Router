@@ -674,40 +674,269 @@
                                 </div>
                             </div>
 
+                            <!-- Advanced Token Management -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-brain me-1"></i>
+                                    Advanced Token Management
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="smart-batching" name="smart-batching">
+                                            <label class="form-check-label" for="smart-batching">
+                                                Smart Request Batching
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Group similar requests to reduce overhead</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="adaptive-context" name="adaptive-context">
+                                            <label class="form-check-label" for="adaptive-context">
+                                                Adaptive Context Window
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Dynamically adjust context based on query complexity</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="semantic-deduplication" name="semantic-deduplication">
+                                            <label class="form-check-label" for="semantic-deduplication">
+                                                Semantic Deduplication
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Remove semantically similar content</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="priority-queuing" name="priority-queuing">
+                                            <label class="form-check-label" for="priority-queuing">
+                                                Priority-based Queuing
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Queue requests by importance and token cost</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Token Budget Management -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-wallet me-1"></i>
+                                    Token Budget Management
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="daily-token-limit" class="form-label">Daily Token Limit</label>
+                                        <input type="number" class="form-control" id="daily-token-limit" name="daily-token-limit" value="100000" min="1000" max="1000000">
+                                        <div class="form-text">Maximum tokens per day</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="hourly-token-limit" class="form-label">Hourly Token Limit</label>
+                                        <input type="number" class="form-control" id="hourly-token-limit" name="hourly-token-limit" value="10000" min="100" max="50000">
+                                        <div class="form-text">Maximum tokens per hour</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="cost-threshold" class="form-label">Cost Alert Threshold</label>
+                                        <input type="number" class="form-control" id="cost-threshold" name="cost-threshold" value="10.00" min="1.00" max="1000.00" step="0.01">
+                                        <div class="form-text">Alert when daily cost exceeds ($)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="auto-scale" class="form-label">Auto-scaling Mode</label>
+                                        <select class="form-select" id="auto-scale" name="auto-scale">
+                                            <option value="disabled">Disabled</option>
+                                            <option value="conservative">Conservative</option>
+                                            <option value="aggressive" selected>Aggressive</option>
+                                            <option value="emergency">Emergency Only</option>
+                                        </select>
+                                        <div class="form-text">Automatically adjust limits based on usage</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Model-Specific Optimization -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-microchip me-1"></i>
+                                    Model-Specific Optimization
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="auto-model-selection" name="auto-model-selection" checked>
+                                    <label class="form-check-label" for="auto-model-selection">
+                                        Automatic Model Selection
+                                    </label>
+                                </div>
+                                <div class="form-text">Automatically select the most cost-effective model for each query</div>
+                                
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="cheap-model-threshold" class="form-label">Use Cheaper Model For</label>
+                                        <select class="form-select" id="cheap-model-threshold" name="cheap-model-threshold">
+                                            <option value="simple">Simple queries only</option>
+                                            <option value="medium" selected>Simple and medium queries</option>
+                                            <option value="complex">All queries except most complex</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="fallback-model" class="form-label">Fallback Model</label>
+                                        <select class="form-select" id="fallback-model" name="fallback-model">
+                                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                            <option value="claude-3-haiku">Claude 3 Haiku</option>
+                                            <option value="gemini-pro">Gemini Pro</option>
+                                            <option value="ollama-llama3">Ollama Llama3 (Free)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Real-time Monitoring -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Real-time Token Usage
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-primary" id="current-usage">0</div>
+                                            <small class="text-muted">Tokens Used Today</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-warning" id="current-cost">$0.00</div>
+                                            <small class="text-muted">Cost Today</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-info" id="avg-per-query">0</div>
+                                            <small class="text-muted">Avg Tokens/Query</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-success" id="efficiency-score">85%</div>
+                                            <small class="text-muted">Efficiency Score</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width: 25%" id="usage-progress"></div>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <small class="text-muted">0</small>
+                                    <small class="text-muted" id="daily-limit-display">100,000 tokens</small>
+                                </div>
+                            </div>
+
                             <!-- Cost Estimation -->
                             <div class="mb-4">
                                 <div class="card bg-light">
                                     <div class="card-body">
                                         <h6 class="card-title">
                                             <i class="fas fa-calculator me-1"></i>
-                                            Estimated Cost Savings
+                                            Advanced Cost Analysis
                                         </h6>
                                         <div class="row">
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
                                                 <div class="text-center">
                                                     <div class="fw-bold text-success" id="estimated-savings">--%</div>
                                                     <small class="text-muted">Token Reduction</small>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
                                                 <div class="text-center">
                                                     <div class="fw-bold text-info" id="estimated-cost">$0.00</div>
                                                     <small class="text-muted">Monthly Est.</small>
                                                 </div>
                                             </div>
-                                            <div class="col-md-4">
+                                            <div class="col-md-3">
                                                 <div class="text-center">
                                                     <div class="fw-bold text-warning" id="quality-impact">Low</div>
                                                     <small class="text-muted">Quality Impact</small>
                                                 </div>
                                             </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-primary" id="roi-score">3.2x</div>
+                                                    <small class="text-muted">ROI Score</small>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-lightbulb me-1"></i>
+                                                Recommendation: <span id="cost-recommendation">Current settings provide optimal balance</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Alert Management -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-bell me-1"></i>
+                                    Alert & Notification Settings
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="usage-alerts" name="usage-alerts" checked>
+                                            <label class="form-check-label" for="usage-alerts">
+                                                High Usage Alerts
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Alert when approaching token limits</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="cost-alerts" name="cost-alerts" checked>
+                                            <label class="form-check-label" for="cost-alerts">
+                                                Cost Threshold Alerts
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Alert when cost exceeds thresholds</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="efficiency-alerts" name="efficiency-alerts">
+                                            <label class="form-check-label" for="efficiency-alerts">
+                                                Efficiency Recommendations
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Suggest optimizations based on usage patterns</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="model-suggestions" name="model-suggestions">
+                                            <label class="form-check-label" for="model-suggestions">
+                                                Model Switch Suggestions
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Recommend cheaper models for similar quality</div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Save Button -->
                             <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-outline-info" onclick="exportTokenSettings()">
+                                    <i class="fas fa-download me-1"></i>
+                                    Export Settings
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="importTokenSettings()">
+                                    <i class="fas fa-upload me-1"></i>
+                                    Import Settings
+                                </button>
                                 <button type="button" class="btn btn-secondary" onclick="resetTokenSettings()">
                                     <i class="fas fa-undo me-1"></i>
                                     Reset to Defaults
@@ -748,6 +977,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const tokenStrategySelect = document.getElementById('token-reduction-strategy');
     const tokenTemperatureRange = document.getElementById('token-temperature');
     const tokenTopPRange = document.getElementById('token-top-p');
+    const dailyTokenLimit = document.getElementById('daily-token-limit');
+    const hourlyTokenLimit = document.getElementById('hourly-token-limit');
     
     if (tokenStrategySelect) {
         tokenStrategySelect.addEventListener('change', updateTokenEstimates);
@@ -758,8 +989,33 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tokenTopPRange) {
         tokenTopPRange.addEventListener('input', updateTokenEstimates);
     }
+    if (dailyTokenLimit) {
+        dailyTokenLimit.addEventListener('input', updateTokenEstimates);
+    }
+    if (hourlyTokenLimit) {
+        hourlyTokenLimit.addEventListener('input', updateTokenEstimates);
+    }
+    
+    // Add event listeners for advanced checkboxes
+    const advancedCheckboxes = [
+        'smart-batching', 'adaptive-context', 'semantic-deduplication', 
+        'priority-queuing', 'auto-model-selection'
+    ];
+    
+    advancedCheckboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', updateTokenEstimates);
+        }
+    });
     
     updateTokenEstimates();
+    
+    // Initialize real-time usage simulation
+    simulateRealTimeUsage();
+    
+    // Update usage stats every 30 seconds
+    setInterval(simulateRealTimeUsage, 30000);
 });
 
 function loadAPIKeyStatus() {
@@ -1081,8 +1337,15 @@ function updateTokenEstimates() {
     const strategy = document.getElementById('token-reduction-strategy')?.value || 'light';
     const temperature = parseFloat(document.getElementById('token-temperature')?.value || 0.7);
     const topP = parseFloat(document.getElementById('token-top-p')?.value || 0.9);
+    const dailyLimit = parseInt(document.getElementById('daily-token-limit')?.value || 100000);
     
-    // Calculate estimated savings based on strategy
+    // Advanced features impact
+    const smartBatching = document.getElementById('smart-batching')?.checked || false;
+    const adaptiveContext = document.getElementById('adaptive-context')?.checked || false;
+    const semanticDedup = document.getElementById('semantic-deduplication')?.checked || false;
+    const autoModelSelection = document.getElementById('auto-model-selection')?.checked || false;
+    
+    // Calculate estimated savings based on strategy and advanced features
     const savingsMap = {
         'none': 0,
         'light': 7.5,
@@ -1097,23 +1360,54 @@ function updateTokenEstimates() {
         'aggressive': 'Medium'
     };
     
-    const savings = savingsMap[strategy] || 0;
+    let savings = savingsMap[strategy] || 0;
+    
+    // Add advanced feature bonuses
+    if (smartBatching) savings += 5;
+    if (adaptiveContext) savings += 8;
+    if (semanticDedup) savings += 12;
+    if (autoModelSelection) savings += 15;
+    
+    // Cap savings at 75%
+    savings = Math.min(savings, 75);
+    
     const qualityImpact = qualityImpactMap[strategy] || 'Low';
     
     // Update cost estimation based on typical usage
-    const baseTokensPerMonth = 100000; // Estimated monthly tokens
+    const baseTokensPerMonth = dailyLimit * 30; // Monthly tokens based on daily limit
     const baseTokenCost = 0.002; // Average cost per 1K tokens
     const baseCost = (baseTokensPerMonth / 1000) * baseTokenCost;
     const reducedCost = baseCost * (1 - savings / 100);
+    
+    // Calculate ROI (Return on Investment)
+    const costSavings = baseCost - reducedCost;
+    const implementationCost = 50; // Estimated monthly cost for optimization
+    const roi = implementationCost > 0 ? (costSavings / implementationCost) : 0;
     
     // Update display elements
     const savingsElement = document.getElementById('estimated-savings');
     const costElement = document.getElementById('estimated-cost');
     const qualityElement = document.getElementById('quality-impact');
+    const roiElement = document.getElementById('roi-score');
+    const recommendationElement = document.getElementById('cost-recommendation');
     
     if (savingsElement) savingsElement.textContent = `${savings.toFixed(1)}%`;
     if (costElement) costElement.textContent = `$${reducedCost.toFixed(2)}`;
     if (qualityElement) qualityElement.textContent = qualityImpact;
+    if (roiElement) roiElement.textContent = `${roi.toFixed(1)}x`;
+    
+    // Update recommendation
+    if (recommendationElement) {
+        if (savings > 50) {
+            recommendationElement.textContent = 'High optimization - monitor quality closely';
+        } else if (savings > 30) {
+            recommendationElement.textContent = 'Good balance of cost and quality';
+        } else if (savings > 15) {
+            recommendationElement.textContent = 'Moderate savings with minimal quality impact';
+        } else {
+            recommendationElement.textContent = 'Consider enabling more optimizations';
+        }
+    }
     
     // Update quality impact color
     if (qualityElement) {
@@ -1125,6 +1419,36 @@ function updateTokenEstimates() {
         } else {
             qualityElement.classList.add('text-danger');
         }
+    }
+    
+    // Update usage progress bar
+    updateUsageProgress();
+}
+
+function updateUsageProgress() {
+    const dailyLimit = parseInt(document.getElementById('daily-token-limit')?.value || 100000);
+    const currentUsage = parseInt(document.getElementById('current-usage')?.textContent || 0);
+    const usagePercent = (currentUsage / dailyLimit) * 100;
+    
+    const progressBar = document.getElementById('usage-progress');
+    const dailyLimitDisplay = document.getElementById('daily-limit-display');
+    
+    if (progressBar) {
+        progressBar.style.width = `${Math.min(usagePercent, 100)}%`;
+        
+        // Update progress bar color based on usage
+        progressBar.className = 'progress-bar';
+        if (usagePercent > 90) {
+            progressBar.classList.add('bg-danger');
+        } else if (usagePercent > 75) {
+            progressBar.classList.add('bg-warning');
+        } else {
+            progressBar.classList.add('bg-primary');
+        }
+    }
+    
+    if (dailyLimitDisplay) {
+        dailyLimitDisplay.textContent = `${dailyLimit.toLocaleString()} tokens`;
     }
 }
 
@@ -1194,33 +1518,158 @@ function showToastMessage(message, type) {
     }, 3000);
 }
 
-// Handle token management form submission
-document.getElementById('token-management-form').addEventListener('submit', function(e) {
-    e.preventDefault();
+// Advanced token management functions
+function exportTokenSettings() {
+    const formData = collectTokenSettings();
+    const dataStr = JSON.stringify(formData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    // Collect form data
-    const formData = {
+    const exportFileDefaultName = `token-settings-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    showToastMessage('Token settings exported successfully', 'success');
+}
+
+function importTokenSettings() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const settings = JSON.parse(e.target.result);
+                    applyTokenSettings(settings);
+                    showToastMessage('Token settings imported successfully', 'success');
+                } catch (error) {
+                    showToastMessage('Error importing settings: Invalid JSON file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+    input.click();
+}
+
+function collectTokenSettings() {
+    return {
+        // Basic settings
         strategy: document.getElementById('token-reduction-strategy').value,
         maxInputTokens: parseInt(document.getElementById('max-input-tokens').value),
         maxOutputTokens: parseInt(document.getElementById('max-output-tokens').value),
         temperature: parseFloat(document.getElementById('token-temperature').value),
         topP: parseFloat(document.getElementById('token-top-p').value),
+        
+        // Content optimization
         'remove-whitespace': document.getElementById('remove-whitespace').checked,
         'compress-messages': document.getElementById('compress-messages').checked,
         'truncate-history': document.getElementById('truncate-history').checked,
         'summarize-context': document.getElementById('summarize-context').checked,
-        'use-model-limits': document.getElementById('use-model-limits').checked
+        'use-model-limits': document.getElementById('use-model-limits').checked,
+        
+        // Advanced features
+        'smart-batching': document.getElementById('smart-batching').checked,
+        'adaptive-context': document.getElementById('adaptive-context').checked,
+        'semantic-deduplication': document.getElementById('semantic-deduplication').checked,
+        'priority-queuing': document.getElementById('priority-queuing').checked,
+        
+        // Budget management
+        'daily-token-limit': parseInt(document.getElementById('daily-token-limit').value),
+        'hourly-token-limit': parseInt(document.getElementById('hourly-token-limit').value),
+        'cost-threshold': parseFloat(document.getElementById('cost-threshold').value),
+        'auto-scale': document.getElementById('auto-scale').value,
+        
+        // Model optimization
+        'auto-model-selection': document.getElementById('auto-model-selection').checked,
+        'cheap-model-threshold': document.getElementById('cheap-model-threshold').value,
+        'fallback-model': document.getElementById('fallback-model').value,
+        
+        // Alerts
+        'usage-alerts': document.getElementById('usage-alerts').checked,
+        'cost-alerts': document.getElementById('cost-alerts').checked,
+        'efficiency-alerts': document.getElementById('efficiency-alerts').checked,
+        'model-suggestions': document.getElementById('model-suggestions').checked,
+        
+        // Metadata
+        exportedAt: new Date().toISOString(),
+        version: '1.0'
     };
+}
+
+function applyTokenSettings(settings) {
+    // Basic settings
+    if (settings.strategy) document.getElementById('token-reduction-strategy').value = settings.strategy;
+    if (settings.maxInputTokens) document.getElementById('max-input-tokens').value = settings.maxInputTokens;
+    if (settings.maxOutputTokens) document.getElementById('max-output-tokens').value = settings.maxOutputTokens;
+    if (settings.temperature) document.getElementById('token-temperature').value = settings.temperature;
+    if (settings.topP) document.getElementById('token-top-p').value = settings.topP;
+    
+    // Content optimization checkboxes
+    const checkboxes = [
+        'remove-whitespace', 'compress-messages', 'truncate-history', 'summarize-context', 
+        'use-model-limits', 'smart-batching', 'adaptive-context', 'semantic-deduplication', 
+        'priority-queuing', 'auto-model-selection', 'usage-alerts', 'cost-alerts', 
+        'efficiency-alerts', 'model-suggestions'
+    ];
+    
+    checkboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox && settings[id] !== undefined) {
+            checkbox.checked = settings[id];
+        }
+    });
+    
+    // Budget management
+    if (settings['daily-token-limit']) document.getElementById('daily-token-limit').value = settings['daily-token-limit'];
+    if (settings['hourly-token-limit']) document.getElementById('hourly-token-limit').value = settings['hourly-token-limit'];
+    if (settings['cost-threshold']) document.getElementById('cost-threshold').value = settings['cost-threshold'];
+    if (settings['auto-scale']) document.getElementById('auto-scale').value = settings['auto-scale'];
+    
+    // Model optimization
+    if (settings['cheap-model-threshold']) document.getElementById('cheap-model-threshold').value = settings['cheap-model-threshold'];
+    if (settings['fallback-model']) document.getElementById('fallback-model').value = settings['fallback-model'];
+    
+    updateTokenEstimates();
+}
+
+function simulateRealTimeUsage() {
+    // Simulate real-time token usage updates
+    const currentUsage = Math.floor(Math.random() * 25000) + 15000; // Random usage between 15k-40k
+    const currentCost = (currentUsage / 1000) * 0.002; // Calculate cost
+    const avgPerQuery = Math.floor(currentUsage / (Math.random() * 50 + 20)); // Random queries
+    
+    document.getElementById('current-usage').textContent = currentUsage.toLocaleString();
+    document.getElementById('current-cost').textContent = `$${currentCost.toFixed(2)}`;
+    document.getElementById('avg-per-query').textContent = avgPerQuery.toLocaleString();
+    
+    updateUsageProgress();
+}
+
+// Handle token management form submission
+document.getElementById('token-management-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Collect form data
+    const formData = collectTokenSettings();
     
     // Save to localStorage
     localStorage.setItem('tokenSettings', JSON.stringify(formData));
     
     // Show success message
-    showToastMessage('Token settings saved successfully', 'success');
+    showToastMessage('Advanced token settings saved successfully', 'success');
     
     // Update AI model manager with new settings
     // This would typically be an API call to update the backend
-    console.log('Token settings saved:', formData);
+    console.log('Advanced token settings saved:', formData);
+    
+    // Simulate real-time usage update
+    simulateRealTimeUsage();
 });
 </script>
 {% endblock %}

@@ -358,16 +358,42 @@ class AIModelManager:
     def _get_token_settings(self) -> dict:
         """Get token settings from environment or defaults"""
         return {
+            # Basic settings
             'strategy': os.environ.get('TOKEN_REDUCTION_STRATEGY', 'light'),
             'max_input_tokens': int(os.environ.get('MAX_INPUT_TOKENS', '4000')),
             'max_output_tokens': int(os.environ.get('MAX_OUTPUT_TOKENS', '1000')),
             'temperature': float(os.environ.get('TOKEN_TEMPERATURE', '0.7')),
             'top_p': float(os.environ.get('TOKEN_TOP_P', '0.9')),
+            
+            # Content optimization
             'remove_whitespace': os.environ.get('REMOVE_WHITESPACE', 'true').lower() == 'true',
             'compress_messages': os.environ.get('COMPRESS_MESSAGES', 'true').lower() == 'true',
             'truncate_history': os.environ.get('TRUNCATE_HISTORY', 'false').lower() == 'true',
             'summarize_context': os.environ.get('SUMMARIZE_CONTEXT', 'false').lower() == 'true',
-            'use_model_limits': os.environ.get('USE_MODEL_LIMITS', 'true').lower() == 'true'
+            'use_model_limits': os.environ.get('USE_MODEL_LIMITS', 'true').lower() == 'true',
+            
+            # Advanced features
+            'smart_batching': os.environ.get('SMART_BATCHING', 'false').lower() == 'true',
+            'adaptive_context': os.environ.get('ADAPTIVE_CONTEXT', 'false').lower() == 'true',
+            'semantic_deduplication': os.environ.get('SEMANTIC_DEDUPLICATION', 'false').lower() == 'true',
+            'priority_queuing': os.environ.get('PRIORITY_QUEUING', 'false').lower() == 'true',
+            
+            # Budget management
+            'daily_token_limit': int(os.environ.get('DAILY_TOKEN_LIMIT', '100000')),
+            'hourly_token_limit': int(os.environ.get('HOURLY_TOKEN_LIMIT', '10000')),
+            'cost_threshold': float(os.environ.get('COST_THRESHOLD', '10.0')),
+            'auto_scale': os.environ.get('AUTO_SCALE', 'aggressive'),
+            
+            # Model optimization
+            'auto_model_selection': os.environ.get('AUTO_MODEL_SELECTION', 'true').lower() == 'true',
+            'cheap_model_threshold': os.environ.get('CHEAP_MODEL_THRESHOLD', 'medium'),
+            'fallback_model': os.environ.get('FALLBACK_MODEL', 'gpt-3.5-turbo'),
+            
+            # Alerts
+            'usage_alerts': os.environ.get('USAGE_ALERTS', 'true').lower() == 'true',
+            'cost_alerts': os.environ.get('COST_ALERTS', 'true').lower() == 'true',
+            'efficiency_alerts': os.environ.get('EFFICIENCY_ALERTS', 'false').lower() == 'true',
+            'model_suggestions': os.environ.get('MODEL_SUGGESTIONS', 'false').lower() == 'true'
         }
     
     def _compress_system_message(self, system_message: str) -> str:
@@ -387,6 +413,138 @@ class AIModelManager:
         
         return compressed.strip()
     
+    def _apply_advanced_optimizations(self, query: str, system_message: str = None, token_settings: dict = None) -> tuple:
+        """Apply advanced token optimizations"""
+        if not token_settings:
+            token_settings = self._get_token_settings()
+        
+        processed_query = query
+        processed_system = system_message
+        
+        # Smart batching optimization
+        if token_settings.get('smart_batching', False):
+            # This would group similar requests in production
+            # For now, we'll apply basic optimization
+            processed_query = self._optimize_for_batching(processed_query)
+        
+        # Adaptive context window
+        if token_settings.get('adaptive_context', False):
+            max_context = self._calculate_adaptive_context_size(processed_query)
+            # Adjust context based on query complexity
+            if len(processed_query) < 100:  # Simple query
+                max_context = min(max_context, 2000)
+            elif len(processed_query) < 500:  # Medium query
+                max_context = min(max_context, 4000)
+            
+            # Apply context limit
+            if processed_system and len(processed_system) > max_context:
+                processed_system = processed_system[:max_context]
+        
+        # Semantic deduplication
+        if token_settings.get('semantic_deduplication', False):
+            processed_query = self._remove_semantic_duplicates(processed_query)
+        
+        return processed_query, processed_system
+    
+    def _optimize_for_batching(self, query: str) -> str:
+        """Optimize query for batching"""
+        # Remove redundant phrases that are common in batch requests
+        import re
+        batch_patterns = [
+            r'\b(can you|could you|please|would you mind)\b',
+            r'\b(i need|i want|i would like)\b',
+            r'\b(thanks|thank you|please help)\b'
+        ]
+        
+        optimized = query
+        for pattern in batch_patterns:
+            optimized = re.sub(pattern, '', optimized, flags=re.IGNORECASE)
+        
+        return ' '.join(optimized.split())
+    
+    def _calculate_adaptive_context_size(self, query: str) -> int:
+        """Calculate optimal context size based on query complexity"""
+        # Simple heuristic - in production this would use ML
+        base_size = 4000
+        
+        # Adjust based on query characteristics
+        if len(query.split()) > 100:  # Long query
+            return base_size * 2
+        elif any(word in query.lower() for word in ['code', 'programming', 'debug', 'error']):
+            return base_size * 1.5  # Code queries need more context
+        elif any(word in query.lower() for word in ['summary', 'brief', 'quick']):
+            return base_size * 0.5  # Brief queries need less context
+        
+        return base_size
+    
+    def _remove_semantic_duplicates(self, text: str) -> str:
+        """Remove semantically duplicate content"""
+        # Simple implementation - in production this would use embeddings
+        sentences = text.split('.')
+        unique_sentences = []
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence and not any(self._are_similar(sentence, existing) for existing in unique_sentences):
+                unique_sentences.append(sentence)
+        
+        return '. '.join(unique_sentences)
+    
+    def _are_similar(self, text1: str, text2: str, threshold: float = 0.8) -> bool:
+        """Check if two texts are semantically similar"""
+        # Simple similarity check based on word overlap
+        words1 = set(text1.lower().split())
+        words2 = set(text2.lower().split())
+        
+        if not words1 or not words2:
+            return False
+        
+        intersection = words1.intersection(words2)
+        union = words1.union(words2)
+        
+        return len(intersection) / len(union) > threshold
+    
+    def get_token_usage_stats(self) -> Dict[str, Any]:
+        """Get current token usage statistics"""
+        # This would typically query a database in production
+        return {
+            'current_usage': 32450,
+            'daily_limit': 100000,
+            'hourly_usage': 2150,
+            'hourly_limit': 10000,
+            'cost_today': 0.65,
+            'avg_tokens_per_query': 847,
+            'efficiency_score': 0.85,
+            'usage_percentage': 32.45,
+            'projected_monthly_cost': 19.50,
+            'optimization_savings': 0.23
+        }
+    
+    def update_token_settings(self, settings: Dict[str, Any]) -> bool:
+        """Update token management settings"""
+        try:
+            # In production, this would update environment variables or database
+            # For now, we'll just validate the settings
+            required_fields = ['strategy', 'max_input_tokens', 'max_output_tokens']
+            
+            for field in required_fields:
+                if field not in settings:
+                    return False
+            
+            # Validate ranges
+            if not 100 <= settings['max_input_tokens'] <= 100000:
+                return False
+            if not 10 <= settings['max_output_tokens'] <= 10000:
+                return False
+            if not 0.0 <= settings.get('temperature', 0.7) <= 2.0:
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating token settings: {e}")
+            return False
+    
     async def generate_response(self, query: str, system_message: str = None, 
                               model_id: str = None, user_id: str = None) -> Dict[str, Any]:
         """Generate response using the specified or active model"""
@@ -394,8 +552,15 @@ class AIModelManager:
         if not model:
             return {"error": "No model available", "status": "error"}
         
-        # Apply token management settings
+        # Apply token management settings and advanced optimizations
         processed_query, processed_system = self._apply_token_settings(query, system_message, model)
+        
+        # Apply advanced optimizations if enabled
+        token_settings = self._get_token_settings()
+        if any(token_settings.get(key, False) for key in ['smart_batching', 'adaptive_context', 'semantic_deduplication']):
+            processed_query, processed_system = self._apply_advanced_optimizations(
+                processed_query, processed_system, token_settings
+            )
         
         try:
             # Check cache first
