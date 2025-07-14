@@ -313,6 +313,80 @@ class AIModelManager:
             return True
         return False
     
+    def _apply_token_settings(self, query: str, system_message: str = None, model: AIModel = None) -> tuple:
+        """Apply token management settings to reduce token usage"""
+        # Get token settings from environment or defaults
+        token_settings = self._get_token_settings()
+        
+        processed_query = query
+        processed_system = system_message
+        
+        # Apply content optimization based on strategy
+        if token_settings.get('remove_whitespace', True):
+            processed_query = ' '.join(processed_query.split())
+            if processed_system:
+                processed_system = ' '.join(processed_system.split())
+        
+        if token_settings.get('compress_messages', True):
+            # Compress system messages by removing unnecessary words
+            if processed_system:
+                processed_system = self._compress_system_message(processed_system)
+        
+        # Apply token limits
+        max_input_tokens = token_settings.get('max_input_tokens', 4000)
+        
+        # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+        estimated_tokens = len(processed_query + (processed_system or '')) / 4
+        
+        if estimated_tokens > max_input_tokens:
+            if token_settings.get('truncate_history', False):
+                # Truncate the query to fit within limits
+                max_chars = max_input_tokens * 4
+                if processed_system:
+                    max_chars -= len(processed_system)
+                processed_query = processed_query[:max_chars]
+            elif token_settings.get('summarize_context', False):
+                # This would need a summarization service
+                # For now, just truncate
+                max_chars = max_input_tokens * 4
+                if processed_system:
+                    max_chars -= len(processed_system)
+                processed_query = processed_query[:max_chars]
+        
+        return processed_query, processed_system
+    
+    def _get_token_settings(self) -> dict:
+        """Get token settings from environment or defaults"""
+        return {
+            'strategy': os.environ.get('TOKEN_REDUCTION_STRATEGY', 'light'),
+            'max_input_tokens': int(os.environ.get('MAX_INPUT_TOKENS', '4000')),
+            'max_output_tokens': int(os.environ.get('MAX_OUTPUT_TOKENS', '1000')),
+            'temperature': float(os.environ.get('TOKEN_TEMPERATURE', '0.7')),
+            'top_p': float(os.environ.get('TOKEN_TOP_P', '0.9')),
+            'remove_whitespace': os.environ.get('REMOVE_WHITESPACE', 'true').lower() == 'true',
+            'compress_messages': os.environ.get('COMPRESS_MESSAGES', 'true').lower() == 'true',
+            'truncate_history': os.environ.get('TRUNCATE_HISTORY', 'false').lower() == 'true',
+            'summarize_context': os.environ.get('SUMMARIZE_CONTEXT', 'false').lower() == 'true',
+            'use_model_limits': os.environ.get('USE_MODEL_LIMITS', 'true').lower() == 'true'
+        }
+    
+    def _compress_system_message(self, system_message: str) -> str:
+        """Compress system message by removing unnecessary words"""
+        import re
+        # Simple compression - remove common words and phrases
+        compression_patterns = [
+            r'\b(please|kindly|you should|you must|you will|you can|you may)\b',
+            r'\b(the following|as follows|listed below|shown below)\b',
+            r'\b(very|quite|rather|really|actually|basically|essentially)\b',
+            r'\s+', # Multiple spaces
+        ]
+        
+        compressed = system_message
+        for pattern in compression_patterns:
+            compressed = re.sub(pattern, ' ', compressed, flags=re.IGNORECASE)
+        
+        return compressed.strip()
+    
     async def generate_response(self, query: str, system_message: str = None, 
                               model_id: str = None, user_id: str = None) -> Dict[str, Any]:
         """Generate response using the specified or active model"""
@@ -320,9 +394,12 @@ class AIModelManager:
         if not model:
             return {"error": "No model available", "status": "error"}
         
+        # Apply token management settings
+        processed_query, processed_system = self._apply_token_settings(query, system_message, model)
+        
         try:
             # Check cache first
-            cached_response = self.cache_manager.get(query, model.id, system_message)
+            cached_response = self.cache_manager.get(processed_query, model.id, processed_system)
             if cached_response:
                 logger.info(f"Cache hit for model {model.id}")
                 return {
@@ -399,12 +476,15 @@ class AIModelManager:
             messages.append({"role": "system", "content": system_message})
         messages.append({"role": "user", "content": query})
         
+        # Apply token settings for request parameters
+        token_settings = self._get_token_settings()
+        
         payload = {
             "model": model.model_name,
             "messages": messages,
-            "max_tokens": model.max_tokens,
-            "temperature": model.temperature,
-            "top_p": model.top_p
+            "max_tokens": min(token_settings.get('max_output_tokens', 1000), model.max_tokens),
+            "temperature": token_settings.get('temperature', model.temperature),
+            "top_p": token_settings.get('top_p', model.top_p)
         }
         
         async with aiohttp.ClientSession() as session:

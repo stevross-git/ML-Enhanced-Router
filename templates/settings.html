@@ -84,6 +84,10 @@
                         <i class="fas fa-database me-2"></i>
                         Cache Management
                     </a>
+                    <a href="#token-management" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-coins me-2"></i>
+                        Token Management
+                    </a>
                 </div>
             </div>
         </div>
@@ -543,6 +547,180 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Token Management Tab -->
+            <div class="tab-pane fade" id="token-management">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-coins me-2"></i>
+                            Token Usage Management
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Manage token usage to optimize costs and performance. These settings help reduce the number of tokens consumed by AI models.
+                        </div>
+
+                        <form id="token-management-form">
+                            <!-- Token Reduction Strategy -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-cut me-1"></i>
+                                    Token Reduction Strategy
+                                </label>
+                                <select class="form-select" id="token-reduction-strategy" name="token-reduction-strategy">
+                                    <option value="none">No Reduction (Full Context)</option>
+                                    <option value="light" selected>Light Reduction (5-10% savings)</option>
+                                    <option value="moderate">Moderate Reduction (15-25% savings)</option>
+                                    <option value="aggressive">Aggressive Reduction (30-50% savings)</option>
+                                </select>
+                                <div class="form-text">Choose how aggressively to reduce token usage</div>
+                            </div>
+
+                            <!-- Max Token Limits -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="max-input-tokens" class="form-label">
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        Max Input Tokens
+                                    </label>
+                                    <input type="number" class="form-control" id="max-input-tokens" name="max-input-tokens" value="4000" min="500" max="32000">
+                                    <div class="form-text">Limit for input/context tokens</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max-output-tokens" class="form-label">
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        Max Output Tokens
+                                    </label>
+                                    <input type="number" class="form-control" id="max-output-tokens" name="max-output-tokens" value="1000" min="100" max="4000">
+                                    <div class="form-text">Limit for response tokens</div>
+                                </div>
+                            </div>
+
+                            <!-- Content Optimization -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-compress me-1"></i>
+                                    Content Optimization
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remove-whitespace" name="remove-whitespace" checked>
+                                    <label class="form-check-label" for="remove-whitespace">
+                                        Remove extra whitespace and formatting
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="compress-messages" name="compress-messages" checked>
+                                    <label class="form-check-label" for="compress-messages">
+                                        Compress system messages and instructions
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="truncate-history" name="truncate-history">
+                                    <label class="form-check-label" for="truncate-history">
+                                        Truncate conversation history when limit reached
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="summarize-context" name="summarize-context">
+                                    <label class="form-check-label" for="summarize-context">
+                                        Summarize older context instead of removing
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Model-Specific Settings -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-robot me-1"></i>
+                                    Model-Specific Token Limits
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="use-model-limits" name="use-model-limits" checked>
+                                    <label class="form-check-label" for="use-model-limits">
+                                        Use model-specific optimal token limits
+                                    </label>
+                                </div>
+                                <div class="form-text">Automatically adjust limits based on selected AI model capabilities</div>
+                            </div>
+
+                            <!-- Temperature and Top-p Adjustments -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="token-temperature" class="form-label">
+                                        <i class="fas fa-thermometer-half me-1"></i>
+                                        Temperature (Focus)
+                                    </label>
+                                    <input type="range" class="form-range" id="token-temperature" name="token-temperature" min="0.1" max="2.0" step="0.1" value="0.7">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">0.1 (Focused)</small>
+                                        <small class="text-muted">2.0 (Creative)</small>
+                                    </div>
+                                    <div class="form-text">Lower values use fewer tokens but may be less creative</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="token-top-p" class="form-label">
+                                        <i class="fas fa-filter me-1"></i>
+                                        Top-p (Nucleus)
+                                    </label>
+                                    <input type="range" class="form-range" id="token-top-p" name="token-top-p" min="0.1" max="1.0" step="0.05" value="0.9">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">0.1 (Precise)</small>
+                                        <small class="text-muted">1.0 (Diverse)</small>
+                                    </div>
+                                    <div class="form-text">Lower values can reduce token usage</div>
+                                </div>
+                            </div>
+
+                            <!-- Cost Estimation -->
+                            <div class="mb-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-calculator me-1"></i>
+                                            Estimated Cost Savings
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-success" id="estimated-savings">--%</div>
+                                                    <small class="text-muted">Token Reduction</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-info" id="estimated-cost">$0.00</div>
+                                                    <small class="text-muted">Monthly Est.</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-warning" id="quality-impact">Low</div>
+                                                    <small class="text-muted">Quality Impact</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Button -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-secondary" onclick="resetTokenSettings()">
+                                    <i class="fas fa-undo me-1"></i>
+                                    Reset to Defaults
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    Save Token Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -554,6 +732,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAvailableModels();
     loadCacheStats();
     loadCacheEntries();
+    loadTokenSettings();
     
     // Ensure all form elements have proper dark theme styling
     const formElements = document.querySelectorAll('select, input[type="number"], input[type="range"]');
@@ -564,6 +743,23 @@ document.addEventListener('DOMContentLoaded', function() {
             element.classList.add('bg-dark', 'text-light', 'border-secondary');
         }
     });
+    
+    // Add event listeners for token management
+    const tokenStrategySelect = document.getElementById('token-reduction-strategy');
+    const tokenTemperatureRange = document.getElementById('token-temperature');
+    const tokenTopPRange = document.getElementById('token-top-p');
+    
+    if (tokenStrategySelect) {
+        tokenStrategySelect.addEventListener('change', updateTokenEstimates);
+    }
+    if (tokenTemperatureRange) {
+        tokenTemperatureRange.addEventListener('input', updateTokenEstimates);
+    }
+    if (tokenTopPRange) {
+        tokenTopPRange.addEventListener('input', updateTokenEstimates);
+    }
+    
+    updateTokenEstimates();
 });
 
 function loadAPIKeyStatus() {
@@ -847,5 +1043,184 @@ function clearAllCache() {
         });
     }
 }
+
+// Token Management Functions
+function loadTokenSettings() {
+    // Load saved token settings from localStorage or use defaults
+    const savedSettings = localStorage.getItem('tokenSettings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        
+        // Apply saved settings to form elements
+        const strategySelect = document.getElementById('token-reduction-strategy');
+        const maxInputTokens = document.getElementById('max-input-tokens');
+        const maxOutputTokens = document.getElementById('max-output-tokens');
+        const temperatureRange = document.getElementById('token-temperature');
+        const topPRange = document.getElementById('token-top-p');
+        
+        if (strategySelect) strategySelect.value = settings.strategy || 'light';
+        if (maxInputTokens) maxInputTokens.value = settings.maxInputTokens || 4000;
+        if (maxOutputTokens) maxOutputTokens.value = settings.maxOutputTokens || 1000;
+        if (temperatureRange) temperatureRange.value = settings.temperature || 0.7;
+        if (topPRange) topPRange.value = settings.topP || 0.9;
+        
+        // Apply checkboxes
+        const checkboxes = ['remove-whitespace', 'compress-messages', 'truncate-history', 'summarize-context', 'use-model-limits'];
+        checkboxes.forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (checkbox && settings[id] !== undefined) {
+                checkbox.checked = settings[id];
+            }
+        });
+    }
+    
+    updateTokenEstimates();
+}
+
+function updateTokenEstimates() {
+    const strategy = document.getElementById('token-reduction-strategy')?.value || 'light';
+    const temperature = parseFloat(document.getElementById('token-temperature')?.value || 0.7);
+    const topP = parseFloat(document.getElementById('token-top-p')?.value || 0.9);
+    
+    // Calculate estimated savings based on strategy
+    const savingsMap = {
+        'none': 0,
+        'light': 7.5,
+        'moderate': 20,
+        'aggressive': 40
+    };
+    
+    const qualityImpactMap = {
+        'none': 'None',
+        'light': 'Minimal',
+        'moderate': 'Low',
+        'aggressive': 'Medium'
+    };
+    
+    const savings = savingsMap[strategy] || 0;
+    const qualityImpact = qualityImpactMap[strategy] || 'Low';
+    
+    // Update cost estimation based on typical usage
+    const baseTokensPerMonth = 100000; // Estimated monthly tokens
+    const baseTokenCost = 0.002; // Average cost per 1K tokens
+    const baseCost = (baseTokensPerMonth / 1000) * baseTokenCost;
+    const reducedCost = baseCost * (1 - savings / 100);
+    
+    // Update display elements
+    const savingsElement = document.getElementById('estimated-savings');
+    const costElement = document.getElementById('estimated-cost');
+    const qualityElement = document.getElementById('quality-impact');
+    
+    if (savingsElement) savingsElement.textContent = `${savings.toFixed(1)}%`;
+    if (costElement) costElement.textContent = `$${reducedCost.toFixed(2)}`;
+    if (qualityElement) qualityElement.textContent = qualityImpact;
+    
+    // Update quality impact color
+    if (qualityElement) {
+        qualityElement.className = 'fw-bold';
+        if (qualityImpact === 'None' || qualityImpact === 'Minimal') {
+            qualityElement.classList.add('text-success');
+        } else if (qualityImpact === 'Low') {
+            qualityElement.classList.add('text-warning');
+        } else {
+            qualityElement.classList.add('text-danger');
+        }
+    }
+}
+
+function resetTokenSettings() {
+    // Reset all token settings to defaults
+    const defaultSettings = {
+        strategy: 'light',
+        maxInputTokens: 4000,
+        maxOutputTokens: 1000,
+        temperature: 0.7,
+        topP: 0.9,
+        'remove-whitespace': true,
+        'compress-messages': true,
+        'truncate-history': false,
+        'summarize-context': false,
+        'use-model-limits': true
+    };
+    
+    // Apply defaults to form elements
+    document.getElementById('token-reduction-strategy').value = defaultSettings.strategy;
+    document.getElementById('max-input-tokens').value = defaultSettings.maxInputTokens;
+    document.getElementById('max-output-tokens').value = defaultSettings.maxOutputTokens;
+    document.getElementById('token-temperature').value = defaultSettings.temperature;
+    document.getElementById('token-top-p').value = defaultSettings.topP;
+    
+    // Apply checkbox defaults
+    const checkboxes = ['remove-whitespace', 'compress-messages', 'truncate-history', 'summarize-context', 'use-model-limits'];
+    checkboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.checked = defaultSettings[id];
+        }
+    });
+    
+    updateTokenEstimates();
+    showToastMessage('Token settings reset to defaults', 'success');
+}
+
+function showToastMessage(message, type) {
+    // Create or update message element
+    let messageDiv = document.getElementById('message-container');
+    if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'message-container';
+        messageDiv.className = 'position-fixed top-0 start-50 translate-middle-x mt-3';
+        messageDiv.style.zIndex = '9999';
+        document.body.appendChild(messageDiv);
+    }
+    
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    messageDiv.innerHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        const alert = messageDiv.querySelector('.alert');
+        if (alert) {
+            alert.classList.remove('show');
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 150);
+        }
+    }, 3000);
+}
+
+// Handle token management form submission
+document.getElementById('token-management-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Collect form data
+    const formData = {
+        strategy: document.getElementById('token-reduction-strategy').value,
+        maxInputTokens: parseInt(document.getElementById('max-input-tokens').value),
+        maxOutputTokens: parseInt(document.getElementById('max-output-tokens').value),
+        temperature: parseFloat(document.getElementById('token-temperature').value),
+        topP: parseFloat(document.getElementById('token-top-p').value),
+        'remove-whitespace': document.getElementById('remove-whitespace').checked,
+        'compress-messages': document.getElementById('compress-messages').checked,
+        'truncate-history': document.getElementById('truncate-history').checked,
+        'summarize-context': document.getElementById('summarize-context').checked,
+        'use-model-limits': document.getElementById('use-model-limits').checked
+    };
+    
+    // Save to localStorage
+    localStorage.setItem('tokenSettings', JSON.stringify(formData));
+    
+    // Show success message
+    showToastMessage('Token settings saved successfully', 'success');
+    
+    // Update AI model manager with new settings
+    // This would typically be an API call to update the backend
+    console.log('Token settings saved:', formData);
+});
 </script>
 {% endblock %}
