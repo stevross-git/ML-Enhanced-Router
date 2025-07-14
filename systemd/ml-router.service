@@ -1,0 +1,55 @@
+[Unit]
+Description=ML Router - AI Query Routing Service
+After=network.target
+Requires=network.target
+
+[Service]
+Type=simple
+User=mlrouter
+Group=mlrouter
+WorkingDirectory=/opt/ml-router
+ExecStart=/opt/ml-router/venv/bin/gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 main:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+# Environment variables
+Environment=FLASK_ENV=production
+Environment=DATABASE_URL=postgresql://mlrouter:password@localhost:5432/mlrouter
+Environment=REDIS_URL=redis://localhost:6379
+Environment=SESSION_SECRET=your-long-random-secret-key-here
+Environment=ROUTER_JWT_SECRET=jwt-signing-secret-here
+Environment=OPENAI_API_KEY=your-openai-key
+Environment=ANTHROPIC_API_KEY=your-anthropic-key
+Environment=GOOGLE_API_KEY=your-google-key
+Environment=ROUTER_CACHE_TTL=3600
+Environment=ROUTER_CACHE_SIZE=10000
+Environment=ROUTER_MAX_CONCURRENT=50
+Environment=ROUTER_RATE_LIMIT=1000
+Environment=ROUTER_GLOBAL_RATE_LIMIT=5000
+Environment=ROUTER_USE_ML=true
+Environment=ROUTER_AUTH_ENABLED=true
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ml-router/rag_data
+ReadWritePaths=/opt/ml-router/models
+ReadWritePaths=/opt/ml-router/instance
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

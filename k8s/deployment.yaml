@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-router
+  labels:
+    app: ml-router
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ml-router
+  template:
+    metadata:
+      labels:
+        app: ml-router
+    spec:
+      containers:
+      - name: ml-router
+        image: ml-router:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: ml-router-secrets
+              key: database-url
+        - name: REDIS_URL
+          value: "redis://redis-service:6379"
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ml-router-secrets
+              key: session-secret
+        - name: ROUTER_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: ml-router-secrets
+              key: jwt-secret
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ml-router-secrets
+              key: openai-api-key
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ml-router-secrets
+              key: anthropic-api-key
+        - name: GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ml-router-secrets
+              key: google-api-key
+        - name: FLASK_ENV
+          value: "production"
+        - name: ROUTER_CACHE_TTL
+          value: "3600"
+        - name: ROUTER_CACHE_SIZE
+          value: "10000"
+        - name: ROUTER_MAX_CONCURRENT
+          value: "50"
+        - name: ROUTER_RATE_LIMIT
+          value: "1000"
+        - name: ROUTER_GLOBAL_RATE_LIMIT
+          value: "5000"
+        - name: ROUTER_USE_ML
+          value: "true"
+        - name: ROUTER_AUTH_ENABLED
+          value: "true"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: rag-data
+          mountPath: /app/rag_data
+        - name: models
+          mountPath: /app/models
+      volumes:
+      - name: rag-data
+        persistentVolumeClaim:
+          claimName: rag-data-pvc
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-router-service
+spec:
+  selector:
+    app: ml-router
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 5000
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rag-data-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
