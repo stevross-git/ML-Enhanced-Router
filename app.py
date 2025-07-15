@@ -3364,6 +3364,199 @@ def get_email_classifications():
         logger.error(f"Error getting email classifications: {e}")
         return jsonify({"error": str(e)}), 500
 
+# Writing Style Training API Endpoints
+@app.route('/api/email/writing-style/settings', methods=['GET', 'POST'])
+def writing_style_settings():
+    """Get or update writing style training settings"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        user_id = request.args.get('user_id', 'default')
+        
+        if request.method == 'GET':
+            settings = email_intelligence.db.get_writing_style_settings(user_id)
+            return jsonify({
+                "status": "success",
+                "settings": {
+                    "consent": settings.consent.value,
+                    "auto_learn_from_sent": settings.auto_learn_from_sent,
+                    "learn_from_manual_edits": settings.learn_from_manual_edits,
+                    "preserve_privacy": settings.preserve_privacy,
+                    "training_data_retention_days": settings.training_data_retention_days,
+                    "min_confidence_threshold": settings.min_confidence_threshold,
+                    "user_approval_required": settings.user_approval_required
+                },
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Settings data is required"}), 400
+            
+            from email_intelligence import WritingStyleSettings, TrainingConsent
+            
+            # Validate consent value
+            consent_value = data.get('consent', 'disabled')
+            if consent_value not in [c.value for c in TrainingConsent]:
+                return jsonify({"error": f"Invalid consent value: {consent_value}"}), 400
+            
+            settings = WritingStyleSettings(
+                consent=TrainingConsent(consent_value),
+                auto_learn_from_sent=data.get('auto_learn_from_sent', False),
+                learn_from_manual_edits=data.get('learn_from_manual_edits', False),
+                preserve_privacy=data.get('preserve_privacy', True),
+                training_data_retention_days=data.get('training_data_retention_days', 30),
+                min_confidence_threshold=data.get('min_confidence_threshold', 0.8),
+                user_approval_required=data.get('user_approval_required', True)
+            )
+            
+            email_intelligence.db.store_writing_style_settings(user_id, settings)
+            
+            return jsonify({
+                "status": "success",
+                "message": "Writing style settings updated successfully",
+                "timestamp": datetime.now().isoformat()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error managing writing style settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/writing-style/training-data', methods=['GET', 'POST'])
+def writing_style_training_data():
+    """Get or add writing style training data"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        user_id = request.args.get('user_id', 'default')
+        
+        if request.method == 'GET':
+            limit = request.args.get('limit', 100, type=int)
+            training_data = email_intelligence.db.get_training_data(user_id, limit)
+            
+            return jsonify({
+                "status": "success",
+                "training_data": training_data,
+                "count": len(training_data),
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data or 'email_id' not in data or 'training_text' not in data:
+                return jsonify({"error": "Email ID and training text are required"}), 400
+            
+            email_id = data['email_id']
+            training_text = data['training_text']
+            tone = data.get('tone', 'professional')
+            context = data.get('context', '')
+            confidence = data.get('confidence', 0.0)
+            
+            # Validate tone
+            if tone not in [t.value for t in EmailTone]:
+                return jsonify({"error": f"Invalid tone: {tone}"}), 400
+            
+            email_tone = EmailTone(tone)
+            
+            # Check user consent
+            settings = email_intelligence.db.get_writing_style_settings(user_id)
+            if settings.consent == TrainingConsent.DISABLED:
+                return jsonify({"error": "Writing style training is disabled"}), 403
+            
+            # Store training data
+            training_id = email_intelligence.db.store_training_data(
+                user_id, email_id, training_text, email_tone, context, confidence
+            )
+            
+            return jsonify({
+                "status": "success",
+                "message": "Training data stored successfully",
+                "training_id": training_id,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+    except Exception as e:
+        logger.error(f"Error managing training data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/writing-style/approve/<int:training_id>', methods=['POST'])
+def approve_training_data(training_id):
+    """Approve training data for use"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        user_id = request.args.get('user_id', 'default')
+        
+        email_intelligence.db.approve_training_data(training_id, user_id)
+        
+        return jsonify({
+            "status": "success",
+            "message": "Training data approved successfully",
+            "training_id": training_id,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error approving training data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/writing-style/cleanup', methods=['POST'])
+def cleanup_training_data():
+    """Clean up expired training data"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        email_intelligence.db.cleanup_expired_training_data()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Expired training data cleaned up successfully",
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error cleaning up training data: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/writing-style/consent', methods=['GET'])
+def get_training_consent_options():
+    """Get available training consent options"""
+    try:
+        from email_intelligence import TrainingConsent
+        
+        consent_options = [
+            {
+                "value": TrainingConsent.ENABLED.value,
+                "label": "Enabled",
+                "description": "Allow AI to learn from your writing style"
+            },
+            {
+                "value": TrainingConsent.DISABLED.value,
+                "label": "Disabled",
+                "description": "Do not use my emails for training"
+            },
+            {
+                "value": TrainingConsent.ASK_EACH_TIME.value,
+                "label": "Ask Each Time",
+                "description": "Request permission for each training opportunity"
+            }
+        ]
+        
+        return jsonify({
+            "status": "success",
+            "consent_options": consent_options,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting consent options: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/chains/stats', methods=['GET'])
 def get_chain_stats():
     """Get Auto Chain Generator statistics"""

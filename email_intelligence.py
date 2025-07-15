@@ -81,6 +81,25 @@ class EmailTone(Enum):
     EMPATHETIC = "empathetic"
 
 
+class TrainingConsent(Enum):
+    """Training consent options"""
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    ASK_EACH_TIME = "ask_each_time"
+
+
+@dataclass
+class WritingStyleSettings:
+    """Writing style training settings"""
+    consent: TrainingConsent = TrainingConsent.DISABLED
+    auto_learn_from_sent: bool = False
+    learn_from_manual_edits: bool = False
+    preserve_privacy: bool = True
+    training_data_retention_days: int = 30
+    min_confidence_threshold: float = 0.8
+    user_approval_required: bool = True
+
+
 @dataclass
 class EmailMessage:
     """Email message structure"""
@@ -109,6 +128,8 @@ class EmailReply:
     persona: Optional[str] = None
     confidence: float = 0.0
     requires_review: bool = True
+    allow_training: bool = False
+    training_consent: TrainingConsent = TrainingConsent.DISABLED
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -157,6 +178,8 @@ class EmailDatabase:
                     persona TEXT,
                     confidence REAL,
                     requires_review INTEGER,
+                    allow_training INTEGER DEFAULT 0,
+                    training_consent TEXT DEFAULT 'disabled',
                     sent INTEGER DEFAULT 0,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (original_message_id) REFERENCES email_messages (id)
@@ -171,6 +194,40 @@ class EmailDatabase:
                     settings TEXT,
                     is_active INTEGER DEFAULT 1,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Writing style training data table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS writing_style_training (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT,
+                    original_email_id TEXT,
+                    training_text TEXT,
+                    tone TEXT,
+                    context TEXT,
+                    confidence REAL DEFAULT 0.0,
+                    user_approved INTEGER DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TEXT,
+                    FOREIGN KEY (original_email_id) REFERENCES email_messages (id)
+                )
+            ''')
+            
+            # Writing style settings table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS writing_style_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT,
+                    consent TEXT DEFAULT 'disabled',
+                    auto_learn_from_sent INTEGER DEFAULT 0,
+                    learn_from_manual_edits INTEGER DEFAULT 0,
+                    preserve_privacy INTEGER DEFAULT 1,
+                    training_data_retention_days INTEGER DEFAULT 30,
+                    min_confidence_threshold REAL DEFAULT 0.8,
+                    user_approval_required INTEGER DEFAULT 1,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
             
@@ -247,8 +304,8 @@ class EmailDatabase:
                 cursor.execute('''
                     INSERT INTO email_replies 
                     (original_message_id, recipient, subject, body, tone, persona, 
-                     confidence, requires_review)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     confidence, requires_review, allow_training, training_consent)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     original_message_id,
                     reply.recipient,
@@ -257,7 +314,9 @@ class EmailDatabase:
                     reply.tone.value,
                     reply.persona,
                     reply.confidence,
-                    1 if reply.requires_review else 0
+                    1 if reply.requires_review else 0,
+                    1 if reply.allow_training else 0,
+                    reply.training_consent.value
                 ))
                 conn.commit()
                 return cursor.lastrowid
@@ -287,6 +346,131 @@ class EmailDatabase:
                     INSERT INTO email_settings (provider, settings)
                     VALUES (?, ?)
                 ''', (provider.value, json.dumps(settings)))
+                conn.commit()
+    
+    def get_writing_style_settings(self, user_id: str = "default") -> WritingStyleSettings:
+        """Get writing style settings for a user"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT consent, auto_learn_from_sent, learn_from_manual_edits, 
+                       preserve_privacy, training_data_retention_days, 
+                       min_confidence_threshold, user_approval_required
+                FROM writing_style_settings 
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT 1
+            ''', (user_id,))
+            
+            row = cursor.fetchone()
+            if row:
+                return WritingStyleSettings(
+                    consent=TrainingConsent(row[0]),
+                    auto_learn_from_sent=bool(row[1]),
+                    learn_from_manual_edits=bool(row[2]),
+                    preserve_privacy=bool(row[3]),
+                    training_data_retention_days=row[4],
+                    min_confidence_threshold=row[5],
+                    user_approval_required=bool(row[6])
+                )
+            return WritingStyleSettings()
+    
+    def store_writing_style_settings(self, user_id: str, settings: WritingStyleSettings):
+        """Store writing style settings for a user"""
+        with self.lock:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT OR REPLACE INTO writing_style_settings 
+                    (user_id, consent, auto_learn_from_sent, learn_from_manual_edits,
+                     preserve_privacy, training_data_retention_days, 
+                     min_confidence_threshold, user_approval_required, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    user_id,
+                    settings.consent.value,
+                    1 if settings.auto_learn_from_sent else 0,
+                    1 if settings.learn_from_manual_edits else 0,
+                    1 if settings.preserve_privacy else 0,
+                    settings.training_data_retention_days,
+                    settings.min_confidence_threshold,
+                    1 if settings.user_approval_required else 0,
+                    datetime.now().isoformat()
+                ))
+                conn.commit()
+    
+    def store_training_data(self, user_id: str, email_id: str, training_text: str, 
+                           tone: EmailTone, context: str = "", confidence: float = 0.0):
+        """Store training data for writing style learning"""
+        with self.lock:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Calculate expiration date based on settings
+                settings = self.get_writing_style_settings(user_id)
+                expires_at = datetime.now() + timedelta(days=settings.training_data_retention_days)
+                
+                cursor.execute('''
+                    INSERT INTO writing_style_training 
+                    (user_id, original_email_id, training_text, tone, context, 
+                     confidence, expires_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    user_id,
+                    email_id,
+                    training_text,
+                    tone.value,
+                    context,
+                    confidence,
+                    expires_at.isoformat()
+                ))
+                conn.commit()
+                return cursor.lastrowid
+    
+    def get_training_data(self, user_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get training data for a user"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT training_text, tone, context, confidence, created_at
+                FROM writing_style_training 
+                WHERE user_id = ? AND expires_at > ? AND user_approved = 1
+                ORDER BY created_at DESC
+                LIMIT ?
+            ''', (user_id, datetime.now().isoformat(), limit))
+            
+            return [
+                {
+                    'text': row[0],
+                    'tone': row[1],
+                    'context': row[2],
+                    'confidence': row[3],
+                    'created_at': row[4]
+                }
+                for row in cursor.fetchall()
+            ]
+    
+    def approve_training_data(self, training_id: int, user_id: str):
+        """Approve training data for use"""
+        with self.lock:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE writing_style_training 
+                    SET user_approved = 1 
+                    WHERE id = ? AND user_id = ?
+                ''', (training_id, user_id))
+                conn.commit()
+    
+    def cleanup_expired_training_data(self):
+        """Clean up expired training data"""
+        with self.lock:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    DELETE FROM writing_style_training 
+                    WHERE expires_at < ?
+                ''', (datetime.now().isoformat(),))
                 conn.commit()
 
 

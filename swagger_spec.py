@@ -2639,6 +2639,258 @@ swagger_spec = {
                     }
                 }
             }
+        },
+        "/api/email/writing-style/settings": {
+            "get": {
+                "tags": ["Email Intelligence"],
+                "summary": "Get writing style settings",
+                "description": "Get writing style training settings for a user",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID",
+                        "schema": {"type": "string", "default": "default"}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Writing style settings retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "settings": {"$ref": "#/components/schemas/WritingStyleSettings"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": ["Email Intelligence"],
+                "summary": "Update writing style settings",
+                "description": "Update writing style training settings for a user",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID",
+                        "schema": {"type": "string", "default": "default"}
+                    }
+                ],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/WritingStyleSettings"}
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Writing style settings updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "message": {"type": "string"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/writing-style/training-data": {
+            "get": {
+                "tags": ["Email Intelligence"],
+                "summary": "Get training data",
+                "description": "Get writing style training data for a user",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID",
+                        "schema": {"type": "string", "default": "default"}
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of training entries to return",
+                        "schema": {"type": "integer", "default": 100}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Training data retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "training_data": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/TrainingDataEntry"}
+                                        },
+                                        "count": {"type": "integer"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": ["Email Intelligence"],
+                "summary": "Add training data",
+                "description": "Add writing style training data for a user",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID",
+                        "schema": {"type": "string", "default": "default"}
+                    }
+                ],
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email_id": {"type": "string"},
+                                    "training_text": {"type": "string"},
+                                    "tone": {"type": "string", "enum": ["professional", "friendly", "formal", "casual", "supportive", "assertive", "empathetic"]},
+                                    "context": {"type": "string"},
+                                    "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+                                },
+                                "required": ["email_id", "training_text"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Training data added successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "message": {"type": "string"},
+                                        "training_id": {"type": "integer"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/writing-style/approve/{training_id}": {
+            "post": {
+                "tags": ["Email Intelligence"],
+                "summary": "Approve training data",
+                "description": "Approve training data for use in writing style learning",
+                "parameters": [
+                    {
+                        "name": "training_id",
+                        "in": "path",
+                        "required": True,
+                        "description": "Training data ID",
+                        "schema": {"type": "integer"}
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID",
+                        "schema": {"type": "string", "default": "default"}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Training data approved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "message": {"type": "string"},
+                                        "training_id": {"type": "integer"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/writing-style/consent": {
+            "get": {
+                "tags": ["Email Intelligence"],
+                "summary": "Get consent options",
+                "description": "Get available training consent options",
+                "responses": {
+                    "200": {
+                        "description": "Consent options retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "consent_options": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/ConsentOption"}
+                                        },
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/writing-style/cleanup": {
+            "post": {
+                "tags": ["Email Intelligence"],
+                "summary": "Clean up expired training data",
+                "description": "Remove expired training data from the system",
+                "responses": {
+                    "200": {
+                        "description": "Training data cleanup completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "message": {"type": "string"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     'components': {
@@ -2912,6 +3164,36 @@ swagger_spec = {
                     'reply_accuracy': {'type': 'number'},
                     'processing_time': {'type': 'number'},
                     'date_range': {'type': 'string'}
+                }
+            },
+            'WritingStyleSettings': {
+                'type': 'object',
+                'properties': {
+                    'consent': {'type': 'string', 'enum': ['enabled', 'disabled', 'ask_each_time']},
+                    'auto_learn_from_sent': {'type': 'boolean'},
+                    'learn_from_manual_edits': {'type': 'boolean'},
+                    'preserve_privacy': {'type': 'boolean'},
+                    'training_data_retention_days': {'type': 'integer'},
+                    'min_confidence_threshold': {'type': 'number'},
+                    'user_approval_required': {'type': 'boolean'}
+                }
+            },
+            'TrainingDataEntry': {
+                'type': 'object',
+                'properties': {
+                    'text': {'type': 'string'},
+                    'tone': {'type': 'string'},
+                    'context': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'created_at': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'ConsentOption': {
+                'type': 'object',
+                'properties': {
+                    'value': {'type': 'string'},
+                    'label': {'type': 'string'},
+                    'description': {'type': 'string'}
                 }
             }
         }

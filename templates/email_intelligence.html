@@ -122,6 +122,10 @@
                             <i class="fas fa-chart-bar me-2"></i>
                             Analytics
                         </button>
+                        <button class="nav-link" id="v-pills-training-tab" data-bs-toggle="pill" data-bs-target="#v-pills-training" type="button" role="tab">
+                            <i class="fas fa-brain me-2"></i>
+                            Writing Style Training
+                        </button>
                     </div>
                     
                     <!-- Quick Actions -->
@@ -349,6 +353,130 @@
                             <div class="card-body">
                                 <div id="topSenders">
                                     <!-- Top senders will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Writing Style Training Tab -->
+                    <div class="tab-pane fade" id="v-pills-training" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Writing Style Training</h4>
+                            <button class="btn btn-primary" onclick="loadWritingStyleSettings()">
+                                <i class="fas fa-sync me-1"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        
+                        <!-- Training Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="trainingConsent" class="form-label">Training Consent</label>
+                                            <select class="form-select" id="trainingConsent">
+                                                <option value="disabled">Disabled</option>
+                                                <option value="enabled">Enabled</option>
+                                                <option value="ask_each_time">Ask Each Time</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="retentionDays" class="form-label">Data Retention (Days)</label>
+                                            <input type="number" class="form-control" id="retentionDays" min="1" max="365" value="30">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoLearnFromSent">
+                                            <label class="form-check-label" for="autoLearnFromSent">
+                                                Auto-learn from sent emails
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="learnFromEdits">
+                                            <label class="form-check-label" for="learnFromEdits">
+                                                Learn from manual edits
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="preservePrivacy" checked>
+                                            <label class="form-check-label" for="preservePrivacy">
+                                                Preserve privacy (remove sensitive data)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="userApprovalRequired" checked>
+                                            <label class="form-check-label" for="userApprovalRequired">
+                                                User approval required for training
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <label for="confidenceThreshold" class="form-label">Minimum Confidence Threshold</label>
+                                    <input type="range" class="form-range" id="confidenceThreshold" min="0" max="1" step="0.1" value="0.8">
+                                    <div class="d-flex justify-content-between">
+                                        <small>0.0 (Low)</small>
+                                        <small>1.0 (High)</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary" onclick="saveWritingStyleSettings()">
+                                        <i class="fas fa-save me-1"></i>
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Training Data -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Data</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-8">
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-primary" onclick="loadTrainingData()">
+                                                <i class="fas fa-refresh me-1"></i>
+                                                Refresh Data
+                                            </button>
+                                            <button class="btn btn-outline-secondary" onclick="cleanupTrainingData()">
+                                                <i class="fas fa-trash me-1"></i>
+                                                Cleanup Expired
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-end">
+                                            <small class="text-muted">Total entries: <span id="trainingDataCount">0</span></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="trainingDataList">
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-brain text-muted fa-2x mb-2"></i>
+                                        <p class="text-muted">No training data available</p>
+                                        <p class="text-muted small">Training data will appear here as you interact with the email system</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -791,6 +919,122 @@
         // Classify email
         function classifyEmail(emailId) {
             showSuccess('Email classification would be implemented here');
+        }
+
+        // Writing Style Training Functions
+        async function loadWritingStyleSettings() {
+            try {
+                const response = await fetch('/api/email/writing-style/settings');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const settings = data.settings;
+                    document.getElementById('trainingConsent').value = settings.consent || 'disabled';
+                    document.getElementById('retentionDays').value = settings.training_data_retention_days || 30;
+                    document.getElementById('autoLearnFromSent').checked = settings.auto_learn_from_sent || false;
+                    document.getElementById('learnFromEdits').checked = settings.learn_from_manual_edits || false;
+                    document.getElementById('preservePrivacy').checked = settings.preserve_privacy !== false;
+                    document.getElementById('userApprovalRequired').checked = settings.user_approval_required !== false;
+                    document.getElementById('confidenceThreshold').value = settings.min_confidence_threshold || 0.8;
+                    showSuccess('Writing style settings loaded successfully');
+                } else {
+                    showError('Failed to load writing style settings: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error loading writing style settings: ' + error.message);
+            }
+        }
+
+        async function saveWritingStyleSettings() {
+            try {
+                const settings = {
+                    consent: document.getElementById('trainingConsent').value,
+                    training_data_retention_days: parseInt(document.getElementById('retentionDays').value),
+                    auto_learn_from_sent: document.getElementById('autoLearnFromSent').checked,
+                    learn_from_manual_edits: document.getElementById('learnFromEdits').checked,
+                    preserve_privacy: document.getElementById('preservePrivacy').checked,
+                    user_approval_required: document.getElementById('userApprovalRequired').checked,
+                    min_confidence_threshold: parseFloat(document.getElementById('confidenceThreshold').value)
+                };
+                
+                const response = await fetch('/api/email/writing-style/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showSuccess('Writing style settings saved successfully');
+                } else {
+                    showError('Failed to save writing style settings: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error saving writing style settings: ' + error.message);
+            }
+        }
+
+        async function loadTrainingData() {
+            try {
+                const response = await fetch('/api/email/writing-style/training-data');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const trainingData = data.training_data || [];
+                    document.getElementById('trainingDataCount').textContent = trainingData.length;
+                    
+                    if (trainingData.length === 0) {
+                        document.getElementById('trainingDataList').innerHTML = `
+                            <div class="text-center py-4">
+                                <i class="fas fa-brain text-muted fa-2x mb-2"></i>
+                                <p class="text-muted">No training data available</p>
+                                <p class="text-muted small">Training data will appear here as you interact with the email system</p>
+                            </div>
+                        `;
+                    } else {
+                        const trainingHTML = trainingData.map(entry => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="card-title">Training Entry</h6>
+                                            <p class="card-text text-muted small">${entry.text.substring(0, 100)}${entry.text.length > 100 ? '...' : ''}</p>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <span class="badge bg-secondary">${entry.tone}</span>
+                                            <br>
+                                            <small class="text-muted">${new Date(entry.created_at).toLocaleDateString()}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        document.getElementById('trainingDataList').innerHTML = trainingHTML;
+                    }
+                } else {
+                    showError('Failed to load training data: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error loading training data: ' + error.message);
+            }
+        }
+
+        async function cleanupTrainingData() {
+            try {
+                const response = await fetch('/api/email/writing-style/cleanup', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showSuccess('Training data cleanup completed successfully');
+                    loadTrainingData(); // Refresh the training data list
+                } else {
+                    showError('Failed to cleanup training data: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error cleaning up training data: ' + error.message);
+            }
         }
     </script>
 </body>
