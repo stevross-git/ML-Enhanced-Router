@@ -128,3 +128,5 @@ beautifulsoup4
 docx
 redis
 graphene
+graphene
+graphql-core

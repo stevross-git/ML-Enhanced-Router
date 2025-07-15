@@ -5,8 +5,17 @@ Flask integration for GraphQL schema
 
 from flask import Blueprint, request, jsonify
 from graphql import graphql_sync, build_schema
-from graphql_schema import schema
 import json
+
+# Import the schema
+try:
+    from graphql_schema import schema
+    # Convert Graphene schema to GraphQL schema
+    graphql_schema = schema
+    print(f"GraphQL schema imported successfully: {type(graphql_schema)}")
+except ImportError as e:
+    print(f"Error importing GraphQL schema: {e}")
+    graphql_schema = None
 
 # Create GraphQL blueprint
 graphql_bp = Blueprint('graphql', __name__)
@@ -19,6 +28,10 @@ def graphql_endpoint():
         return graphql_playground()
     
     try:
+        # Check if schema is available
+        if graphql_schema is None:
+            return jsonify({'error': 'GraphQL schema not available'}), 503
+        
         # Parse request data
         if request.content_type and 'application/json' in request.content_type:
             data = request.get_json()
@@ -36,11 +49,10 @@ def graphql_endpoint():
         if not query:
             return jsonify({'error': 'No query provided'}), 400
         
-        # Execute GraphQL query
-        result = graphql_sync(
-            schema,
+        # Execute GraphQL query with graphene schema
+        result = graphql_schema.execute(
             query,
-            variable_values=variables,
+            variables=variables,
             operation_name=operation_name
         )
         

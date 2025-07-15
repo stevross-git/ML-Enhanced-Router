@@ -52,6 +52,26 @@ try:
 except ImportError:
     AutoChainGenerator = None
 
+try:
+    from cross_persona_memory import CrossPersonaMemorySystem
+except ImportError:
+    CrossPersonaMemorySystem = None
+
+try:
+    from cognitive_loop_debug import CognitiveLoopDebugger
+except ImportError:
+    CognitiveLoopDebugger = None
+
+try:
+    from temporal_memory_weighting import TemporalMemoryWeighting
+except ImportError:
+    TemporalMemoryWeighting = None
+
+try:
+    from personal_ai_router import PersonalAIRouter
+except ImportError:
+    PersonalAIRouter = None
+
 
 class AgentCapability(ObjectType):
     """Agent capability GraphQL type"""
@@ -217,6 +237,112 @@ class PredictionResult(ObjectType):
     metadata = String()
 
 
+# Enterprise Feature Types
+class CrossPersonaLinkage(ObjectType):
+    """Cross-persona linkage GraphQL type"""
+    persona_1 = String()
+    persona_2 = String()
+    linkage_type = String()
+    confidence = Float()
+    description = String()
+    created_at = String()
+
+
+class CrossPersonaInsight(ObjectType):
+    """Cross-persona insight GraphQL type"""
+    insight_type = String()
+    description = String()
+    confidence = Float()
+    recommendation = String()
+    personas_involved = List(String)
+    created_at = String()
+
+
+class CrossPersonaAnalysis(ObjectType):
+    """Cross-persona analysis result GraphQL type"""
+    linkages = List(CrossPersonaLinkage)
+    insights = List(CrossPersonaInsight)
+    compatibility_score = Float()
+    analysis_timestamp = String()
+
+
+class CognitiveDecision(ObjectType):
+    """Cognitive decision GraphQL type"""
+    decision_id = String()
+    decision_type = String()
+    decision_made = String()
+    reasoning = String()
+    confidence = Float()
+    context = String()
+    alternatives = List(String)
+    timestamp = String()
+    user_id = String()
+    session_id = String()
+
+
+class CognitiveExplanation(ObjectType):
+    """Cognitive decision explanation GraphQL type"""
+    decision_id = String()
+    explanation = String()
+    decision_path = List(String)
+    reasoning_factors = List(String)
+    alternative_paths = List(String)
+    confidence_breakdown = String()
+
+
+class CognitiveSession(ObjectType):
+    """Cognitive debugging session GraphQL type"""
+    session_id = String()
+    user_id = String()
+    started_at = String()
+    status = String()
+    decisions_count = Int()
+    metadata = String()
+
+
+class TemporalMemory(ObjectType):
+    """Temporal memory GraphQL type"""
+    memory_id = String()
+    content = String()
+    confidence = Float()
+    priority = String()
+    access_count = Int()
+    last_accessed = String()
+    created_at = String()
+    temporal_weight = Float()
+    relevance_score = Float()
+    decay_rate = Float()
+
+
+class TemporalMemoryInsight(ObjectType):
+    """Temporal memory insight GraphQL type"""
+    insight_type = String()
+    description = String()
+    confidence = Float()
+    recommendation = String()
+    memory_patterns = List(String)
+    optimization_suggestions = List(String)
+
+
+class TemporalMemoryOptimization(ObjectType):
+    """Temporal memory optimization result GraphQL type"""
+    memories_optimized = Int()
+    performance_improvement = Float()
+    storage_efficiency = Float()
+    optimization_type = String()
+    timestamp = String()
+
+
+class PersonalAIInsight(ObjectType):
+    """Personal AI insight GraphQL type"""
+    insight_type = String()
+    description = String()
+    confidence = Float()
+    recommendation = String()
+    persona_context = String()
+    created_at = String()
+
+
 class Query(ObjectType):
     """Main GraphQL Query type"""
     
@@ -252,6 +378,29 @@ class Query(ObjectType):
     analyze_chain = Field(ChainAnalysis, query=String(required=True))
     generate_chain = Field(AgentChain, query=String(required=True))
     execute_chain = Field(ChainExecution, query=String(required=True))
+    
+    # Enterprise Features
+    # Cross-Persona Memory Inference
+    cross_persona_analyze = Field(CrossPersonaAnalysis, 
+                                 persona_1=String(required=True),
+                                 persona_2=String(required=True),
+                                 persona_1_data=String(),
+                                 persona_2_data=String())
+    cross_persona_insights = List(CrossPersonaInsight, user_id=String())
+    cross_persona_linkages = List(CrossPersonaLinkage, user_id=String())
+    
+    # Cognitive Loop Debugging
+    cognitive_decisions = List(CognitiveDecision, user_id=String(), limit=Int(default_value=10))
+    cognitive_explanation = Field(CognitiveExplanation, decision_id=String(required=True))
+    cognitive_sessions = List(CognitiveSession, user_id=String())
+    
+    # Temporal Memory Weighting
+    temporal_memories = List(TemporalMemory, user_id=String(), limit=Int(default_value=10))
+    temporal_insights = List(TemporalMemoryInsight, user_id=String())
+    temporal_optimization = Field(TemporalMemoryOptimization, user_id=String(required=True))
+    
+    # Personal AI Insights
+    personal_ai_insights = List(PersonalAIInsight, user_id=String())
 
     def resolve_agents(self, info, active_only=False):
         """Resolve agents query"""
@@ -616,6 +765,298 @@ class Query(ObjectType):
         except Exception as e:
             print(f"Error getting prediction: {e}")
             return None
+    
+    # Enterprise Feature Resolvers
+    def resolve_cross_persona_analyze(self, info, persona_1, persona_2, persona_1_data=None, persona_2_data=None):
+        """Resolve cross-persona analysis query"""
+        try:
+            if not CrossPersonaMemorySystem:
+                return None
+            
+            cross_persona_system = CrossPersonaMemorySystem()
+            
+            # Parse persona data if provided
+            p1_data = json.loads(persona_1_data) if persona_1_data else {}
+            p2_data = json.loads(persona_2_data) if persona_2_data else {}
+            
+            # Analyze persona compatibility
+            analysis = cross_persona_system.analyze_persona_compatibility(
+                persona_1, persona_2, p1_data, p2_data
+            )
+            
+            # Format linkages
+            linkages = []
+            for linkage in analysis.get('linkages', []):
+                linkages.append(CrossPersonaLinkage(
+                    persona_1=linkage.get('persona_1', ''),
+                    persona_2=linkage.get('persona_2', ''),
+                    linkage_type=linkage.get('linkage_type', ''),
+                    confidence=linkage.get('confidence', 0.0),
+                    description=linkage.get('description', ''),
+                    created_at=linkage.get('created_at', datetime.now().isoformat())
+                ))
+            
+            # Format insights
+            insights = []
+            for insight in analysis.get('insights', []):
+                insights.append(CrossPersonaInsight(
+                    insight_type=insight.get('insight_type', ''),
+                    description=insight.get('description', ''),
+                    confidence=insight.get('confidence', 0.0),
+                    recommendation=insight.get('recommendation', ''),
+                    personas_involved=[persona_1, persona_2],
+                    created_at=insight.get('created_at', datetime.now().isoformat())
+                ))
+            
+            return CrossPersonaAnalysis(
+                linkages=linkages,
+                insights=insights,
+                compatibility_score=analysis.get('compatibility_score', 0.0),
+                analysis_timestamp=datetime.now().isoformat()
+            )
+            
+        except Exception as e:
+            print(f"Error analyzing cross-persona compatibility: {e}")
+            return None
+    
+    def resolve_cross_persona_insights(self, info, user_id=None):
+        """Resolve cross-persona insights query"""
+        try:
+            if not CrossPersonaMemorySystem:
+                return []
+            
+            cross_persona_system = CrossPersonaMemorySystem()
+            insights_data = cross_persona_system.get_insights(user_id or "default_user")
+            
+            insights = []
+            for insight in insights_data:
+                insights.append(CrossPersonaInsight(
+                    insight_type=insight.get('insight_type', ''),
+                    description=insight.get('description', ''),
+                    confidence=insight.get('confidence', 0.0),
+                    recommendation=insight.get('recommendation', ''),
+                    personas_involved=insight.get('personas_involved', []),
+                    created_at=insight.get('created_at', datetime.now().isoformat())
+                ))
+            
+            return insights
+            
+        except Exception as e:
+            print(f"Error getting cross-persona insights: {e}")
+            return []
+    
+    def resolve_cross_persona_linkages(self, info, user_id=None):
+        """Resolve cross-persona linkages query"""
+        try:
+            if not CrossPersonaMemorySystem:
+                return []
+            
+            cross_persona_system = CrossPersonaMemorySystem()
+            linkages_data = cross_persona_system.get_linkages(user_id or "default_user")
+            
+            linkages = []
+            for linkage in linkages_data:
+                linkages.append(CrossPersonaLinkage(
+                    persona_1=linkage.get('persona_1', ''),
+                    persona_2=linkage.get('persona_2', ''),
+                    linkage_type=linkage.get('linkage_type', ''),
+                    confidence=linkage.get('confidence', 0.0),
+                    description=linkage.get('description', ''),
+                    created_at=linkage.get('created_at', datetime.now().isoformat())
+                ))
+            
+            return linkages
+            
+        except Exception as e:
+            print(f"Error getting cross-persona linkages: {e}")
+            return []
+    
+    def resolve_cognitive_decisions(self, info, user_id=None, limit=10):
+        """Resolve cognitive decisions query"""
+        try:
+            if not CognitiveLoopDebugger:
+                return []
+            
+            cognitive_debugger = CognitiveLoopDebugger()
+            decisions_data = cognitive_debugger.get_decisions(user_id or "default_user", limit)
+            
+            decisions = []
+            for decision in decisions_data:
+                decisions.append(CognitiveDecision(
+                    decision_id=decision.get('decision_id', ''),
+                    decision_type=decision.get('decision_type', ''),
+                    decision_made=decision.get('decision_made', ''),
+                    reasoning=decision.get('reasoning', ''),
+                    confidence=decision.get('confidence', 0.0),
+                    context=json.dumps(decision.get('context', {})),
+                    alternatives=decision.get('alternatives', []),
+                    timestamp=decision.get('timestamp', datetime.now().isoformat()),
+                    user_id=decision.get('user_id', ''),
+                    session_id=decision.get('session_id', '')
+                ))
+            
+            return decisions
+            
+        except Exception as e:
+            print(f"Error getting cognitive decisions: {e}")
+            return []
+    
+    def resolve_cognitive_explanation(self, info, decision_id):
+        """Resolve cognitive explanation query"""
+        try:
+            if not CognitiveLoopDebugger:
+                return None
+            
+            cognitive_debugger = CognitiveLoopDebugger()
+            explanation = cognitive_debugger.explain_decision(decision_id)
+            
+            if explanation:
+                return CognitiveExplanation(
+                    decision_id=decision_id,
+                    explanation=explanation.get('explanation', ''),
+                    decision_path=explanation.get('decision_path', []),
+                    reasoning_factors=explanation.get('reasoning_factors', []),
+                    alternative_paths=explanation.get('alternative_paths', []),
+                    confidence_breakdown=json.dumps(explanation.get('confidence_breakdown', {}))
+                )
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error getting cognitive explanation: {e}")
+            return None
+    
+    def resolve_cognitive_sessions(self, info, user_id=None):
+        """Resolve cognitive sessions query"""
+        try:
+            if not CognitiveLoopDebugger:
+                return []
+            
+            cognitive_debugger = CognitiveLoopDebugger()
+            sessions_data = cognitive_debugger.get_sessions(user_id or "default_user")
+            
+            sessions = []
+            for session in sessions_data:
+                sessions.append(CognitiveSession(
+                    session_id=session.get('session_id', ''),
+                    user_id=session.get('user_id', ''),
+                    started_at=session.get('started_at', datetime.now().isoformat()),
+                    status=session.get('status', 'active'),
+                    decisions_count=session.get('decisions_count', 0),
+                    metadata=json.dumps(session.get('metadata', {}))
+                ))
+            
+            return sessions
+            
+        except Exception as e:
+            print(f"Error getting cognitive sessions: {e}")
+            return []
+    
+    def resolve_temporal_memories(self, info, user_id=None, limit=10):
+        """Resolve temporal memories query"""
+        try:
+            if not TemporalMemoryWeighting:
+                return []
+            
+            temporal_memory = TemporalMemoryWeighting()
+            memories_data = temporal_memory.get_memories(user_id or "default_user", limit)
+            
+            memories = []
+            for memory in memories_data:
+                memories.append(TemporalMemory(
+                    memory_id=memory.get('memory_id', ''),
+                    content=memory.get('content', ''),
+                    confidence=memory.get('confidence', 0.0),
+                    priority=memory.get('priority', 'medium'),
+                    access_count=memory.get('access_count', 0),
+                    last_accessed=memory.get('last_accessed', datetime.now().isoformat()),
+                    created_at=memory.get('created_at', datetime.now().isoformat()),
+                    temporal_weight=memory.get('temporal_weight', 0.0),
+                    relevance_score=memory.get('relevance_score', 0.0),
+                    decay_rate=memory.get('decay_rate', 0.0)
+                ))
+            
+            return memories
+            
+        except Exception as e:
+            print(f"Error getting temporal memories: {e}")
+            return []
+    
+    def resolve_temporal_insights(self, info, user_id=None):
+        """Resolve temporal memory insights query"""
+        try:
+            if not TemporalMemoryWeighting:
+                return []
+            
+            temporal_memory = TemporalMemoryWeighting()
+            insights_data = temporal_memory.get_insights(user_id or "default_user")
+            
+            insights = []
+            for insight in insights_data:
+                insights.append(TemporalMemoryInsight(
+                    insight_type=insight.get('insight_type', ''),
+                    description=insight.get('description', ''),
+                    confidence=insight.get('confidence', 0.0),
+                    recommendation=insight.get('recommendation', ''),
+                    memory_patterns=insight.get('memory_patterns', []),
+                    optimization_suggestions=insight.get('optimization_suggestions', [])
+                ))
+            
+            return insights
+            
+        except Exception as e:
+            print(f"Error getting temporal insights: {e}")
+            return []
+    
+    def resolve_temporal_optimization(self, info, user_id):
+        """Resolve temporal memory optimization query"""
+        try:
+            if not TemporalMemoryWeighting:
+                return None
+            
+            temporal_memory = TemporalMemoryWeighting()
+            optimization = temporal_memory.optimize_memory(user_id)
+            
+            if optimization:
+                return TemporalMemoryOptimization(
+                    memories_optimized=optimization.get('memories_optimized', 0),
+                    performance_improvement=optimization.get('performance_improvement', 0.0),
+                    storage_efficiency=optimization.get('storage_efficiency', 0.0),
+                    optimization_type=optimization.get('optimization_type', 'standard'),
+                    timestamp=datetime.now().isoformat()
+                )
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error optimizing temporal memory: {e}")
+            return None
+    
+    def resolve_personal_ai_insights(self, info, user_id=None):
+        """Resolve personal AI insights query"""
+        try:
+            if not PersonalAIRouter:
+                return []
+            
+            personal_ai = PersonalAIRouter()
+            insights_data = personal_ai.get_insights(user_id or "default_user")
+            
+            insights = []
+            for insight in insights_data:
+                insights.append(PersonalAIInsight(
+                    insight_type=insight.get('insight_type', ''),
+                    description=insight.get('description', ''),
+                    confidence=insight.get('confidence', 0.0),
+                    recommendation=insight.get('recommendation', ''),
+                    persona_context=insight.get('persona_context', ''),
+                    created_at=insight.get('created_at', datetime.now().isoformat())
+                ))
+            
+            return insights
+            
+        except Exception as e:
+            print(f"Error getting personal AI insights: {e}")
+            return []
 
 
 class ExecuteAgent(Mutation):
