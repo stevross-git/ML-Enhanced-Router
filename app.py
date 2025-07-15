@@ -4044,6 +4044,183 @@ def test_mood_analysis():
         logger.error(f"Error testing mood analysis: {e}")
         return jsonify({"error": str(e)}), 500
 
+# Advanced Features API Endpoints
+@app.route('/api/personal-ai/cross-persona/linkages', methods=['GET'])
+def get_persona_linkages():
+    """Get persona linkage graph"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'cross_persona_system'):
+            return jsonify({"error": "Cross-persona system not available"}), 503
+        
+        if not personal_ai_router.cross_persona_system:
+            return jsonify({"linkages": [], "graph": {"nodes": [], "edges": []}})
+        
+        linkage_graph = personal_ai_router.cross_persona_system.get_persona_linkage_graph(
+            personal_ai_router.user_id
+        )
+        
+        return jsonify({
+            "linkage_graph": linkage_graph,
+            "statistics": personal_ai_router.cross_persona_system.get_statistics()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting persona linkages: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/cross-persona/insights', methods=['GET'])
+def get_cross_persona_insights():
+    """Get cross-persona insights"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'cross_persona_system'):
+            return jsonify({"error": "Cross-persona system not available"}), 503
+        
+        if not personal_ai_router.cross_persona_system:
+            return jsonify({"insights": []})
+        
+        # Mock persona data for demonstration
+        persona_data = {
+            "work": {"skills": ["analysis", "communication"], "interests": ["technology", "productivity"]},
+            "creative": {"skills": ["writing", "design"], "interests": ["art", "music"]},
+            "casual": {"skills": ["conversation"], "interests": ["movies", "books"]}
+        }
+        
+        insights = personal_ai_router.cross_persona_system.generate_cross_persona_insights(
+            personal_ai_router.user_id, persona_data
+        )
+        
+        return jsonify({
+            "insights": [
+                {
+                    "type": insight.insight_type,
+                    "description": insight.description,
+                    "personas": insight.involved_personas,
+                    "confidence": insight.confidence,
+                    "evidence": insight.evidence,
+                    "suggestion": insight.suggestion,
+                    "timestamp": insight.timestamp.isoformat()
+                }
+                for insight in insights
+            ]
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting cross-persona insights: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/cognitive-debug/decisions', methods=['GET'])
+def get_cognitive_decisions():
+    """Get recent cognitive decisions"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'cognitive_debugger'):
+            return jsonify({"error": "Cognitive debugger not available"}), 503
+        
+        if not personal_ai_router.cognitive_debugger:
+            return jsonify({"decisions": []})
+        
+        limit = request.args.get('limit', 20, type=int)
+        decisions = personal_ai_router.cognitive_debugger.get_user_decisions(
+            personal_ai_router.user_id, limit
+        )
+        
+        return jsonify({
+            "decisions": [decision.to_dict() for decision in decisions],
+            "patterns": personal_ai_router.cognitive_debugger.get_decision_patterns(
+                personal_ai_router.user_id
+            )
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting cognitive decisions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/cognitive-debug/explain/<decision_id>', methods=['GET'])
+def explain_decision(decision_id):
+    """Get detailed explanation of a decision"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'cognitive_debugger'):
+            return jsonify({"error": "Cognitive debugger not available"}), 503
+        
+        if not personal_ai_router.cognitive_debugger:
+            return jsonify({"error": "Decision not found"}), 404
+        
+        explanation = personal_ai_router.cognitive_debugger.explain_decision(decision_id)
+        
+        return jsonify({"explanation": explanation})
+        
+    except Exception as e:
+        logger.error(f"Error explaining decision: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/temporal-memory/insights/<memory_id>', methods=['GET'])
+def get_memory_insights(memory_id):
+    """Get temporal insights for a memory"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'temporal_memory_system'):
+            return jsonify({"error": "Temporal memory system not available"}), 503
+        
+        if not personal_ai_router.temporal_memory_system:
+            return jsonify({"error": "Memory not found"}), 404
+        
+        insights = personal_ai_router.temporal_memory_system.get_memory_insights(memory_id)
+        
+        return jsonify({"insights": insights})
+        
+    except Exception as e:
+        logger.error(f"Error getting memory insights: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/temporal-memory/cleanup-suggestions', methods=['GET'])
+def get_cleanup_suggestions():
+    """Get memory cleanup suggestions"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'temporal_memory_system'):
+            return jsonify({"error": "Temporal memory system not available"}), 503
+        
+        if not personal_ai_router.temporal_memory_system:
+            return jsonify({"suggestions": []})
+        
+        suggestions = personal_ai_router.temporal_memory_system.suggest_memory_cleanup(
+            personal_ai_router.user_id
+        )
+        
+        return jsonify({
+            "suggestions": suggestions,
+            "statistics": personal_ai_router.temporal_memory_system.get_statistics()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting cleanup suggestions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/temporal-memory/pin', methods=['POST'])
+def pin_memory():
+    """Pin or unpin a memory"""
+    try:
+        if not personal_ai_router or not hasattr(personal_ai_router, 'temporal_memory_system'):
+            return jsonify({"error": "Temporal memory system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'memory_id' not in data:
+            return jsonify({'error': 'Memory ID is required'}), 400
+        
+        memory_id = data['memory_id']
+        pinned = data.get('pinned', True)
+        
+        success = personal_ai_router.temporal_memory_system.pin_memory(memory_id, pinned)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "message": f"Memory {'pinned' if pinned else 'unpinned'} successfully"
+            })
+        else:
+            return jsonify({"error": "Memory not found"}), 404
+            
+    except Exception as e:
+        logger.error(f"Error pinning memory: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Register GraphQL blueprint
 app.register_blueprint(graphql_bp)
 

@@ -39,10 +39,15 @@ except ImportError:
 try:
     from personal_memory import get_personal_memory_system, PersonaType, MemoryCategory
     from mood_aware_system import get_mood_aware_system, MoodType
+    from cross_persona_memory import get_cross_persona_system
+    from cognitive_loop_debug import get_cognitive_debugger
+    from temporal_memory_weighting import get_temporal_memory_system
     ENHANCED_MEMORY_AVAILABLE = True
+    ADVANCED_FEATURES_AVAILABLE = True
     logger.info("Enhanced memory and mood systems available")
 except ImportError:
     ENHANCED_MEMORY_AVAILABLE = False
+    ADVANCED_FEATURES_AVAILABLE = False
     logger.warning("Enhanced memory and mood systems not available")
 
 class QueryComplexity(Enum):
@@ -489,6 +494,29 @@ class PersonalAIRouter:
             self.enhanced_memory = None
             self.mood_system = None
             self.user_id = None
+        
+        # Initialize advanced features
+        if ADVANCED_FEATURES_AVAILABLE:
+            try:
+                self.cross_persona_system = get_cross_persona_system()
+                self.cognitive_debugger = get_cognitive_debugger()
+                self.temporal_memory_system = get_temporal_memory_system()
+                
+                # Start cognitive debugging session
+                self.current_debug_session = self.cognitive_debugger.start_session(self.user_id or "default_user")
+                
+                logger.info("Advanced features initialized (cross-persona, cognitive debugging, temporal memory)")
+            except Exception as e:
+                logger.error(f"Failed to initialize advanced features: {e}")
+                self.cross_persona_system = None
+                self.cognitive_debugger = None
+                self.temporal_memory_system = None
+                self.current_debug_session = None
+        else:
+            self.cross_persona_system = None
+            self.cognitive_debugger = None
+            self.temporal_memory_system = None
+            self.current_debug_session = None
         
         # Initialize P2P network capabilities
         self.p2p_network = None
