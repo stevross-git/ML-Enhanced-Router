@@ -336,6 +336,84 @@
                     </div>
                 </div>
                 
+                <!-- User Profile Builder -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user-circle me-2"></i>
+                            User Profile
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="profile-status">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <small class="text-muted ms-2">Checking profile...</small>
+                            </div>
+                        </div>
+                        
+                        <div id="profile-complete" style="display: none;">
+                            <div class="mb-2">
+                                <strong id="profile-name">Welcome!</strong>
+                                <div class="progress mb-2">
+                                    <div id="profile-completion" class="progress-bar bg-success" role="progressbar"></div>
+                                </div>
+                                <small class="text-muted">Profile <span id="profile-percentage">0%</span> complete</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="updateProfile()">
+                                <i class="fas fa-edit me-1"></i>
+                                Update Profile
+                            </button>
+                        </div>
+                        
+                        <div id="profile-builder" style="display: none;">
+                            <div class="mb-3">
+                                <div class="progress mb-2">
+                                    <div id="profile-progress" class="progress-bar bg-primary" role="progressbar"></div>
+                                </div>
+                                <small id="profile-progress-text" class="text-muted">Question 1 of 5</small>
+                            </div>
+                            
+                            <div id="profile-question" class="mb-3">
+                                <div id="profile-message" class="alert alert-info mb-2" style="display: none;"></div>
+                                <p id="profile-question-text" class="fw-bold"></p>
+                                <div id="profile-question-context" class="text-muted small mb-2" style="display: none;"></div>
+                                
+                                <div id="profile-question-choices" class="mb-2" style="display: none;">
+                                    <div class="d-grid gap-2">
+                                        <!-- Choice buttons will be inserted here -->
+                                    </div>
+                                </div>
+                                
+                                <div id="profile-question-input">
+                                    <textarea id="profile-answer" class="form-control" rows="3" placeholder="Tell me about yourself..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button id="profile-submit" class="btn btn-primary">
+                                    <i class="fas fa-arrow-right me-1"></i>
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="profile-welcome" style="display: none;">
+                            <div class="alert alert-primary">
+                                <i class="fas fa-robot me-2"></i>
+                                <strong>Welcome to Personal AI!</strong>
+                                <p class="mb-2">I'd love to get to know you better to provide more personalized assistance.</p>
+                                <button class="btn btn-sm btn-primary" onclick="startProfileBuilding()">
+                                    <i class="fas fa-play me-1"></i>
+                                    Start Profile Setup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Routing Strategy -->
                 <div class="card mb-3">
                     <div class="card-header">
@@ -493,15 +571,215 @@
         let chatHistory = [];
         let isProcessing = false;
         
+        // Profile Builder Variables
+        let currentQuestionId = null;
+        let currentQuestion = null;
+        let profileBuilderActive = false;
+        
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             checkOllamaStatus();
             refreshStats();
             loadPersonalMemory();
+            checkProfileStatus();
             
             // Auto-refresh stats every 30 seconds
             setInterval(refreshStats, 30000);
+            
+            // Profile submit button handler
+            document.getElementById('profile-submit').addEventListener('click', submitProfileAnswer);
+            
+            // Allow Enter key to submit profile answer
+            document.getElementById('profile-answer').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitProfileAnswer();
+                }
+            });
         });
+        
+        // Profile Builder Functions
+        function checkProfileStatus() {
+            fetch('/api/profile/status?user_id=default_user')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.has_profile && data.completion > 0.6) {
+                        // Show completed profile
+                        document.getElementById('profile-status').style.display = 'none';
+                        document.getElementById('profile-complete').style.display = 'block';
+                        document.getElementById('profile-name').textContent = `Welcome back, ${data.name}!`;
+                        document.getElementById('profile-completion').style.width = `${data.completion * 100}%`;
+                        document.getElementById('profile-percentage').textContent = `${Math.round(data.completion * 100)}%`;
+                    } else {
+                        // Show welcome message to start profile building
+                        document.getElementById('profile-status').style.display = 'none';
+                        document.getElementById('profile-welcome').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking profile status:', error);
+                    document.getElementById('profile-status').style.display = 'none';
+                    document.getElementById('profile-welcome').style.display = 'block';
+                });
+        }
+        
+        function startProfileBuilding() {
+            profileBuilderActive = true;
+            document.getElementById('profile-welcome').style.display = 'none';
+            document.getElementById('profile-builder').style.display = 'block';
+            
+            fetch('/api/profile/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: 'default_user'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started') {
+                    showProfileMessage(data.message);
+                    displayProfileQuestion(data.question, data.progress);
+                } else if (data.status === 'existing_profile') {
+                    showProfileMessage(data.message);
+                    checkProfileStatus();
+                } else {
+                    showProfileMessage('Sorry, I encountered an error starting the profile building process.');
+                }
+            })
+            .catch(error => {
+                console.error('Error starting profile building:', error);
+                showProfileMessage('Sorry, I encountered an error. Please try again.');
+            });
+        }
+        
+        function displayProfileQuestion(question, progress) {
+            currentQuestionId = question.id;
+            currentQuestion = question;
+            
+            // Update progress
+            const progressPercent = (progress.current / progress.total) * 100;
+            document.getElementById('profile-progress').style.width = `${progressPercent}%`;
+            document.getElementById('profile-progress-text').textContent = `Question ${progress.current} of ${progress.total}`;
+            
+            // Display question
+            document.getElementById('profile-question-text').textContent = question.text;
+            
+            // Show context if available
+            if (question.context) {
+                document.getElementById('profile-question-context').textContent = question.context;
+                document.getElementById('profile-question-context').style.display = 'block';
+            } else {
+                document.getElementById('profile-question-context').style.display = 'none';
+            }
+            
+            // Handle different question types
+            if (question.type === 'multiple_choice' && question.choices) {
+                // Show choices
+                const choicesDiv = document.getElementById('profile-question-choices');
+                const choicesContainer = choicesDiv.querySelector('.d-grid');
+                choicesContainer.innerHTML = '';
+                
+                question.choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'btn btn-outline-primary';
+                    button.textContent = choice;
+                    button.onclick = () => selectChoice(choice);
+                    choicesContainer.appendChild(button);
+                });
+                
+                choicesDiv.style.display = 'block';
+                document.getElementById('profile-question-input').style.display = 'none';
+            } else {
+                // Show text input
+                document.getElementById('profile-question-choices').style.display = 'none';
+                document.getElementById('profile-question-input').style.display = 'block';
+                document.getElementById('profile-answer').value = '';
+                document.getElementById('profile-answer').focus();
+            }
+        }
+        
+        function selectChoice(choice) {
+            document.getElementById('profile-answer').value = choice;
+            submitProfileAnswer();
+        }
+        
+        function submitProfileAnswer() {
+            const answer = document.getElementById('profile-answer').value.trim();
+            
+            if (!answer) {
+                showProfileMessage('Please provide an answer before continuing.');
+                return;
+            }
+            
+            if (!currentQuestionId) {
+                showProfileMessage('Error: No current question. Please refresh the page.');
+                return;
+            }
+            
+            // Disable submit button
+            const submitBtn = document.getElementById('profile-submit');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+            
+            fetch('/api/profile/respond', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: 'default_user',
+                    question_id: currentQuestionId,
+                    response: answer
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'next_question' || data.status === 'follow_up') {
+                    showProfileMessage(data.message);
+                    displayProfileQuestion(data.question, data.progress);
+                } else if (data.status === 'completed') {
+                    showProfileMessage(data.message);
+                    setTimeout(() => {
+                        profileBuilderActive = false;
+                        document.getElementById('profile-builder').style.display = 'none';
+                        checkProfileStatus();
+                    }, 3000);
+                } else {
+                    showProfileMessage('Sorry, I encountered an error processing your response.');
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting profile answer:', error);
+                showProfileMessage('Sorry, I encountered an error. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Continue';
+            });
+        }
+        
+        function showProfileMessage(message) {
+            const messageDiv = document.getElementById('profile-message');
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            // Auto-hide message after 5 seconds unless it's the completion message
+            if (!message.includes('Thank you for sharing')) {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function updateProfile() {
+            // Allow user to update existing profile
+            document.getElementById('profile-complete').style.display = 'none';
+            document.getElementById('profile-welcome').style.display = 'block';
+        }
         
         async function checkOllamaStatus() {
             try {

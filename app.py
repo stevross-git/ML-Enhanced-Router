@@ -36,7 +36,8 @@ from graphql_simple import graphql_bp
 from auto_chain_generator import AutoChainGenerator
 from automated_evaluation_engine import get_evaluation_engine
 from peer_teaching_system import get_peer_teaching_system, AgentSpecialization, LessonType, ConsensusMethod
-from personal_ai_router import get_personal_ai_router, QueryComplexity, QueryIntent, RoutingDecision
+from personal_ai_router import get_personal_ai_router
+from user_profile_builder import get_user_profile_builder
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -3710,6 +3711,91 @@ def personal_ai_chat():
         
     except Exception as e:
         logger.error(f"Error in personal AI chat: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# User Profile Builder API endpoints
+@app.route('/api/profile/start', methods=['POST'])
+def start_profile_building():
+    """Start profile building process for a user"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default_user')
+        
+        profile_builder = get_user_profile_builder()
+        result = profile_builder.start_profile_building(user_id)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error starting profile building: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/profile/respond', methods=['POST'])
+def handle_profile_response():
+    """Handle user response to profile question"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id', 'default_user')
+        question_id = data.get('question_id')
+        response = data.get('response')
+        
+        if not question_id or not response:
+            return jsonify({"error": "Question ID and response are required"}), 400
+        
+        profile_builder = get_user_profile_builder()
+        result = profile_builder.process_response(user_id, question_id, response)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error handling profile response: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/profile/status', methods=['GET'])
+def get_profile_status():
+    """Get user profile status"""
+    try:
+        user_id = request.args.get('user_id', 'default_user')
+        
+        profile_builder = get_user_profile_builder()
+        profile = profile_builder.get_user_profile(user_id)
+        
+        if profile:
+            return jsonify({
+                "has_profile": True,
+                "completion": profile.profile_completion,
+                "name": profile.personal_info.get("preferred_name", "User"),
+                "last_updated": profile.last_updated.isoformat() if profile.last_updated else None
+            })
+        else:
+            return jsonify({
+                "has_profile": False,
+                "completion": 0.0,
+                "name": None,
+                "last_updated": None
+            })
+        
+    except Exception as e:
+        logger.error(f"Error getting profile status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/profile/summary', methods=['GET'])
+def get_profile_summary():
+    """Get user profile summary"""
+    try:
+        user_id = request.args.get('user_id', 'default_user')
+        
+        profile_builder = get_user_profile_builder()
+        profile = profile_builder.get_user_profile(user_id)
+        
+        if profile:
+            summary = profile_builder._generate_profile_summary(profile)
+            return jsonify(summary)
+        else:
+            return jsonify({"error": "No profile found"}), 404
+        
+    except Exception as e:
+        logger.error(f"Error getting profile summary: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/personal-ai/memory', methods=['GET', 'POST'])
