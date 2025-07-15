@@ -77,9 +77,12 @@ function updateProviderGrid(models) {
         const statusClass = provider.active > 0 ? 'status-active' : 'status-warning';
         const statusText = provider.active > 0 ? 'Active' : 'No API Key';
         
+        // Get provider icon
+        const providerIcon = getProviderIcon(provider.name);
+        
         providerItem.innerHTML = `
             <div class="provider-logo">
-                <i class="fas fa-robot"></i>
+                <i class="${providerIcon}"></i>
             </div>
             <div class="fw-semibold">${provider.name.toUpperCase()}</div>
             <div class="text-muted small">${provider.active}/${provider.total} models</div>
@@ -91,6 +94,27 @@ function updateProviderGrid(models) {
         
         providerGrid.appendChild(providerItem);
     });
+}
+
+function getProviderIcon(provider) {
+    const icons = {
+        'openai': 'fas fa-brain',
+        'anthropic': 'fas fa-microscope',
+        'google': 'fab fa-google',
+        'xai': 'fas fa-rocket',
+        'azure': 'fab fa-microsoft',
+        'aws_bedrock': 'fab fa-aws',
+        'groq': 'fas fa-bolt',
+        'together': 'fas fa-users',
+        'fireworks': 'fas fa-fire',
+        'deepseek': 'fas fa-search',
+        'cerebras': 'fas fa-microchip',
+        'perplexity': 'fas fa-question-circle',
+        'ollama': 'fas fa-home',
+        'huggingface': 'fas fa-heart',
+        'replicate': 'fas fa-copy'
+    };
+    return icons[provider] || 'fas fa-robot';
 }
 
 function updateRecentActivity() {

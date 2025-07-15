@@ -36,6 +36,7 @@
             text-align: center;
             border: none;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: #495057;
         }
         .stats-number {
             font-size: 2.5rem;
@@ -97,16 +98,18 @@
             margin-top: 1rem;
         }
         .provider-item {
-            background: white;
+            background: #f8f9fa;
             padding: 1rem;
             border-radius: 8px;
             text-align: center;
             border: 1px solid #dee2e6;
             transition: all 0.3s ease;
+            color: #495057;
         }
         .provider-item:hover {
             border-color: #007bff;
             transform: translateY(-2px);
+            background: #e9ecef;
         }
         .provider-logo {
             width: 40px;
@@ -116,7 +119,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f8f9fa;
+            background: #007bff;
+            color: white;
+        }
+        .provider-item .fw-semibold {
+            color: #212529;
+        }
+        .provider-item .text-muted {
+            color: #6c757d !important;
         }
         .chart-container {
             height: 300px;
