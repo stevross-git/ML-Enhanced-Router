@@ -78,10 +78,11 @@ predictive_analytics_engine = None
 active_learning_system = None
 contextual_memory_router = None
 semantic_guardrail_system = None
+multimodal_ai_integration = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration
     
     try:
         with app.app_context():
@@ -107,10 +108,12 @@ def initialize_router():
             from active_learning_system import get_active_learning_system
             from contextual_memory_router import get_contextual_memory_router
             from semantic_guardrails import get_semantic_guardrail_system
+            from multimodal_ai_integration import get_multimodal_ai_integration
             
             active_learning_system = get_active_learning_system()
             contextual_memory_router = get_contextual_memory_router()
             semantic_guardrail_system = get_semantic_guardrail_system()
+            multimodal_ai_integration = get_multimodal_ai_integration(ai_model_manager)
             
             # Initialize ML models
             loop = asyncio.new_event_loop()
@@ -1714,6 +1717,11 @@ def collaborate_page():
     """Collaborative AI interface page"""
     return render_template('collaborate.html')
 
+@app.route('/multimodal')
+def multimodal_page():
+    """Multi-modal AI processing interface"""
+    return render_template('multimodal.html')
+
 @app.route('/api/collaborate/agents', methods=['GET'])
 def get_collaborative_agents():
     """Get collaborative agent configurations"""
@@ -2428,6 +2436,315 @@ def report_false_positive():
         return jsonify({"success": True, "message": "False positive reported"})
     except Exception as e:
         logger.error(f"Error reporting false positive: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Multi-Modal AI Integration Endpoints
+@app.route('/api/multimodal/process', methods=['POST'])
+def process_multimodal_content():
+    """Process multi-modal content (image, audio, document)"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        # Handle file upload
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Get processing options
+        processing_type = request.form.get('processing_type', 'auto')
+        options = {
+            'analysis_type': request.form.get('analysis_type', 'general'),
+            'language': request.form.get('language', 'auto'),
+            'style': request.form.get('style', 'realistic')
+        }
+        
+        # Save uploaded file temporarily
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as temp_file:
+            file.save(temp_file.name)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Process the file
+            result = asyncio.run(multimodal_ai_integration.process_media(
+                temp_file_path, processing_type, options
+            ))
+            
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+            
+            return jsonify({
+                "processing_result": {
+                    "status": result.status.value,
+                    "processing_type": result.processing_type,
+                    "result": result.result,
+                    "confidence": result.confidence,
+                    "processing_time": result.processing_time,
+                    "error_message": result.error_message,
+                    "timestamp": result.timestamp.isoformat()
+                }
+            })
+            
+        except Exception as e:
+            # Clean up temporary file on error
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            raise e
+            
+    except Exception as e:
+        logger.error(f"Error processing multi-modal content: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/multimodal/generate', methods=['POST'])
+def generate_multimodal_content():
+    """Generate multi-modal content (image, audio)"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'content_type' not in data or 'prompt' not in data:
+            return jsonify({"error": "Content type and prompt are required"}), 400
+        
+        content_type = data['content_type']
+        prompt = data['prompt']
+        options = data.get('options', {})
+        
+        # Generate content
+        result = asyncio.run(multimodal_ai_integration.generate_content(
+            content_type, prompt, options
+        ))
+        
+        return jsonify({
+            "generation_result": {
+                "status": result.status.value,
+                "processing_type": result.processing_type,
+                "result": result.result,
+                "confidence": result.confidence,
+                "processing_time": result.processing_time,
+                "error_message": result.error_message,
+                "timestamp": result.timestamp.isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating multi-modal content: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/multimodal/analyze-image', methods=['POST'])
+def analyze_image():
+    """Analyze image content with AI"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        # Handle file upload or base64 data
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"error": "No file selected"}), 400
+            
+            # Save uploaded file temporarily
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as temp_file:
+                file.save(temp_file.name)
+                temp_file_path = temp_file.name
+        else:
+            return jsonify({"error": "No image file provided"}), 400
+        
+        analysis_type = request.form.get('analysis_type', 'general')
+        
+        try:
+            # Analyze image
+            result = asyncio.run(multimodal_ai_integration.image_processor.analyze_image(
+                temp_file_path, analysis_type
+            ))
+            
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+            
+            return jsonify({
+                "image_analysis": {
+                    "status": result.status.value,
+                    "analysis_type": analysis_type,
+                    "result": result.result,
+                    "confidence": result.confidence,
+                    "processing_time": result.processing_time,
+                    "error_message": result.error_message
+                }
+            })
+            
+        except Exception as e:
+            # Clean up temporary file on error
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            raise e
+            
+    except Exception as e:
+        logger.error(f"Error analyzing image: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/multimodal/transcribe-audio', methods=['POST'])
+def transcribe_audio():
+    """Transcribe audio to text"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        # Handle file upload
+        if 'file' not in request.files:
+            return jsonify({"error": "No audio file provided"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Save uploaded file temporarily
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as temp_file:
+            file.save(temp_file.name)
+            temp_file_path = temp_file.name
+        
+        language = request.form.get('language', 'auto')
+        
+        try:
+            # Transcribe audio
+            result = asyncio.run(multimodal_ai_integration.audio_processor.transcribe_audio(
+                temp_file_path, language
+            ))
+            
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+            
+            return jsonify({
+                "transcription": {
+                    "status": result.status.value,
+                    "language": language,
+                    "result": result.result,
+                    "confidence": result.confidence,
+                    "processing_time": result.processing_time,
+                    "error_message": result.error_message
+                }
+            })
+            
+        except Exception as e:
+            # Clean up temporary file on error
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            raise e
+            
+    except Exception as e:
+        logger.error(f"Error transcribing audio: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/multimodal/generate-speech', methods=['POST'])
+def generate_speech():
+    """Generate speech from text"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({"error": "Text is required"}), 400
+        
+        text = data['text']
+        voice = data.get('voice', 'neutral')
+        
+        # Generate speech
+        result = asyncio.run(multimodal_ai_integration.audio_processor.generate_speech(
+            text, voice
+        ))
+        
+        return jsonify({
+            "speech_generation": {
+                "status": result.status.value,
+                "text": text,
+                "voice": voice,
+                "result": result.result,
+                "confidence": result.confidence,
+                "processing_time": result.processing_time,
+                "error_message": result.error_message
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating speech: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/multimodal/analyze-document', methods=['POST'])
+def analyze_document():
+    """Analyze document content with AI"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        # Handle file upload
+        if 'file' not in request.files:
+            return jsonify({"error": "No document file provided"}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Save uploaded file temporarily
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{file.filename}") as temp_file:
+            file.save(temp_file.name)
+            temp_file_path = temp_file.name
+        
+        analysis_type = request.form.get('analysis_type', 'summary')
+        
+        try:
+            # Analyze document
+            result = asyncio.run(multimodal_ai_integration.document_processor.analyze_document(
+                temp_file_path, analysis_type
+            ))
+            
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+            
+            return jsonify({
+                "document_analysis": {
+                    "status": result.status.value,
+                    "analysis_type": analysis_type,
+                    "result": result.result,
+                    "confidence": result.confidence,
+                    "processing_time": result.processing_time,
+                    "error_message": result.error_message
+                }
+            })
+            
+        except Exception as e:
+            # Clean up temporary file on error
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+            raise e
+            
+    except Exception as e:
+        logger.error(f"Error analyzing document: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/multimodal/stats', methods=['GET'])
+def get_multimodal_stats():
+    """Get multi-modal processing statistics"""
+    try:
+        if not multimodal_ai_integration:
+            return jsonify({"error": "Multi-modal AI integration not available"}), 503
+        
+        stats = multimodal_ai_integration.get_stats()
+        
+        return jsonify({
+            "multimodal_stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting multi-modal stats: {e}")
         return jsonify({"error": str(e)}), 500
 
 # Initialize database

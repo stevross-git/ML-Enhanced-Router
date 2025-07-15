@@ -1570,6 +1570,273 @@ swagger_spec = {
                     }
                 }
             }
+        },
+        '/api/multimodal/process': {
+            'post': {
+                'tags': ['Multi-Modal AI'],
+                'summary': 'Process multi-modal content',
+                'description': 'Process image, audio, or document files with AI',
+                'requestBody': {
+                    'required': True,
+                    'content': {
+                        'multipart/form-data': {
+                            'schema': {
+                                'type': 'object',
+                                'properties': {
+                                    'file': {
+                                        'type': 'string',
+                                        'format': 'binary',
+                                        'description': 'File to process'
+                                    },
+                                    'processing_type': {
+                                        'type': 'string',
+                                        'default': 'auto',
+                                        'description': 'Type of processing to perform'
+                                    },
+                                    'analysis_type': {
+                                        'type': 'string',
+                                        'default': 'general',
+                                        'description': 'Analysis type for the content'
+                                    }
+                                },
+                                'required': ['file']
+                            }
+                        }
+                    }
+                },
+                'responses': {
+                    '200': {
+                        'description': 'Content processed successfully',
+                        'content': {
+                            'application/json': {
+                                'schema': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'processing_result': {
+                                            '$ref': '#/components/schemas/ProcessingResult'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    '400': {'description': 'Invalid request'},
+                    '500': {'description': 'Internal server error'}
+                }
+            }
+        },
+        '/api/multimodal/generate': {
+            'post': {
+                'tags': ['Multi-Modal AI'],
+                'summary': 'Generate multi-modal content',
+                'description': 'Generate image or audio content using AI',
+                'requestBody': {
+                    'required': True,
+                    'content': {
+                        'application/json': {
+                            'schema': {
+                                'type': 'object',
+                                'properties': {
+                                    'content_type': {
+                                        'type': 'string',
+                                        'enum': ['image', 'audio'],
+                                        'description': 'Type of content to generate'
+                                    },
+                                    'prompt': {
+                                        'type': 'string',
+                                        'description': 'Prompt for content generation'
+                                    },
+                                    'options': {
+                                        'type': 'object',
+                                        'description': 'Generation options'
+                                    }
+                                },
+                                'required': ['content_type', 'prompt']
+                            }
+                        }
+                    }
+                },
+                'responses': {
+                    '200': {
+                        'description': 'Content generated successfully',
+                        'content': {
+                            'application/json': {
+                                'schema': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'generation_result': {
+                                            '$ref': '#/components/schemas/ProcessingResult'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    '400': {'description': 'Invalid request'},
+                    '500': {'description': 'Internal server error'}
+                }
+            }
+        },
+        '/api/multimodal/analyze-image': {
+            'post': {
+                'tags': ['Multi-Modal AI'],
+                'summary': 'Analyze image content',
+                'description': 'Analyze image content with AI',
+                'requestBody': {
+                    'required': True,
+                    'content': {
+                        'multipart/form-data': {
+                            'schema': {
+                                'type': 'object',
+                                'properties': {
+                                    'file': {
+                                        'type': 'string',
+                                        'format': 'binary',
+                                        'description': 'Image file to analyze'
+                                    },
+                                    'analysis_type': {
+                                        'type': 'string',
+                                        'enum': ['general', 'technical', 'creative', 'object_detection', 'text_extraction', 'safety_check'],
+                                        'default': 'general',
+                                        'description': 'Type of image analysis'
+                                    }
+                                },
+                                'required': ['file']
+                            }
+                        }
+                    }
+                },
+                'responses': {
+                    '200': {
+                        'description': 'Image analyzed successfully',
+                        'content': {
+                            'application/json': {
+                                'schema': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'image_analysis': {
+                                            '$ref': '#/components/schemas/ProcessingResult'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    '400': {'description': 'Invalid request'},
+                    '500': {'description': 'Internal server error'}
+                }
+            }
+        },
+        '/api/multimodal/stats': {
+            'get': {
+                'tags': ['Multi-Modal AI'],
+                'summary': 'Get multi-modal processing statistics',
+                'description': 'Get comprehensive statistics for multi-modal AI processing',
+                'responses': {
+                    '200': {
+                        'description': 'Statistics retrieved successfully',
+                        'content': {
+                            'application/json': {
+                                'schema': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'multimodal_stats': {
+                                            'type': 'object',
+                                            'properties': {
+                                                'total_processed': {'type': 'integer'},
+                                                'successful_processed': {'type': 'integer'},
+                                                'success_rate': {'type': 'number'},
+                                                'average_processing_time': {'type': 'number'},
+                                                'by_type': {
+                                                    'type': 'object',
+                                                    'properties': {
+                                                        'image': {'type': 'integer'},
+                                                        'audio': {'type': 'integer'},
+                                                        'document': {'type': 'integer'}
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    '500': {'description': 'Internal server error'}
+                }
+            }
+        }
+    },
+    'components': {
+        'schemas': {
+            'ProcessingResult': {
+                'type': 'object',
+                'properties': {
+                    'status': {'type': 'string'},
+                    'processing_type': {'type': 'string'},
+                    'result': {'type': 'object'},
+                    'confidence': {'type': 'number'},
+                    'processing_time': {'type': 'number'},
+                    'error_message': {'type': 'string'},
+                    'timestamp': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'MediaFile': {
+                'type': 'object',
+                'properties': {
+                    'file_path': {'type': 'string'},
+                    'file_type': {'type': 'string'},
+                    'mime_type': {'type': 'string'},
+                    'size_bytes': {'type': 'integer'},
+                    'created_at': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'ExternalLLMResponse': {
+                'type': 'object',
+                'properties': {
+                    'response': {'type': 'string'},
+                    'provider': {'type': 'string'},
+                    'complexity': {'type': 'string'},
+                    'processing_time': {'type': 'number'},
+                    'success': {'type': 'boolean'},
+                    'error': {'type': 'string'}
+                }
+            },
+            'ExternalProvider': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'string'},
+                    'name': {'type': 'string'},
+                    'endpoint': {'type': 'string'},
+                    'max_tokens': {'type': 'integer'},
+                    'cost_per_1k_tokens': {'type': 'number'},
+                    'rate_limit_rpm': {'type': 'integer'},
+                    'specializations': {'type': 'array', 'items': {'type': 'string'}},
+                    'api_key_available': {'type': 'boolean'}
+                }
+            },
+            'ExternalLLMMetrics': {
+                'type': 'object',
+                'properties': {
+                    'total_queries': {'type': 'integer'},
+                    'successful_queries': {'type': 'integer'},
+                    'failed_queries': {'type': 'integer'},
+                    'average_response_time': {'type': 'number'},
+                    'provider_breakdown': {
+                        'type': 'object',
+                        'additionalProperties': {
+                            'type': 'object',
+                            'properties': {
+                                'total_requests': {'type': 'integer'},
+                                'successful_requests': {'type': 'integer'},
+                                'failed_requests': {'type': 'integer'},
+                                'avg_response_time': {'type': 'number'},
+                                'rate_limit_hits': {'type': 'integer'}
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
