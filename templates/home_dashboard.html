@@ -7,36 +7,21 @@
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .hero-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 3rem 0;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-        }
         .feature-card {
             transition: all 0.3s ease;
-            border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         .feature-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
         }
         .stats-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
             text-align: center;
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            color: #495057;
         }
         .stats-number {
             font-size: 2.5rem;
@@ -53,7 +38,6 @@
             width: 100%;
             padding: 1rem;
             border-radius: 8px;
-            border: none;
             font-size: 1.1rem;
             font-weight: 500;
             transition: all 0.3s ease;
@@ -61,7 +45,6 @@
         }
         .quick-action-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         .status-indicator {
             width: 12px;
@@ -77,7 +60,7 @@
             display: flex;
             align-items: center;
             padding: 0.75rem;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid #dee2e6;
         }
         .activity-item:last-child {
             border-bottom: none;
@@ -98,18 +81,14 @@
             margin-top: 1rem;
         }
         .provider-item {
-            background: #f8f9fa;
             padding: 1rem;
             border-radius: 8px;
             text-align: center;
-            border: 1px solid #dee2e6;
             transition: all 0.3s ease;
-            color: #495057;
         }
         .provider-item:hover {
             border-color: #007bff;
             transform: translateY(-2px);
-            background: #e9ecef;
         }
         .provider-logo {
             width: 40px;
@@ -122,19 +101,16 @@
             background: #007bff;
             color: white;
         }
-        .provider-item .fw-semibold {
-            color: #212529;
-        }
-        .provider-item .text-muted {
-            color: #6c757d !important;
-        }
-        .chart-container {
-            height: 300px;
-            position: relative;
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 0;
+            border-radius: 8px;
+            margin-bottom: 2rem;
         }
         .system-health-bar {
             height: 20px;
-            background: #e9ecef;
+            background: rgba(255,255,255,0.3);
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 1rem;
@@ -147,47 +123,6 @@
     </style>
 </head>
 <body>
-    <!-- Hero Section -->
-    <div class="hero-section">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="display-4 mb-3">
-                        <i class="fas fa-robot me-3"></i>
-                        ML Router Platform
-                    </h1>
-                    <p class="lead mb-4">
-                        Intelligent AI routing system with 32+ models, multi-modal capabilities, and enterprise-grade features
-                    </p>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <button class="btn btn-light btn-lg quick-action-btn" onclick="location.href='/chat'">
-                                <i class="fas fa-comments me-2"></i>
-                                Start Chat
-                            </button>
-                        </div>
-                        <div class="col-md-6">
-                            <button class="btn btn-outline-light btn-lg quick-action-btn" onclick="location.href='/api-keys'">
-                                <i class="fas fa-key me-2"></i>
-                                Configure API Keys
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="system-health-bar">
-                        <div class="health-fill" id="systemHealthBar" style="width: 85%"></div>
-                    </div>
-                    <h4 class="mb-0">System Health</h4>
-                    <p class="mb-0">
-                        <span class="status-indicator status-active"></span>
-                        <span id="systemHealthText">Excellent</span>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
@@ -226,31 +161,77 @@
         </div>
     </nav>
 
+    <!-- Hero Section -->
     <div class="container mt-4">
+        <div class="hero-section">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-6 mb-3">
+                        <i class="fas fa-robot me-3"></i>
+                        ML Router Platform
+                    </h1>
+                    <p class="lead mb-4">
+                        Intelligent AI routing system with 32+ models, multi-modal capabilities, and enterprise-grade features
+                    </p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-light btn-lg quick-action-btn" onclick="location.href='/chat'">
+                                <i class="fas fa-comments me-2"></i>
+                                Start Chat
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-light btn-lg quick-action-btn" onclick="location.href='/api-keys'">
+                                <i class="fas fa-key me-2"></i>
+                                Configure API Keys
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="system-health-bar">
+                        <div class="health-fill" id="systemHealthBar" style="width: 85%"></div>
+                    </div>
+                    <h4 class="mb-0">System Health</h4>
+                    <p class="mb-0">
+                        <span class="status-indicator status-active"></span>
+                        <span id="systemHealthText">Excellent</span>
+                    </p>
+                </div>
+            </div>
+        </div>
         <!-- System Statistics -->
         <div class="row mb-4">
             <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number text-primary" id="totalModels">32</div>
-                    <div class="stats-label">AI Models</div>
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="stats-number text-primary" id="totalModels">32</div>
+                        <div class="stats-label">AI Models</div>
+                    </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number text-success" id="activeModels">0</div>
-                    <div class="stats-label">Active Models</div>
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="stats-number text-success" id="activeModels">0</div>
+                        <div class="stats-label">Active Models</div>
+                    </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number text-info" id="totalQueries">0</div>
-                    <div class="stats-label">Total Queries</div>
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="stats-number text-info" id="totalQueries">0</div>
+                        <div class="stats-label">Total Queries</div>
+                    </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="stats-card">
-                    <div class="stats-number text-warning" id="totalAgents">0</div>
-                    <div class="stats-label">Registered Agents</div>
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="stats-number text-warning" id="totalAgents">0</div>
+                        <div class="stats-label">Registered Agents</div>
+                    </div>
                 </div>
             </div>
         </div>

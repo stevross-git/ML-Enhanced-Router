@@ -72,7 +72,7 @@ function updateProviderGrid(models) {
     providerGrid.innerHTML = '';
     Object.values(providerCounts).forEach(provider => {
         const providerItem = document.createElement('div');
-        providerItem.className = 'provider-item';
+        providerItem.className = 'card provider-item h-100';
         
         const statusClass = provider.active > 0 ? 'status-active' : 'status-warning';
         const statusText = provider.active > 0 ? 'Active' : 'No API Key';
@@ -81,14 +81,16 @@ function updateProviderGrid(models) {
         const providerIcon = getProviderIcon(provider.name);
         
         providerItem.innerHTML = `
-            <div class="provider-logo">
-                <i class="${providerIcon}"></i>
-            </div>
-            <div class="fw-semibold">${provider.name.toUpperCase()}</div>
-            <div class="text-muted small">${provider.active}/${provider.total} models</div>
-            <div class="mt-2">
-                <span class="status-indicator ${statusClass}"></span>
-                <span class="small">${statusText}</span>
+            <div class="card-body">
+                <div class="provider-logo">
+                    <i class="${providerIcon}"></i>
+                </div>
+                <div class="fw-semibold">${provider.name.toUpperCase()}</div>
+                <div class="text-muted small">${provider.active}/${provider.total} models</div>
+                <div class="mt-2">
+                    <span class="status-indicator ${statusClass}"></span>
+                    <span class="small">${statusText}</span>
+                </div>
             </div>
         `;
         
