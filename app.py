@@ -31,6 +31,7 @@ from intelligent_routing_engine import IntelligentRoutingEngine
 from real_time_analytics import RealTimeAnalytics
 from advanced_query_optimizer import AdvancedQueryOptimizer
 from predictive_analytics_engine import PredictiveAnalyticsEngine
+from graphql_simple import graphql_bp
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -2931,6 +2932,9 @@ def get_multimodal_stats():
     except Exception as e:
         logger.error(f"Error getting multi-modal stats: {e}")
         return jsonify({"error": str(e)}), 500
+
+# Register GraphQL blueprint
+app.register_blueprint(graphql_bp)
 
 # Initialize database
 with app.app_context():
