@@ -6,8 +6,8 @@ swagger_spec = {
     "openapi": "3.0.3",
     "info": {
         "title": "ML Query Router API",
-        "description": "A Flask-based ML-Enhanced Query Router with intelligent agent routing, AI model management, and RAG capabilities",
-        "version": "1.0.0",
+        "description": "A Flask-based ML-Enhanced Query Router with intelligent agent routing, AI model management, RAG capabilities, and enterprise features including Cross-Persona Memory Inference, Cognitive Loop Debugging, and Temporal Memory Weighting",
+        "version": "2.0.0",
         "contact": {
             "name": "API Support",
             "email": "support@example.com"
@@ -63,6 +63,22 @@ swagger_spec = {
         {
             "name": "Auto Chain Generator",
             "description": "Dynamic multi-step agent chain composition"
+        },
+        {
+            "name": "Cross-Persona Memory",
+            "description": "Cross-persona memory inference and linkage analysis"
+        },
+        {
+            "name": "Cognitive Debugging",
+            "description": "AI decision tracking and cognitive loop debugging"
+        },
+        {
+            "name": "Temporal Memory",
+            "description": "Time-aware memory weighting and relevance management"
+        },
+        {
+            "name": "Enterprise Features",
+            "description": "Advanced enterprise AI features and analytics"
         }
     ],
     "paths": {
@@ -2103,6 +2119,341 @@ swagger_spec = {
                     }
                 }
             }
+        },
+        "/api/cross-persona/analyze": {
+            "post": {
+                "tags": ["Cross-Persona Memory"],
+                "summary": "Analyze persona compatibility",
+                "description": "Analyze compatibility between two personas and generate linkage suggestions",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "persona_1": {"type": "string"},
+                                    "persona_2": {"type": "string"},
+                                    "persona_1_data": {"type": "object"},
+                                    "persona_2_data": {"type": "object"}
+                                },
+                                "required": ["persona_1", "persona_2"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Persona compatibility analysis completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "linkages": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/CrossPersonaLinkage"}
+                                        },
+                                        "compatibility_score": {"type": "number"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/cross-persona/linkage-graph": {
+            "get": {
+                "tags": ["Cross-Persona Memory"],
+                "summary": "Get persona linkage graph",
+                "description": "Generate a graph representation of persona linkages",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID to get linkages for",
+                        "schema": {"type": "string"}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Persona linkage graph generated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "nodes": {"type": "array", "items": {"type": "object"}},
+                                        "edges": {"type": "array", "items": {"type": "object"}},
+                                        "metadata": {"type": "object"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/cross-persona/insights": {
+            "get": {
+                "tags": ["Cross-Persona Memory"],
+                "summary": "Get cross-persona insights",
+                "description": "Generate insights from cross-persona analysis",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID to get insights for",
+                        "schema": {"type": "string"}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cross-persona insights generated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "insights": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/EnterpriseInsight"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/cognitive/decisions": {
+            "get": {
+                "tags": ["Cognitive Debugging"],
+                "summary": "Get cognitive decisions",
+                "description": "Retrieve logged AI decisions for a user",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID to get decisions for",
+                        "schema": {"type": "string"}
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of decisions to return",
+                        "schema": {"type": "integer", "default": 10}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Cognitive decisions retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "decisions": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/CognitiveDecision"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/cognitive/explain": {
+            "post": {
+                "tags": ["Cognitive Debugging"],
+                "summary": "Explain cognitive decision",
+                "description": "Get detailed explanation of a specific decision",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "decision_id": {"type": "string"}
+                                },
+                                "required": ["decision_id"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Decision explanation generated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "explanation": {"type": "object"},
+                                        "decision_path": {"type": "array", "items": {"type": "string"}},
+                                        "alternative_paths": {"type": "array", "items": {"type": "string"}}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/cognitive/session": {
+            "post": {
+                "tags": ["Cognitive Debugging"],
+                "summary": "Start cognitive debugging session",
+                "description": "Start a new cognitive debugging session",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user_id": {"type": "string"},
+                                    "session_metadata": {"type": "object"}
+                                },
+                                "required": ["user_id"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Debugging session started",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "session_id": {"type": "string"},
+                                        "started_at": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/temporal/memories": {
+            "get": {
+                "tags": ["Temporal Memory"],
+                "summary": "Get temporal memories",
+                "description": "Retrieve time-weighted memories for a user",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID to get memories for",
+                        "schema": {"type": "string"}
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of memories to return",
+                        "schema": {"type": "integer", "default": 10}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Temporal memories retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "memories": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/TemporalMemory"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/temporal/insights": {
+            "get": {
+                "tags": ["Temporal Memory"],
+                "summary": "Get temporal memory insights",
+                "description": "Generate insights from temporal memory analysis",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "User ID to get insights for",
+                        "schema": {"type": "string"}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Temporal memory insights generated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "insights": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/EnterpriseInsight"}
+                                        },
+                                        "memory_statistics": {"type": "object"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/temporal/optimize": {
+            "post": {
+                "tags": ["Temporal Memory"],
+                "summary": "Optimize temporal memory",
+                "description": "Optimize memory storage based on temporal patterns",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "user_id": {"type": "string"},
+                                    "optimization_type": {"type": "string"}
+                                },
+                                "required": ["user_id"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Memory optimization completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "optimization_results": {"type": "object"},
+                                        "memories_optimized": {"type": "integer"},
+                                        "performance_improvement": {"type": "number"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     'components': {
@@ -2269,6 +2620,58 @@ swagger_spec = {
                             }
                         }
                     }
+                }
+            },
+            'CrossPersonaLinkage': {
+                'type': 'object',
+                'properties': {
+                    'persona_1': {'type': 'string'},
+                    'persona_2': {'type': 'string'},
+                    'linkage_type': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'description': {'type': 'string'},
+                    'created_at': {'type': 'string', 'format': 'date-time'},
+                    'usage_count': {'type': 'integer'},
+                    'user_approved': {'type': 'boolean'}
+                }
+            },
+            'CognitiveDecision': {
+                'type': 'object',
+                'properties': {
+                    'decision_id': {'type': 'string'},
+                    'decision_type': {'type': 'string'},
+                    'decision_made': {'type': 'string'},
+                    'reasoning': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'context': {'type': 'object'},
+                    'alternatives': {'type': 'array', 'items': {'type': 'string'}},
+                    'timestamp': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'TemporalMemory': {
+                'type': 'object',
+                'properties': {
+                    'memory_id': {'type': 'string'},
+                    'content': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'priority': {'type': 'string'},
+                    'access_count': {'type': 'integer'},
+                    'last_accessed': {'type': 'string', 'format': 'date-time'},
+                    'created_at': {'type': 'string', 'format': 'date-time'},
+                    'temporal_weight': {'type': 'number'},
+                    'relevance_score': {'type': 'number'}
+                }
+            },
+            'EnterpriseInsight': {
+                'type': 'object',
+                'properties': {
+                    'insight_type': {'type': 'string'},
+                    'description': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'involved_entities': {'type': 'array', 'items': {'type': 'string'}},
+                    'evidence': {'type': 'array', 'items': {'type': 'string'}},
+                    'recommendation': {'type': 'string'},
+                    'timestamp': {'type': 'string', 'format': 'date-time'}
                 }
             }
         }

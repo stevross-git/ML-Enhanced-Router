@@ -1,7 +1,7 @@
 # Network Deployment Guide
 
 ## Overview
-This guide explains how to deploy the ML Router application to your AI network infrastructure with full network integration capabilities including service discovery, load balancing, and distributed caching.
+This guide explains how to deploy the ML Router application to your AI network infrastructure with full network integration capabilities including service discovery, load balancing, distributed caching, and enterprise features including Cross-Persona Memory Inference, Cognitive Loop Debugging, and Temporal Memory Weighting.
 
 ## Deployment Options
 
@@ -195,6 +195,47 @@ The Kubernetes deployment includes:
 - Horizontal pod autoscaling
 - Network service discovery
 - Load balancing across pods
+
+## Enterprise Features Configuration
+
+### Cross-Persona Memory Inference
+- **Database Setup**: Creates dedicated tables for persona linkages and memory bridges
+- **Configuration**: Automatic initialization with Personal AI router
+- **Memory Management**: Handles persona compatibility analysis and memory bridging
+- **API Integration**: Provides REST endpoints for linkage analysis and insights
+
+### Cognitive Loop Debugging
+- **Decision Tracking**: Logs all AI routing decisions with confidence scores
+- **Session Management**: Supports session-based debugging with unique session IDs
+- **Performance Monitoring**: Tracks decision patterns and optimization opportunities
+- **Real-time Analysis**: Provides immediate feedback on AI decision-making processes
+
+### Temporal Memory Weighting
+- **Memory Prioritization**: Manages memory importance based on temporal context
+- **Intelligent Decay**: Automatically reduces memory relevance over time
+- **Access Pattern Learning**: Optimizes memory storage based on usage patterns
+- **Dynamic Relevance**: Calculates time-based relevance scores for retrieval
+
+### Enterprise Configuration Variables
+```bash
+# Cross-Persona Memory Inference
+CROSS_PERSONA_ENABLED=true
+CROSS_PERSONA_DB_PATH=cross_persona_memory.db
+PERSONA_ANALYSIS_ENABLED=true
+MEMORY_BRIDGE_SUGGESTIONS=true
+
+# Cognitive Loop Debugging
+COGNITIVE_DEBUGGING_ENABLED=true
+COGNITIVE_DEBUG_DB_PATH=cognitive_decisions.db
+DECISION_TRACKING_ENABLED=true
+SESSION_DEBUGGING_ENABLED=true
+
+# Temporal Memory Weighting
+TEMPORAL_MEMORY_ENABLED=true
+TEMPORAL_MEMORY_DB_PATH=temporal_memory.db
+MEMORY_DECAY_ENABLED=true
+DYNAMIC_RELEVANCE_ENABLED=true
+```
 
 ## Network Integration Features
 
