@@ -38,6 +38,7 @@ from automated_evaluation_engine import get_evaluation_engine
 from peer_teaching_system import get_peer_teaching_system, AgentSpecialization, LessonType, ConsensusMethod
 from personal_ai_router import get_personal_ai_router
 from user_profile_builder import get_user_profile_builder
+from email_intelligence import get_email_intelligence, EmailProvider, EmailTone, EmailClassification, EmailIntent
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -73,6 +74,7 @@ model_manager = None
 ai_model_manager = None
 auth_manager = None
 cache_manager = None
+email_intelligence = None
 rag_system = None
 collaborative_router = None
 shared_memory_manager = None
@@ -137,6 +139,9 @@ def initialize_router():
             semantic_guardrail_system = get_semantic_guardrail_system()
             multimodal_ai_integration = get_multimodal_ai_integration(ai_model_manager)
             personal_ai_router = get_personal_ai_router()
+            
+            # Initialize Email Intelligence System
+            email_intelligence = get_email_intelligence(ai_model_manager, personal_ai_router.memory_store)
             
             # Initialize ML models
             loop = asyncio.new_event_loop()
@@ -3111,6 +3116,254 @@ def get_chain_templates():
         logger.error(f"Error getting chain templates: {e}")
         return jsonify({"error": str(e)}), 500
 
+# Email Intelligence API Routes
+@app.route('/api/email/configure', methods=['POST'])
+def configure_email_provider():
+    """Configure email provider settings"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Configuration data is required"}), 400
+        
+        provider_type = data.get('provider', 'imap_smtp')
+        settings = data.get('settings', {})
+        
+        # Validate provider type
+        if provider_type not in [p.value for p in EmailProvider]:
+            return jsonify({"error": f"Invalid provider type: {provider_type}"}), 400
+        
+        provider = EmailProvider(provider_type)
+        
+        # Configure the provider
+        email_intelligence.configure_provider(provider, settings)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Email provider {provider_type} configured successfully",
+            "provider": provider_type,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error configuring email provider: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/fetch', methods=['POST'])
+def fetch_emails():
+    """Fetch emails from configured provider"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        data = request.get_json() or {}
+        provider_type = data.get('provider', 'imap_smtp')
+        
+        if provider_type not in [p.value for p in EmailProvider]:
+            return jsonify({"error": f"Invalid provider type: {provider_type}"}), 400
+        
+        provider = EmailProvider(provider_type)
+        
+        # Fetch emails
+        messages = email_intelligence.fetch_emails(provider)
+        
+        # Convert messages to dict for JSON response
+        messages_dict = []
+        for msg in messages:
+            messages_dict.append({
+                "id": msg.id,
+                "subject": msg.subject,
+                "sender": msg.sender,
+                "recipient": msg.recipient,
+                "body": msg.body[:500] + "..." if len(msg.body) > 500 else msg.body,  # Truncate for API
+                "timestamp": msg.timestamp.isoformat(),
+                "thread_id": msg.thread_id,
+                "classification": msg.classification.value if msg.classification else None,
+                "intent": msg.intent.value if msg.intent else None,
+                "confidence": msg.confidence,
+                "extracted_entities": msg.extracted_entities,
+                "action_items": msg.action_items
+            })
+        
+        return jsonify({
+            "status": "success",
+            "provider": provider_type,
+            "messages": messages_dict,
+            "count": len(messages_dict),
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching emails: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/messages', methods=['GET'])
+def get_email_messages():
+    """Get stored email messages"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        limit = request.args.get('limit', 50, type=int)
+        
+        # Get messages from database
+        messages = email_intelligence.db.get_messages(limit)
+        
+        # Convert to dict for JSON response
+        messages_dict = []
+        for msg in messages:
+            messages_dict.append({
+                "id": msg.id,
+                "subject": msg.subject,
+                "sender": msg.sender,
+                "recipient": msg.recipient,
+                "body": msg.body[:500] + "..." if len(msg.body) > 500 else msg.body,
+                "timestamp": msg.timestamp.isoformat(),
+                "thread_id": msg.thread_id,
+                "classification": msg.classification.value if msg.classification else None,
+                "intent": msg.intent.value if msg.intent else None,
+                "confidence": msg.confidence,
+                "extracted_entities": msg.extracted_entities,
+                "action_items": msg.action_items
+            })
+        
+        return jsonify({
+            "status": "success",
+            "messages": messages_dict,
+            "count": len(messages_dict),
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting email messages: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/generate-reply', methods=['POST'])
+def generate_email_reply():
+    """Generate a reply to an email"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'message_id' not in data:
+            return jsonify({"error": "Message ID is required"}), 400
+        
+        message_id = data['message_id']
+        tone = data.get('tone', 'professional')
+        persona = data.get('persona')
+        
+        # Validate tone
+        if tone not in [t.value for t in EmailTone]:
+            return jsonify({"error": f"Invalid tone: {tone}"}), 400
+        
+        email_tone = EmailTone(tone)
+        
+        # Generate reply
+        reply = email_intelligence.generate_reply(message_id, email_tone, persona)
+        
+        if not reply:
+            return jsonify({"error": "Message not found or reply generation failed"}), 404
+        
+        return jsonify({
+            "status": "success",
+            "reply": {
+                "recipient": reply.recipient,
+                "subject": reply.subject,
+                "body": reply.body,
+                "tone": reply.tone.value,
+                "persona": reply.persona,
+                "confidence": reply.confidence,
+                "requires_review": reply.requires_review
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating email reply: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/send-reply', methods=['POST'])
+def send_email_reply():
+    """Send an email reply"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'reply_id' not in data:
+            return jsonify({"error": "Reply ID is required"}), 400
+        
+        reply_id = data['reply_id']
+        provider_type = data.get('provider', 'imap_smtp')
+        
+        if provider_type not in [p.value for p in EmailProvider]:
+            return jsonify({"error": f"Invalid provider type: {provider_type}"}), 400
+        
+        provider = EmailProvider(provider_type)
+        
+        # Send reply
+        success = email_intelligence.send_reply(reply_id, provider)
+        
+        if success:
+            return jsonify({
+                "status": "success",
+                "message": "Email reply sent successfully",
+                "reply_id": reply_id,
+                "timestamp": datetime.now().isoformat()
+            })
+        else:
+            return jsonify({"error": "Failed to send email reply"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error sending email reply: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/summary', methods=['GET'])
+def get_email_summary():
+    """Get email summary and statistics"""
+    try:
+        if not email_intelligence:
+            return jsonify({"error": "Email intelligence system not available"}), 503
+        
+        days_back = request.args.get('days_back', 7, type=int)
+        
+        # Get summary
+        summary = email_intelligence.get_email_summary(days_back)
+        
+        return jsonify({
+            "status": "success",
+            "summary": summary,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting email summary: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/email/classifications', methods=['GET'])
+def get_email_classifications():
+    """Get available email classifications and intents"""
+    try:
+        classifications = {
+            "classifications": [c.value for c in EmailClassification],
+            "intents": [i.value for i in EmailIntent],
+            "tones": [t.value for t in EmailTone],
+            "providers": [p.value for p in EmailProvider]
+        }
+        
+        return jsonify({
+            "status": "success",
+            "classifications": classifications,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting email classifications: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/chains/stats', methods=['GET'])
 def get_chain_stats():
     """Get Auto Chain Generator statistics"""
@@ -3594,6 +3847,11 @@ def peer_teaching_demo():
 def personal_ai():
     """Personal AI interface with hybrid edge-cloud routing"""
     return render_template('personal_ai.html')
+
+@app.route('/email-intelligence')
+def email_intelligence_page():
+    """Email intelligence interface"""
+    return render_template('email_intelligence.html')
 
 @app.route('/api/peer-teaching/demo', methods=['POST'])
 def run_peer_teaching_demo():

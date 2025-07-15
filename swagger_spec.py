@@ -73,6 +73,10 @@ swagger_spec = {
             "description": "AI decision tracking and cognitive loop debugging"
         },
         {
+            "name": "Email Intelligence",
+            "description": "AI-powered email management with smart classification and replies"
+        },
+        {
             "name": "Temporal Memory",
             "description": "Time-aware memory weighting and relevance management"
         },
@@ -2454,6 +2458,187 @@ swagger_spec = {
                     }
                 }
             }
+        },
+        "/api/email/configure": {
+            "post": {
+                "tags": ["Email Intelligence"],
+                "summary": "Configure email provider",
+                "description": "Configure email provider settings (IMAP/SMTP, Gmail API, etc.)",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "provider": {"type": "string", "enum": ["imap_smtp", "gmail_api", "outlook_graph"]},
+                                    "settings": {"$ref": "#/components/schemas/EmailConfiguration"}
+                                },
+                                "required": ["provider", "settings"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Email provider configured successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "message": {"type": "string"},
+                                        "provider": {"type": "string"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/fetch": {
+            "post": {
+                "tags": ["Email Intelligence"],
+                "summary": "Fetch emails from provider",
+                "description": "Fetch and classify emails from configured email provider",
+                "requestBody": {
+                    "required": False,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "provider": {"type": "string", "enum": ["imap_smtp", "gmail_api", "outlook_graph"]}
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Emails fetched and classified successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "messages": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/EmailMessage"}
+                                        },
+                                        "count": {"type": "integer"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/messages": {
+            "get": {
+                "tags": ["Email Intelligence"],
+                "summary": "Get stored email messages",
+                "description": "Retrieve stored email messages from database",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of messages to return",
+                        "schema": {"type": "integer", "default": 50}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email messages retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "messages": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/EmailMessage"}
+                                        },
+                                        "count": {"type": "integer"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/summary": {
+            "get": {
+                "tags": ["Email Intelligence"],
+                "summary": "Get email summary",
+                "description": "Get email summary and statistics",
+                "parameters": [
+                    {
+                        "name": "days_back",
+                        "in": "query",
+                        "description": "Number of days back to analyze",
+                        "schema": {"type": "integer", "default": 7}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email summary retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "summary": {"$ref": "#/components/schemas/EmailSummary"},
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/email/classifications": {
+            "get": {
+                "tags": ["Email Intelligence"],
+                "summary": "Get email classifications",
+                "description": "Get available email classifications, intents, tones, and providers",
+                "responses": {
+                    "200": {
+                        "description": "Email classifications retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {"type": "string"},
+                                        "classifications": {
+                                            "type": "object",
+                                            "properties": {
+                                                "classifications": {"type": "array", "items": {"type": "string"}},
+                                                "intents": {"type": "array", "items": {"type": "string"}},
+                                                "tones": {"type": "array", "items": {"type": "string"}},
+                                                "providers": {"type": "array", "items": {"type": "string"}}
+                                            }
+                                        },
+                                        "timestamp": {"type": "string", "format": "date-time"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     'components': {
@@ -2672,6 +2857,61 @@ swagger_spec = {
                     'evidence': {'type': 'array', 'items': {'type': 'string'}},
                     'recommendation': {'type': 'string'},
                     'timestamp': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'EmailMessage': {
+                'type': 'object',
+                'properties': {
+                    'id': {'type': 'string'},
+                    'subject': {'type': 'string'},
+                    'sender': {'type': 'string'},
+                    'recipient': {'type': 'string'},
+                    'body': {'type': 'string'},
+                    'timestamp': {'type': 'string', 'format': 'date-time'},
+                    'thread_id': {'type': 'string'},
+                    'classification': {'type': 'string'},
+                    'intent': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'extracted_entities': {'type': 'array', 'items': {'type': 'object'}},
+                    'action_items': {'type': 'array', 'items': {'type': 'string'}},
+                    'metadata': {'type': 'object'}
+                }
+            },
+            'EmailReply': {
+                'type': 'object',
+                'properties': {
+                    'recipient': {'type': 'string'},
+                    'subject': {'type': 'string'},
+                    'body': {'type': 'string'},
+                    'tone': {'type': 'string'},
+                    'persona': {'type': 'string'},
+                    'confidence': {'type': 'number'},
+                    'requires_review': {'type': 'boolean'},
+                    'metadata': {'type': 'object'}
+                }
+            },
+            'EmailConfiguration': {
+                'type': 'object',
+                'properties': {
+                    'provider': {'type': 'string'},
+                    'host': {'type': 'string'},
+                    'port': {'type': 'integer'},
+                    'username': {'type': 'string'},
+                    'password': {'type': 'string'},
+                    'use_tls': {'type': 'boolean'},
+                    'use_ssl': {'type': 'boolean'}
+                }
+            },
+            'EmailSummary': {
+                'type': 'object',
+                'properties': {
+                    'total_messages': {'type': 'integer'},
+                    'classification_breakdown': {'type': 'object'},
+                    'most_active_senders': {'type': 'array', 'items': {'type': 'string'}},
+                    'total_replies_generated': {'type': 'integer'},
+                    'reply_accuracy': {'type': 'number'},
+                    'processing_time': {'type': 'number'},
+                    'date_range': {'type': 'string'}
                 }
             }
         }
