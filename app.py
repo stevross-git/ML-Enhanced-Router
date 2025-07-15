@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import time
 import json
@@ -3579,6 +3580,35 @@ def get_peer_teaching_stats():
 def peer_teaching_page():
     """Peer Teaching & Collaborative Agents interface"""
     return render_template('peer_teaching.html')
+
+@app.route('/peer-teaching/demo')
+def peer_teaching_demo():
+    """Peer teaching learning demonstration"""
+    return render_template('peer_teaching_demo.html')
+
+@app.route('/api/peer-teaching/demo', methods=['POST'])
+def run_peer_teaching_demo():
+    """Run the peer teaching demonstration"""
+    try:
+        import subprocess
+        import os
+        
+        # Run the simple demo script
+        result = subprocess.run(
+            [sys.executable, 'simple_peer_demo.py'],
+            capture_output=True,
+            text=True,
+            cwd=os.getcwd()
+        )
+        
+        if result.returncode == 0:
+            return result.stdout
+        else:
+            return f"Demo failed: {result.stderr}", 500
+            
+    except Exception as e:
+        logger.error(f"Error running peer teaching demo: {e}")
+        return f"Error: {str(e)}", 500
 
 # Register GraphQL blueprint
 app.register_blueprint(graphql_bp)
