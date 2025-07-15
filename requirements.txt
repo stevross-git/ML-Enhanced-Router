@@ -124,3 +124,6 @@ influxdb-client==1.38.0
 
 # Load Testing (Development)
 locust==2.17.0
+beautifulsoup4
+docx
+redis

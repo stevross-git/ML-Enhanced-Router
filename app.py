@@ -75,10 +75,13 @@ intelligent_routing_engine = None
 real_time_analytics = None
 advanced_query_optimizer = None
 predictive_analytics_engine = None
+active_learning_system = None
+contextual_memory_router = None
+semantic_guardrail_system = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system
     
     try:
         with app.app_context():
@@ -99,6 +102,15 @@ def initialize_router():
             real_time_analytics = RealTimeAnalytics()
             advanced_query_optimizer = AdvancedQueryOptimizer()
             predictive_analytics_engine = PredictiveAnalyticsEngine()
+            
+            # Initialize next-generation features
+            from active_learning_system import get_active_learning_system
+            from contextual_memory_router import get_contextual_memory_router
+            from semantic_guardrails import get_semantic_guardrail_system
+            
+            active_learning_system = get_active_learning_system()
+            contextual_memory_router = get_contextual_memory_router()
+            semantic_guardrail_system = get_semantic_guardrail_system()
             
             # Initialize ML models
             loop = asyncio.new_event_loop()
@@ -2255,6 +2267,167 @@ def get_advanced_stats():
         })
     except Exception as e:
         logger.error(f"Error getting advanced stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Active Learning Endpoints
+@app.route('/api/learning/feedback', methods=['POST'])
+def submit_feedback():
+    """Submit feedback for active learning"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data or 'agent_id' not in data:
+            return jsonify({"error": "Query and agent_id are required"}), 400
+        
+        if not active_learning_system:
+            return jsonify({"error": "Active learning system not available"}), 503
+        
+        from active_learning_system import FeedbackType
+        
+        query = data['query']
+        agent_id = data['agent_id']
+        feedback_type = FeedbackType(data.get('feedback_type', 'correct'))
+        score = float(data.get('score', 0.8))
+        user_id = data.get('user_id')
+        expected_category = data.get('expected_category')
+        comments = data.get('comments')
+        metadata = data.get('metadata', {})
+        
+        success = asyncio.run(active_learning_system.collect_feedback(
+            query, agent_id, feedback_type, score, user_id, expected_category, comments, metadata
+        ))
+        
+        return jsonify({"success": success, "message": "Feedback submitted successfully"})
+    except Exception as e:
+        logger.error(f"Error submitting feedback: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/learning/retrain', methods=['POST'])
+def trigger_retraining():
+    """Trigger model retraining"""
+    try:
+        if not active_learning_system:
+            return jsonify({"error": "Active learning system not available"}), 503
+        
+        should_retrain = asyncio.run(active_learning_system.should_retrain())
+        if not should_retrain:
+            return jsonify({"message": "Retraining not needed at this time"})
+        
+        success = asyncio.run(active_learning_system.trigger_retraining())
+        return jsonify({"success": success, "message": "Retraining triggered" if success else "Retraining failed"})
+    except Exception as e:
+        logger.error(f"Error triggering retraining: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Contextual Memory Router Endpoints
+@app.route('/api/contextual/route', methods=['POST'])
+def contextual_route():
+    """Route query using contextual memory"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        if not contextual_memory_router:
+            return jsonify({"error": "Contextual memory router not available"}), 503
+        
+        from contextual_memory_router import RoutingStrategy
+        
+        query = data['query']
+        context = data.get('context', {})
+        strategy = RoutingStrategy(data.get('strategy', 'hybrid'))
+        
+        route = asyncio.run(contextual_memory_router.route_with_memory(query, context, strategy))
+        
+        return jsonify({
+            "contextual_route": {
+                "query": route.query,
+                "recommended_agent": route.recommended_agent,
+                "confidence": route.confidence,
+                "similarity_score": route.similarity_score,
+                "reasoning": route.reasoning,
+                "fallback_agents": route.fallback_agents,
+                "estimated_success": route.estimated_success,
+                "matched_memories_count": len(route.matched_memories)
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in contextual routing: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/contextual/outcome', methods=['POST'])
+def record_outcome():
+    """Record routing outcome for contextual memory"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data or 'agent_id' not in data:
+            return jsonify({"error": "Query and agent_id are required"}), 400
+        
+        if not contextual_memory_router:
+            return jsonify({"error": "Contextual memory router not available"}), 503
+        
+        query = data['query']
+        agent_id = data['agent_id']
+        success_score = float(data.get('success_score', 0.8))
+        response_time = float(data.get('response_time', 1.0))
+        user_satisfaction = float(data.get('user_satisfaction', 0.8))
+        context = data.get('context', {})
+        
+        asyncio.run(contextual_memory_router.record_routing_outcome(
+            query, agent_id, success_score, response_time, user_satisfaction, context
+        ))
+        
+        return jsonify({"success": True, "message": "Outcome recorded successfully"})
+    except Exception as e:
+        logger.error(f"Error recording outcome: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Semantic Guardrails Endpoints
+@app.route('/api/guardrails/check', methods=['POST'])
+def check_content():
+    """Check content against semantic guardrails"""
+    try:
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({"error": "Content is required"}), 400
+        
+        if not semantic_guardrail_system:
+            return jsonify({"error": "Semantic guardrail system not available"}), 503
+        
+        content = data['content']
+        result = asyncio.run(semantic_guardrail_system.check_content(content))
+        
+        return jsonify({
+            "guardrail_result": {
+                "is_safe": result.is_safe,
+                "threat_level": result.threat_level.value,
+                "triggered_guardrails": [g.value for g in result.triggered_guardrails],
+                "confidence": result.confidence,
+                "reasoning": result.reasoning,
+                "flagged_content": result.flagged_content,
+                "suggested_action": result.suggested_action
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error checking content: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/guardrails/report-false-positive', methods=['POST'])
+def report_false_positive():
+    """Report false positive detection"""
+    try:
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({"error": "Content is required"}), 400
+        
+        if not semantic_guardrail_system:
+            return jsonify({"error": "Semantic guardrail system not available"}), 503
+        
+        content = data['content']
+        semantic_guardrail_system.report_false_positive(content)
+        
+        return jsonify({"success": True, "message": "False positive reported"})
+    except Exception as e:
+        logger.error(f"Error reporting false positive: {e}")
         return jsonify({"error": str(e)}), 500
 
 # Initialize database
