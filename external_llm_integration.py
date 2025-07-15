@@ -32,6 +32,13 @@ class ExternalProvider(Enum):
     COMMAND_R_PLUS = "command-r-plus"
     MIXTRAL_8X7B = "mixtral-8x7b"
     LLAMA_3_70B = "llama-3-70b"
+    
+    def to_dict(self):
+        """Convert enum to dictionary for JSON serialization"""
+        return {
+            'name': self.name,
+            'value': self.value
+        }
 
 @dataclass
 class ComplexQuery:
@@ -560,7 +567,7 @@ Please provide a comprehensive, well-structured response that addresses all aspe
                 provider: len(timestamps) 
                 for provider, timestamps in self.rate_limits.items()
             },
-            "available_providers": list(self.providers.keys())
+            "available_providers": [provider.value for provider in self.providers.keys()]
         }
     
     def is_complex_query(self, query: str) -> bool:

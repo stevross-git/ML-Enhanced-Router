@@ -130,8 +130,8 @@ def initialize_router():
 
 @app.route('/')
 def index():
-    """Main page with query submission form"""
-    return render_template('index.html')
+    """Home dashboard page"""
+    return render_template('home_dashboard.html')
 
 @app.route('/dashboard')
 def dashboard():
@@ -1721,6 +1721,191 @@ def collaborate_page():
 def multimodal_page():
     """Multi-modal AI processing interface"""
     return render_template('multimodal.html')
+
+@app.route('/api-keys')
+def api_keys_page():
+    """API Keys management interface"""
+    return render_template('api_keys.html')
+
+# API Key Management Endpoints
+@app.route('/api/models/<model_id>/configure', methods=['POST'])
+def configure_model(model_id):
+    """Configure API key and settings for a specific model"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+        
+        # Get the model from AI manager
+        model = ai_model_manager.get_model(model_id)
+        if not model:
+            return jsonify({'error': 'Model not found'}), 404
+        
+        # Update model configuration
+        api_key = data.get('api_key')
+        max_tokens = data.get('max_tokens')
+        temperature = data.get('temperature')
+        
+        # For local models, API key is not required
+        if model.deployment_type != 'local' and api_key:
+            # Set environment variable for API key
+            os.environ[model.api_key_env] = api_key
+        
+        # Update model settings
+        if max_tokens:
+            model.max_tokens = max_tokens
+        if temperature:
+            model.temperature = temperature
+        
+        return jsonify({
+            'message': 'Model configured successfully',
+            'model_id': model_id,
+            'api_key_available': bool(api_key) or model.deployment_type == 'local'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error configuring model {model_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/models/<model_id>/test', methods=['POST'])
+def test_model(model_id):
+    """Test API key for a specific model"""
+    try:
+        model = ai_model_manager.get_model(model_id)
+        if not model:
+            return jsonify({'error': 'Model not found'}), 404
+        
+        # For local models, just return success
+        if model.deployment_type == 'local':
+            return jsonify({
+                'success': True,
+                'message': 'Local model is ready',
+                'model_id': model_id
+            })
+        
+        # Check if API key is available
+        api_key = os.environ.get(model.api_key_env)
+        if not api_key:
+            return jsonify({
+                'success': False,
+                'message': 'API key not configured',
+                'model_id': model_id
+            })
+        
+        # Test the API key with a simple request
+        test_message = "Hello"
+        try:
+            response = ai_model_manager.generate_response(
+                model_id=model_id,
+                query=test_message,
+                system_message="Respond with 'Test successful'"
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': 'API key test successful',
+                'model_id': model_id,
+                'response': response.get('response', 'No response')
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'API key test failed: {str(e)}',
+                'model_id': model_id
+            })
+        
+    except Exception as e:
+        logger.error(f"Error testing model {model_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/models/detailed')
+def get_models_detailed():
+    """Get all available models with their detailed status"""
+    try:
+        models = ai_model_manager.get_all_models()
+        model_list = []
+        
+        for model in models:
+            api_key_available = bool(os.environ.get(model.api_key_env)) or model.deployment_type == 'local'
+            
+            model_dict = {
+                'id': model.id,
+                'name': model.name,
+                'provider': model.provider.value,
+                'model_name': model.model_name,
+                'endpoint': model.endpoint,
+                'max_tokens': model.max_tokens,
+                'temperature': model.temperature,
+                'context_window': model.context_window,
+                'cost_per_1k_tokens': model.cost_per_1k_tokens,
+                'api_key_available': api_key_available,
+                'deployment_type': getattr(model, 'deployment_type', 'cloud'),
+                'supports_vision': getattr(model, 'supports_vision', False),
+                'supports_audio': getattr(model, 'supports_audio', False),
+                'model_type': getattr(model, 'model_type', 'text'),
+                'input_modalities': getattr(model, 'input_modalities', ['text']),
+                'output_modalities': getattr(model, 'output_modalities', ['text']),
+                'capabilities': [cap.value for cap in getattr(model, 'capabilities', [])]
+            }
+            
+            model_list.append(model_dict)
+        
+        return jsonify({'models': model_list})
+        
+    except Exception as e:
+        logger.error(f"Error getting models: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/chat')
+def chat_page():
+    """Multi-modal AI chat interface"""
+    return render_template('chat.html')
+
+@app.route('/api/chat', methods=['POST'])
+def chat_endpoint():
+    """Chat endpoint for multi-modal AI conversation"""
+    try:
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        message = data['message']
+        model_id = data.get('model_id', 'gpt-4o')
+        temperature = data.get('temperature', 0.7)
+        max_tokens = data.get('max_tokens', 1000)
+        enable_rag = data.get('enable_rag', False)
+        enable_streaming = data.get('enable_streaming', False)
+        chat_history = data.get('chat_history', [])
+        
+        # Get the model
+        model = ai_model_manager.get_model(model_id)
+        if not model:
+            return jsonify({'error': 'Model not found'}), 404
+        
+        # Check if API key is available
+        api_key_available = bool(os.environ.get(model.api_key_env)) or model.deployment_type == 'local'
+        if not api_key_available:
+            return jsonify({'error': 'API key not configured for this model'}), 400
+        
+        # Generate response using AI model manager
+        response = ai_model_manager.generate_response(
+            model_id=model_id,
+            query=message,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        return jsonify({
+            'response': response.get('response', 'No response generated'),
+            'model_used': model.name,
+            'tokens_used': response.get('tokens_used', 0),
+            'processing_time': response.get('processing_time', 0)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in chat endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/collaborate/agents', methods=['GET'])
 def get_collaborative_agents():
