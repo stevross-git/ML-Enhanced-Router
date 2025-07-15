@@ -1,0 +1,13 @@
+ Personalized On-Device AI
+Long-term memory and preferences: Maintain a private memory store (semantic embeddings of the user’s data, preferences, conversation history). For example, MemoryBank techniques let an LLM recall personal facts over time
+arxiv.org
+. The local agent could store key decisions, facts (e.g. “my daughter’s birthday”), and use RAG to include them in responses. Personal AI platforms (e.g. Personal.ai) already use “personal language models (PLMs)” with LTM to adapt to users
+arxiv.org
+. Our router could automatically fuse new memories into the local model.
+Continuous learning from interaction: After each user interaction or correction, fine-tune or adjust the local model. For instance, if the user edits the agent’s answer (changing tone, detail, etc.), the agent can infer a preference (like the PRELUDE/CIPHER framework) and adapt its future prompts
+arxiv.org
+. Unlike offline batch fine-tuning, the agent uses implicit feedback (user edits, follow-ups) to update prompt templates or lightweight adapters. Over time, the personal model becomes increasingly aligned to the user’s latent style and interests.
+Federated personalization: Each user’s agent could train privately and then share only model updates or distilled “preferences” (not raw data) to improve a common core model. Techniques like Federated In-Context Learning (FICAL) suggest exchanging “knowledge compendiums” (textual summaries) instead of raw data
+arxiv.org
+. In practice, agents could privately compile what they’ve learned (e.g. “best tool uses”, personal Q&A logs) and contribute encrypted updates to improve all users’ models. This peer-to-peer personalization is currently rare but fits our open, distributed ethos.
+Private data integration: The router should seamlessly use the user’s local documents, emails, calendar, etc., via secure APIs. For example, it might run a mini-QA system over the user’s PDF library or notes without exposing them. Combining private RAG with cloud LLMs for other parts of the query is a novel area.

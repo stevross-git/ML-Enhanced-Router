@@ -36,6 +36,7 @@ from graphql_simple import graphql_bp
 from auto_chain_generator import AutoChainGenerator
 from automated_evaluation_engine import get_evaluation_engine
 from peer_teaching_system import get_peer_teaching_system, AgentSpecialization, LessonType, ConsensusMethod
+from personal_ai_router import get_personal_ai_router, QueryComplexity, QueryIntent, RoutingDecision
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -87,10 +88,11 @@ multimodal_ai_integration = None
 auto_chain_generator = None
 evaluation_engine = None
 peer_teaching_system = None
+personal_ai_router = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine, peer_teaching_system
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine, peer_teaching_system, personal_ai_router
     
     try:
         with app.app_context():
@@ -133,6 +135,7 @@ def initialize_router():
             contextual_memory_router = get_contextual_memory_router()
             semantic_guardrail_system = get_semantic_guardrail_system()
             multimodal_ai_integration = get_multimodal_ai_integration(ai_model_manager)
+            personal_ai_router = get_personal_ai_router()
             
             # Initialize ML models
             loop = asyncio.new_event_loop()
@@ -3586,6 +3589,11 @@ def peer_teaching_demo():
     """Peer teaching learning demonstration"""
     return render_template('peer_teaching_demo.html')
 
+@app.route('/personal-ai')
+def personal_ai():
+    """Personal AI interface with hybrid edge-cloud routing"""
+    return render_template('personal_ai.html')
+
 @app.route('/api/peer-teaching/demo', methods=['POST'])
 def run_peer_teaching_demo():
     """Run the peer teaching demonstration"""
@@ -3609,6 +3617,191 @@ def run_peer_teaching_demo():
     except Exception as e:
         logger.error(f"Error running peer teaching demo: {e}")
         return f"Error: {str(e)}", 500
+
+# Personal AI API endpoints
+@app.route('/api/personal-ai/status', methods=['GET'])
+def get_personal_ai_status():
+    """Get Personal AI system status"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        stats = personal_ai_router.get_stats()
+        
+        return jsonify({
+            "ollama_connected": len(stats.get("available_local_models", [])) > 0,
+            "local_models": len(stats.get("available_local_models", [])),
+            "cache_hit_rate": stats.get("cache_hit_rate", 0.0),
+            "total_memories": stats.get("total_memories", 0),
+            "routing_stats": stats.get("routing_stats", {}),
+            "status": "ready"
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting personal AI status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/stats', methods=['GET'])
+def get_personal_ai_stats():
+    """Get detailed Personal AI statistics"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        stats = personal_ai_router.get_stats()
+        
+        # Get memory and preference counts
+        memory_store = personal_ai_router.memory_store
+        preferences = memory_store.get_preferences()
+        
+        return jsonify({
+            "cache_hit_rate": stats.get("cache_hit_rate", 0.0),
+            "total_memories": stats.get("total_memories", 0),
+            "total_preferences": len(preferences),
+            "routing_stats": stats.get("routing_stats", {}),
+            "available_local_models": stats.get("available_local_models", []),
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting personal AI stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/chat', methods=['POST'])
+def personal_ai_chat():
+    """Process a chat message with personal AI"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        message = data['message']
+        routing_strategy = data.get('routing_strategy', 'auto')
+        local_model = data.get('local_model', 'llama3.2:3b')
+        
+        # Process the query
+        result = asyncio.run(personal_ai_router.process_query(message, {
+            'routing_strategy': routing_strategy,
+            'local_model': local_model
+        }))
+        
+        return jsonify({
+            "response": result.response,
+            "routing_result": {
+                "decision": result.decision.value,
+                "model_used": result.model_used,
+                "confidence": result.confidence,
+                "latency": result.latency,
+                "cost_estimate": result.cost_estimate,
+                "reasoning": result.reasoning,
+                "cached": result.cached,
+                "fallback_used": result.fallback_used
+            },
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in personal AI chat: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/memory', methods=['GET', 'POST'])
+def personal_ai_memory():
+    """Get or store personal memories"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        memory_store = personal_ai_router.memory_store
+        
+        if request.method == 'GET':
+            # Get recent memories and preferences
+            memories = memory_store.search_memories("", limit=20)
+            preferences = memory_store.get_preferences()
+            
+            return jsonify({
+                "memories": memories,
+                "preferences": preferences,
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        elif request.method == 'POST':
+            # Store a new memory
+            data = request.get_json()
+            if not data or not all(key in data for key in ['category', 'key', 'value']):
+                return jsonify({'error': 'Category, key, and value are required'}), 400
+            
+            memory_store.store_memory(
+                data['category'],
+                data['key'],
+                data['value'],
+                data.get('context')
+            )
+            
+            return jsonify({"success": True, "message": "Memory stored successfully"})
+        
+    except Exception as e:
+        logger.error(f"Error with personal AI memory: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/preference', methods=['POST'])
+def personal_ai_preference():
+    """Store a personal preference"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        data = request.get_json()
+        if not data or not all(key in data for key in ['category', 'preference', 'value']):
+            return jsonify({'error': 'Category, preference, and value are required'}), 400
+        
+        memory_store = personal_ai_router.memory_store
+        memory_store.store_preference(
+            data['category'],
+            data['preference'],
+            data['value'],
+            data.get('strength', 1.0)
+        )
+        
+        return jsonify({"success": True, "message": "Preference stored successfully"})
+        
+    except Exception as e:
+        logger.error(f"Error storing personal AI preference: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/test-ollama', methods=['POST'])
+def test_ollama_connection():
+    """Test Ollama connection"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        ollama_client = personal_ai_router.ollama_client
+        
+        # Test with a simple query
+        result = asyncio.run(ollama_client.generate(
+            "llama3.2:3b",
+            "Hello! This is a test. Please respond with 'Test successful!'"
+        ))
+        
+        if "error" in result:
+            return jsonify({
+                "success": False,
+                "error": result["error"]
+            })
+        
+        return jsonify({
+            "success": True,
+            "response": result.get("response", ""),
+            "model": result.get("model", ""),
+            "available_models": ollama_client.available_models
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing Ollama: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # Register GraphQL blueprint
 app.register_blueprint(graphql_bp)
