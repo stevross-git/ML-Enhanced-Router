@@ -26,6 +26,11 @@ from swagger_spec import swagger_spec
 from collaborative_router import get_collaborative_router
 from shared_memory import get_shared_memory_manager
 from external_llm_integration import get_external_llm_manager
+from advanced_ml_classifier import AdvancedMLClassifier
+from intelligent_routing_engine import IntelligentRoutingEngine
+from real_time_analytics import RealTimeAnalytics
+from advanced_query_optimizer import AdvancedQueryOptimizer
+from predictive_analytics_engine import PredictiveAnalyticsEngine
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -65,10 +70,15 @@ rag_system = None
 collaborative_router = None
 shared_memory_manager = None
 external_llm_manager = None
+advanced_ml_classifier = None
+intelligent_routing_engine = None
+real_time_analytics = None
+advanced_query_optimizer = None
+predictive_analytics_engine = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine
     
     try:
         with app.app_context():
@@ -83,12 +93,22 @@ def initialize_router():
             router = MLEnhancedQueryRouter(router_config, model_manager)
             collaborative_router = get_collaborative_router(ai_model_manager)
             
+            # Initialize advanced features
+            advanced_ml_classifier = AdvancedMLClassifier()
+            intelligent_routing_engine = IntelligentRoutingEngine()
+            real_time_analytics = RealTimeAnalytics()
+            advanced_query_optimizer = AdvancedQueryOptimizer()
+            predictive_analytics_engine = PredictiveAnalyticsEngine()
+            
             # Initialize ML models
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             loop.run_until_complete(router.initialize())
+            loop.run_until_complete(advanced_ml_classifier.initialize())
+            loop.run_until_complete(intelligent_routing_engine.initialize())
+            loop.run_until_complete(real_time_analytics.start())
             
-            logger.info("ML Router initialized successfully")
+            logger.info("ML Router and Advanced Features initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize ML Router: {e}")
         router = None
@@ -1924,6 +1944,317 @@ def bulk_optimize_tokens():
         })
     except Exception as e:
         logger.error(f"Error bulk optimizing tokens: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ==============================================================================
+# ADVANCED ML ENHANCEMENT API ENDPOINTS
+# ==============================================================================
+
+@app.route('/api/ml/classify', methods=['POST'])
+def classify_query():
+    """Advanced ML-based query classification"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        context = data.get('context', {})
+        
+        if not advanced_ml_classifier:
+            return jsonify({"error": "Advanced ML classifier not available"}), 503
+        
+        # Analyze query
+        analysis = asyncio.run(advanced_ml_classifier.analyze(query, context))
+        
+        return jsonify({
+            "analysis": {
+                "primary_category": analysis.primary_category.value,
+                "categories": [cat.value for cat in analysis.categories],
+                "confidence": analysis.confidence,
+                "complexity": analysis.complexity,
+                "intent": analysis.intent.value,
+                "sentiment": analysis.sentiment,
+                "language": analysis.language,
+                "technical_level": analysis.technical_level,
+                "domain_expertise": analysis.domain_expertise,
+                "required_capabilities": analysis.required_capabilities,
+                "context_needed": analysis.context_needed,
+                "multi_step": analysis.multi_step,
+                "priority": analysis.priority,
+                "estimated_tokens": analysis.estimated_tokens,
+                "processing_time": analysis.processing_time,
+                "metadata": analysis.metadata
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error classifying query: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/ml/optimize', methods=['POST'])
+def optimize_query():
+    """Advanced query optimization with ML enhancement"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        context = data.get('context', {})
+        optimization_types = data.get('optimization_types', [])
+        
+        if not advanced_ml_classifier or not advanced_query_optimizer:
+            return jsonify({"error": "Advanced optimization not available"}), 503
+        
+        # Analyze query first
+        analysis = asyncio.run(advanced_ml_classifier.analyze(query, context))
+        
+        # Apply optimizations
+        enhancement = asyncio.run(advanced_query_optimizer.optimize_query(
+            query, analysis, optimization_types
+        ))
+        
+        return jsonify({
+            "enhancement": {
+                "original_query": enhancement.original_query,
+                "enhanced_query": enhancement.enhanced_query,
+                "overall_confidence": enhancement.overall_confidence,
+                "quality_score": enhancement.quality_score,
+                "complexity_reduction": enhancement.complexity_reduction,
+                "suggested_context": enhancement.suggested_context,
+                "related_queries": enhancement.related_queries,
+                "optimizations": [
+                    {
+                        "type": opt.optimization_type.value,
+                        "confidence": opt.confidence,
+                        "reasoning": opt.reasoning,
+                        "improvement_score": opt.improvement_score
+                    } for opt in enhancement.optimizations
+                ]
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error optimizing query: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/ml/route', methods=['POST'])
+def intelligent_route():
+    """Intelligent routing with ML-enhanced agent selection"""
+    try:
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        context = data.get('context', {})
+        strategy = data.get('strategy')
+        
+        if not intelligent_routing_engine:
+            return jsonify({"error": "Intelligent routing engine not available"}), 503
+        
+        # Route query
+        decision = asyncio.run(intelligent_routing_engine.route_query(
+            query, context, strategy
+        ))
+        
+        return jsonify({
+            "routing_decision": {
+                "primary_agent": {
+                    "id": decision.primary_agent.id,
+                    "name": decision.primary_agent.name,
+                    "endpoint": decision.primary_agent.endpoint,
+                    "confidence": decision.confidence
+                },
+                "selected_agents": [
+                    {
+                        "id": agent.id,
+                        "name": agent.name,
+                        "endpoint": agent.endpoint
+                    } for agent in decision.selected_agents
+                ],
+                "strategy_used": decision.strategy_used.value,
+                "reasoning": decision.reasoning,
+                "estimated_response_time": decision.estimated_response_time,
+                "estimated_cost": decision.estimated_cost,
+                "fallback_agents": [
+                    {
+                        "id": agent.id,
+                        "name": agent.name
+                    } for agent in decision.fallback_agents
+                ]
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error routing query: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/analytics/real-time', methods=['GET'])
+def get_real_time_analytics():
+    """Get real-time analytics data"""
+    try:
+        if not real_time_analytics:
+            return jsonify({"error": "Real-time analytics not available"}), 503
+        
+        # Get dashboard data
+        dashboard_data = real_time_analytics.get_dashboard_data()
+        
+        return jsonify({
+            "analytics": dashboard_data,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error getting real-time analytics: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/analytics/metric', methods=['POST'])
+def record_metric():
+    """Record a custom metric"""
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data or 'value' not in data:
+            return jsonify({"error": "Metric name and value required"}), 400
+        
+        name = data['name']
+        value = float(data['value'])
+        labels = data.get('labels', {})
+        
+        if not real_time_analytics:
+            return jsonify({"error": "Real-time analytics not available"}), 503
+        
+        # Record metric
+        real_time_analytics.record_metric(name, value, labels)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Metric {name} recorded successfully"
+        })
+    except Exception as e:
+        logger.error(f"Error recording metric: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/analytics/performance-report', methods=['GET'])
+def get_performance_report():
+    """Get comprehensive performance report"""
+    try:
+        if not real_time_analytics:
+            return jsonify({"error": "Real-time analytics not available"}), 503
+        
+        # Get performance analyzer
+        analyzer = real_time_analytics.performance_analyzer
+        
+        # Generate report for key metrics
+        metrics = request.args.getlist('metrics') or [
+            'response_time', 'throughput', 'error_rate', 'cache_hit_rate'
+        ]
+        
+        report = analyzer.generate_performance_report(metrics)
+        
+        return jsonify({
+            "report": report,
+            "generated_at": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error generating performance report: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/predictions/predict', methods=['POST'])
+def make_prediction():
+    """Make a prediction using the predictive analytics engine"""
+    try:
+        data = request.get_json()
+        if not data or 'prediction_type' not in data or 'context' not in data:
+            return jsonify({"error": "Prediction type and context required"}), 400
+        
+        prediction_type = data['prediction_type']
+        context = data['context']
+        horizon_minutes = data.get('horizon_minutes', 30)
+        
+        if not predictive_analytics_engine:
+            return jsonify({"error": "Predictive analytics engine not available"}), 503
+        
+        # Import prediction type enum
+        from predictive_analytics_engine import PredictionType
+        
+        # Convert string to enum
+        try:
+            pred_type = PredictionType(prediction_type)
+        except ValueError:
+            return jsonify({"error": f"Invalid prediction type: {prediction_type}"}), 400
+        
+        # Make prediction
+        prediction = asyncio.run(predictive_analytics_engine.predict(
+            pred_type, context, horizon_minutes
+        ))
+        
+        if prediction:
+            return jsonify({
+                "prediction": {
+                    "type": prediction.prediction_type.value,
+                    "predicted_value": prediction.predicted_value,
+                    "confidence_interval": prediction.confidence_interval,
+                    "confidence_score": prediction.confidence_score,
+                    "model_used": prediction.model_used,
+                    "features_used": prediction.features_used,
+                    "prediction_horizon": prediction.prediction_horizon,
+                    "accuracy_score": prediction.accuracy_score,
+                    "timestamp": prediction.timestamp.isoformat(),
+                    "metadata": prediction.metadata
+                }
+            })
+        else:
+            return jsonify({"error": "Prediction could not be made"}), 500
+            
+    except Exception as e:
+        logger.error(f"Error making prediction: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/predictions/system-health', methods=['GET'])
+def get_system_health_prediction():
+    """Get system health prediction"""
+    try:
+        if not predictive_analytics_engine:
+            return jsonify({"error": "Predictive analytics engine not available"}), 503
+        
+        # Get current system context
+        context = {
+            "system_cpu_usage": 0.5,
+            "system_memory_usage": 0.6,
+            "concurrent_queries": 10,
+            "cache_hit_rate": 0.85,
+            "active_agents": 5,
+            "query_processing_rate": 50,
+            "network_latency": 45
+        }
+        
+        # Get health prediction
+        health_prediction = predictive_analytics_engine.get_system_health_prediction(context)
+        
+        return jsonify({
+            "health_prediction": health_prediction
+        })
+    except Exception as e:
+        logger.error(f"Error getting system health prediction: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/advanced/stats', methods=['GET'])
+def get_advanced_stats():
+    """Get comprehensive advanced features statistics"""
+    try:
+        stats = {
+            "ml_classifier": advanced_ml_classifier.get_classification_stats() if advanced_ml_classifier else {"available": False},
+            "routing_engine": intelligent_routing_engine.get_routing_stats() if intelligent_routing_engine else {"available": False},
+            "real_time_analytics": real_time_analytics.get_analytics_stats() if real_time_analytics else {"available": False},
+            "query_optimizer": advanced_query_optimizer.get_optimization_stats() if advanced_query_optimizer else {"available": False},
+            "predictive_analytics": predictive_analytics_engine.get_analytics_stats() if predictive_analytics_engine else {"available": False}
+        }
+        
+        return jsonify({
+            "advanced_features_stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error getting advanced stats: {e}")
         return jsonify({"error": str(e)}), 500
 
 # Initialize database

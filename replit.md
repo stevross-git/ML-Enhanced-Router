@@ -99,6 +99,15 @@ Preferred communication style: Simple, everyday language.
 ✓ Built bulk query optimizer for enterprise batch processing scenarios
 ✓ Enhanced API endpoints with predictive insights, advanced metrics, and bulk optimization support
 ✓ Integrated comprehensive modal-based UI for advanced token management workflows
+✓ Implemented advanced ML-enhanced query classifier with DistilBERT integration and 15+ query categories
+✓ Created intelligent routing engine with 7 routing strategies and ML-optimized agent selection
+✓ Built comprehensive real-time analytics system with metrics storage, alerting, and anomaly detection
+✓ Developed advanced query optimizer with 6 optimization types and semantic enhancement capabilities
+✓ Integrated predictive analytics engine with 10+ prediction types and ML model management
+✓ Added comprehensive API endpoints for advanced ML classification, routing, and analytics
+✓ Enhanced system with performance monitoring, trend analysis, and automated alerting
+✓ Built circuit breaker patterns for agent reliability and load balancing optimization
+✓ Implemented advanced features with optional ML dependencies for maximum compatibility
 
 ## System Architecture
 
@@ -112,8 +121,10 @@ Preferred communication style: Simple, everyday language.
 - **Framework**: Flask with SQLAlchemy ORM
 - **Database**: SQLite (default) with PostgreSQL support via DATABASE_URL
 - **ML Integration**: DistilBERT for query classification, SentenceTransformers for semantic analysis
+- **Advanced ML**: Optional heavy ML dependencies (torch, transformers, sklearn) with graceful fallbacks
 - **Caching**: Redis support for distributed caching
 - **Rate Limiting**: Flask-Limiter for API protection
+- **Analytics**: Real-time metrics collection, trend analysis, and predictive modeling
 
 ### Data Storage
 - **Primary Database**: SQLite/PostgreSQL via SQLAlchemy
@@ -122,35 +133,45 @@ Preferred communication style: Simple, everyday language.
 
 ## Key Components
 
-### 1. Query Classification System
-- **ML Model**: DistilBERT-based classification
-- **Categories**: Analysis, Creative, Technical, Mathematical, Coding, Research, Philosophical, Practical, Educational, Conversational
-- **Confidence Thresholds**: Configurable routing confidence levels
+### 1. Advanced Query Classification System
+- **ML Models**: DistilBERT-based classification with SentenceTransformers for semantic analysis
+- **Categories**: 15+ categories including Analysis, Creative, Technical, Mathematical, Coding, Research, Business, Scientific, Legal, Medical, Entertainment
+- **Intent Detection**: 10+ intent types with pattern matching and confidence scoring
+- **Complexity Analysis**: Multi-factor complexity scoring with technical level assessment
+- **Language Detection**: Multi-language support with automatic language identification
+- **Domain Expertise**: Automatic extraction of domain-specific knowledge requirements
 
 ### 2. Agent Management
 - **Registration**: Dynamic agent registration with capabilities
 - **Load Balancing**: Concurrent query limits and load penalties
 - **Health Monitoring**: Agent availability and performance tracking
 
-### 3. Routing Engine
-- **Smart Routing**: ML-enhanced routing with fallback mechanisms
-- **Consensus Algorithm**: Multi-agent consensus for complex queries
-- **Retry Logic**: Exponential backoff for failed requests
+### 3. Intelligent Routing Engine
+- **Advanced Routing**: 7 routing strategies (Round Robin, Weighted, Least Connections, Performance-based, ML-optimized, Consensus-based, Hybrid)
+- **ML-Enhanced Selection**: Agent-query matching with confidence scoring and capability assessment
+- **Circuit Breaker**: Automatic failure detection and recovery with health monitoring
+- **Load Balancing**: Dynamic load distribution with performance optimization
+- **Fallback Mechanisms**: Multi-tier fallback with exponential backoff
 
-### 4. Monitoring and Metrics
-- **Query Logging**: Complete audit trail of all queries
-- **Performance Metrics**: Response times, success rates, agent utilization
-- **Real-time Dashboard**: Live statistics and system health
+### 4. Advanced Monitoring and Analytics
+- **Real-time Analytics**: Comprehensive metrics collection with time-series storage
+- **Performance Monitoring**: Response times, throughput, error rates, resource usage
+- **Predictive Analytics**: 10+ prediction types with ML model management
+- **Alerting System**: Configurable alerts with severity levels and notification handlers
+- **Trend Analysis**: Automated trend detection with anomaly identification
+- **System Health**: Comprehensive health monitoring with predictive insights
 
-## Data Flow
+## Advanced Data Flow
 
 1. **Query Submission**: User submits query through web interface
-2. **Classification**: ML model analyzes query and determines category
-3. **Agent Selection**: Router selects appropriate agent(s) based on classification
-4. **Load Balancing**: System considers agent load and availability
-5. **Query Routing**: Request forwarded to selected agent
-6. **Response Processing**: Agent response validated and returned
-7. **Logging**: Complete interaction logged for analytics
+2. **Advanced Classification**: ML-enhanced analysis determines category, intent, complexity, and technical level
+3. **Query Optimization**: Advanced optimizer enhances query with semantic improvements and context expansion
+4. **Intelligent Routing**: Multi-strategy routing engine selects optimal agent(s) with confidence scoring
+5. **Load Balancing**: Dynamic load distribution with circuit breaker protection
+6. **Real-time Monitoring**: Performance metrics collection and trend analysis
+7. **Predictive Analytics**: System health prediction and resource usage forecasting
+8. **Response Processing**: Agent response validated and returned with quality assessment
+9. **Comprehensive Logging**: Complete interaction logged with advanced analytics
 
 ## External Dependencies
 
