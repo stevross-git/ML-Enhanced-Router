@@ -29,6 +29,32 @@ class AIProvider(Enum):
     COHERE = "cohere"
     HUGGINGFACE = "huggingface"
     MISTRAL = "mistral"
+    AZURE = "azure"
+    AWS_BEDROCK = "aws_bedrock"
+    REPLICATE = "replicate"
+    TOGETHER = "together"
+    GROQ = "groq"
+    DEEPSEEK = "deepseek"
+    CEREBRAS = "cerebras"
+    FIREWORKS = "fireworks"
+    ANYSCALE = "anyscale"
+    RUNPOD = "runpod"
+
+class ModelCapability(Enum):
+    """Model capabilities for multi-modal AI"""
+    TEXT_GENERATION = "text_generation"
+    IMAGE_ANALYSIS = "image_analysis"
+    IMAGE_GENERATION = "image_generation"
+    AUDIO_TRANSCRIPTION = "audio_transcription"
+    AUDIO_GENERATION = "audio_generation"
+    VIDEO_ANALYSIS = "video_analysis"
+    VIDEO_GENERATION = "video_generation"
+    DOCUMENT_ANALYSIS = "document_analysis"
+    CODE_GENERATION = "code_generation"
+    EMBEDDING = "embedding"
+    FUNCTION_CALLING = "function_calling"
+    REASONING = "reasoning"
+    MULTIMODAL = "multimodal"
 
 @dataclass
 class AIModel:
@@ -48,10 +74,29 @@ class AIModel:
     context_window: int = 4096
     is_active: bool = True
     custom_headers: Dict[str, str] = None
+    capabilities: List[ModelCapability] = None
+    supports_vision: bool = False
+    supports_audio: bool = False
+    supports_video: bool = False
+    supports_functions: bool = False
+    model_type: str = "llm"  # llm, embedding, image, audio, video, multimodal
+    input_modalities: List[str] = None
+    output_modalities: List[str] = None
+    deployment_type: str = "cloud"  # cloud, local, edge
+    region: str = "us-east-1"
+    specialized_tasks: List[str] = None
     
     def __post_init__(self):
         if self.custom_headers is None:
             self.custom_headers = {}
+        if self.capabilities is None:
+            self.capabilities = [ModelCapability.TEXT_GENERATION]
+        if self.input_modalities is None:
+            self.input_modalities = ["text"]
+        if self.output_modalities is None:
+            self.output_modalities = ["text"]
+        if self.specialized_tasks is None:
+            self.specialized_tasks = []
 
 class AIModelManager:
     """Manages AI model configurations and interactions"""
@@ -64,20 +109,35 @@ class AIModelManager:
         self._initialize_default_models()
     
     def _initialize_default_models(self):
-        """Initialize default AI models"""
-        default_models = [
-            # OpenAI Models
-            AIModel(
-                id="gpt-4o",
-                name="GPT-4o",
-                provider=AIProvider.OPENAI,
-                model_name="gpt-4o",
-                endpoint="https://api.openai.com/v1/chat/completions",
-                api_key_env="OPENAI_API_KEY",
-                max_tokens=4096,
-                context_window=128000,
-                cost_per_1k_tokens=0.03
-            ),
+        """Initialize default AI models with comprehensive multi-modal capabilities"""
+        # Import comprehensive models configuration
+        try:
+            from multimodal_models_config import get_comprehensive_multimodal_models
+            default_models = get_comprehensive_multimodal_models()
+        except ImportError:
+            # Fallback to basic models if comprehensive config not available
+            default_models = [
+                # OpenAI Models - Multi-modal
+                AIModel(
+                    id="gpt-4o",
+                    name="GPT-4o (Multi-modal)",
+                    provider=AIProvider.OPENAI,
+                    model_name="gpt-4o",
+                    endpoint="https://api.openai.com/v1/chat/completions",
+                    api_key_env="OPENAI_API_KEY",
+                    max_tokens=4096,
+                    context_window=128000,
+                    cost_per_1k_tokens=0.03,
+                    capabilities=[
+                        ModelCapability.TEXT_GENERATION,
+                        ModelCapability.IMAGE_ANALYSIS,
+                        ModelCapability.MULTIMODAL
+                    ],
+                    supports_vision=True,
+                    model_type="multimodal",
+                    input_modalities=["text", "image"],
+                    output_modalities=["text"]
+                ),
             AIModel(
                 id="gpt-4-turbo",
                 name="GPT-4 Turbo",
@@ -181,85 +241,65 @@ class AIModelManager:
                 context_window=128000,
                 cost_per_1k_tokens=0.0002
             ),
+            # Ollama Local Models
             AIModel(
-                id="llama-3.1-sonar-large-128k-online",
-                name="Llama 3.1 Sonar Large (Online)",
-                provider=AIProvider.PERPLEXITY,
-                model_name="llama-3.1-sonar-large-128k-online",
-                endpoint="https://api.perplexity.ai/chat/completions",
-                api_key_env="PERPLEXITY_API_KEY",
-                max_tokens=4096,
-                context_window=128000,
-                cost_per_1k_tokens=0.001
-            ),
-            # Ollama (Local)
-            AIModel(
-                id="ollama-llama3",
-                name="Llama 3 (Local)",
+                id="ollama-llama3.1",
+                name="Ollama Llama 3.1 (Local)",
                 provider=AIProvider.OLLAMA,
-                model_name="llama3",
-                endpoint="http://localhost:11434/api/chat",
+                model_name="llama3.1",
+                endpoint="http://localhost:11434/api/generate",
                 api_key_env="",
                 max_tokens=4096,
-                context_window=8192,
-                cost_per_1k_tokens=0.0
+                context_window=131072,
+                cost_per_1k_tokens=0.0,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.REASONING
+                ],
+                model_type="llm",
+                input_modalities=["text"],
+                output_modalities=["text"],
+                deployment_type="local"
             ),
             AIModel(
-                id="ollama-mistral",
-                name="Mistral (Local)",
+                id="ollama-llava",
+                name="Ollama LLaVA (Local Vision)",
                 provider=AIProvider.OLLAMA,
-                model_name="mistral",
-                endpoint="http://localhost:11434/api/chat",
+                model_name="llava",
+                endpoint="http://localhost:11434/api/generate",
                 api_key_env="",
                 max_tokens=4096,
-                context_window=8192,
-                cost_per_1k_tokens=0.0
-            ),
-            # Cohere Models
-            AIModel(
-                id="command-r-plus",
-                name="Command R+",
-                provider=AIProvider.COHERE,
-                model_name="command-r-plus",
-                endpoint="https://api.cohere.ai/v1/chat",
-                api_key_env="COHERE_API_KEY",
-                max_tokens=4096,
-                context_window=128000,
-                cost_per_1k_tokens=0.003
-            ),
-            # Mistral Models
-            AIModel(
-                id="mistral-large-2407",
-                name="Mistral Large 2407",
-                provider=AIProvider.MISTRAL,
-                model_name="mistral-large-2407",
-                endpoint="https://api.mistral.ai/v1/chat/completions",
-                api_key_env="MISTRAL_API_KEY",
-                max_tokens=4096,
-                context_window=128000,
-                cost_per_1k_tokens=0.008
-            ),
-            AIModel(
-                id="mistral-small-2409",
-                name="Mistral Small 2409",
-                provider=AIProvider.MISTRAL,
-                model_name="mistral-small-2409",
-                endpoint="https://api.mistral.ai/v1/chat/completions",
-                api_key_env="MISTRAL_API_KEY",
-                max_tokens=4096,
-                context_window=128000,
-                cost_per_1k_tokens=0.001
+                context_window=4096,
+                cost_per_1k_tokens=0.0,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.IMAGE_ANALYSIS,
+                    ModelCapability.MULTIMODAL
+                ],
+                supports_vision=True,
+                model_type="multimodal",
+                input_modalities=["text", "image"],
+                output_modalities=["text"],
+                deployment_type="local"
             )
-        ]
+            ]
         
+        # Initialize models with validation
         for model in default_models:
-            self.models[model.id] = model
-            
+            try:
+                self.models[model.id] = model
+                logger.info(f"Initialized model: {model.name} ({model.provider.value})")
+            except Exception as e:
+                logger.error(f"Failed to initialize model {model.id}: {e}")
+                continue
+        
         # Set default active model
         if "gpt-4o" in self.models:
             self.active_model_id = "gpt-4o"
         elif self.models:
             self.active_model_id = next(iter(self.models.keys()))
+        
+        logger.info(f"Initialized {len(self.models)} AI models with multi-modal capabilities")
     
     def get_model(self, model_id: str) -> Optional[AIModel]:
         """Get a model by ID"""
