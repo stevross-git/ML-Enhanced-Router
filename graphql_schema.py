@@ -47,6 +47,11 @@ try:
 except ImportError:
     RealTimeAnalytics = None
 
+try:
+    from auto_chain_generator import AutoChainGenerator
+except ImportError:
+    AutoChainGenerator = None
+
 
 class AgentCapability(ObjectType):
     """Agent capability GraphQL type"""
@@ -145,6 +150,63 @@ class SystemMetrics(ObjectType):
     total_cost = Float()
     uptime = Float()
 
+class ChainStep(ObjectType):
+    """Chain step GraphQL type"""
+    step_id = String()
+    step_type = String()
+    agent_id = String()
+    agent_name = String()
+    description = String()
+    input_from = String()
+    expected_output = String()
+    estimated_cost = Float()
+    estimated_time = Float()
+
+class AgentChain(ObjectType):
+    """Agent chain GraphQL type"""
+    chain_id = String()
+    query = String()
+    steps = List(ChainStep)
+    estimated_cost = Float()
+    estimated_time = Float()
+    complexity_score = Float()
+    created_at = String()
+
+class ChainAnalysis(ObjectType):
+    """Chain analysis GraphQL type"""
+    query = String()
+    complexity = Float()
+    intent = String()
+    domain = String()
+    requires_rag = Boolean()
+    requires_debate = Boolean()
+    requires_research = Boolean()
+    requires_creativity = Boolean()
+    output_format = String()
+    estimated_steps = Int()
+
+class ChainTemplate(ObjectType):
+    """Chain template GraphQL type"""
+    name = String()
+    description = String()
+    steps = List(String)
+
+class ChainStats(ObjectType):
+    """Chain generator statistics GraphQL type"""
+    available_templates = Int()
+    step_types = Int()
+    model_count = Int()
+    components_available = String()
+
+class ChainExecution(ObjectType):
+    """Chain execution result GraphQL type"""
+    chain_id = String()
+    query = String()
+    success_rate = Float()
+    total_cost = Float()
+    total_time = Float()
+    results = List(String)
+
 
 class PredictionResult(ObjectType):
     """Prediction result GraphQL type"""
@@ -183,6 +245,13 @@ class Query(ObjectType):
     predict = Field(PredictionResult,
                    prediction_type=String(required=True),
                    timeframe=String(default_value="1h"))
+    
+    # Auto Chain Generator
+    chain_templates = List(ChainTemplate)
+    chain_stats = Field(ChainStats)
+    analyze_chain = Field(ChainAnalysis, query=String(required=True))
+    generate_chain = Field(AgentChain, query=String(required=True))
+    execute_chain = Field(ChainExecution, query=String(required=True))
 
     def resolve_agents(self, info, active_only=False):
         """Resolve agents query"""
@@ -370,6 +439,160 @@ class Query(ObjectType):
                 total_cost=0.0,
                 uptime=0.0
             )
+    
+    def resolve_chain_templates(self, info):
+        """Resolve chain templates query"""
+        try:
+            if not AutoChainGenerator:
+                return []
+            
+            generator = AutoChainGenerator()
+            templates = []
+            
+            for name, template in generator.chain_templates.items():
+                templates.append(ChainTemplate(
+                    name=name,
+                    description=f"Template for {name.replace('_', ' ').title()}",
+                    steps=[step.value for step in template]
+                ))
+            
+            return templates
+            
+        except Exception as e:
+            print(f"Error getting chain templates: {e}")
+            return []
+    
+    def resolve_chain_stats(self, info):
+        """Resolve chain generator statistics"""
+        try:
+            if not AutoChainGenerator:
+                return ChainStats(
+                    available_templates=0,
+                    step_types=0,
+                    model_count=0,
+                    components_available="{}"
+                )
+            
+            generator = AutoChainGenerator()
+            stats = generator.get_chain_stats()
+            
+            return ChainStats(
+                available_templates=stats.get('available_templates', 0),
+                step_types=stats.get('step_types', 0),
+                model_count=stats.get('model_count', 0),
+                components_available=json.dumps(stats.get('components_available', {}))
+            )
+            
+        except Exception as e:
+            print(f"Error getting chain stats: {e}")
+            return ChainStats(
+                available_templates=0,
+                step_types=0,
+                model_count=0,
+                components_available="{}"
+            )
+    
+    def resolve_analyze_chain(self, info, query):
+        """Resolve chain analysis query"""
+        try:
+            if not AutoChainGenerator:
+                return None
+            
+            generator = AutoChainGenerator()
+            analysis = generator.analyze_query_for_chain(query)
+            
+            return ChainAnalysis(
+                query=analysis.get('query', ''),
+                complexity=analysis.get('complexity', 0.0),
+                intent=analysis.get('intent', ''),
+                domain=analysis.get('domain', ''),
+                requires_rag=analysis.get('requires_rag', False),
+                requires_debate=analysis.get('requires_debate', False),
+                requires_research=analysis.get('requires_research', False),
+                requires_creativity=analysis.get('requires_creativity', False),
+                output_format=analysis.get('output_format', ''),
+                estimated_steps=analysis.get('estimated_steps', 0)
+            )
+            
+        except Exception as e:
+            print(f"Error analyzing chain: {e}")
+            return None
+    
+    def resolve_generate_chain(self, info, query):
+        """Resolve chain generation query"""
+        try:
+            if not AutoChainGenerator:
+                return None
+            
+            generator = AutoChainGenerator()
+            chain = generator.generate_chain(query)
+            
+            steps = []
+            for step in chain.steps:
+                steps.append(ChainStep(
+                    step_id=step.step_id,
+                    step_type=step.step_type.value,
+                    agent_id=step.agent_id,
+                    agent_name=step.agent_name,
+                    description=step.description,
+                    input_from=step.input_from,
+                    expected_output=step.expected_output,
+                    estimated_cost=step.parameters.get('estimated_cost', 0.0),
+                    estimated_time=step.parameters.get('estimated_time', 0.0)
+                ))
+            
+            return AgentChain(
+                chain_id=chain.chain_id,
+                query=chain.query,
+                steps=steps,
+                estimated_cost=chain.estimated_cost,
+                estimated_time=chain.estimated_time,
+                complexity_score=chain.complexity_score,
+                created_at=chain.created_at.isoformat()
+            )
+            
+        except Exception as e:
+            print(f"Error generating chain: {e}")
+            return None
+    
+    def resolve_execute_chain(self, info, query):
+        """Resolve chain execution query"""
+        try:
+            if not AutoChainGenerator:
+                return None
+            
+            generator = AutoChainGenerator()
+            chain = generator.generate_chain(query)
+            
+            # Execute chain asynchronously
+            async def execute():
+                return await generator.execute_chain(chain)
+            
+            # Run in new event loop
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                results = loop.run_until_complete(execute())
+            finally:
+                loop.close()
+            
+            # Calculate metrics
+            success_rate = sum(1 for r in results if r.success) / len(results) if results else 0
+            total_cost = sum(r.cost for r in results)
+            total_time = sum(r.execution_time for r in results)
+            
+            return ChainExecution(
+                chain_id=chain.chain_id,
+                query=query,
+                success_rate=success_rate,
+                total_cost=total_cost,
+                total_time=total_time,
+                results=[r.output for r in results if r.success]
+            )
+            
+        except Exception as e:
+            print(f"Error executing chain: {e}")
+            return None
 
     def resolve_predict(self, info, prediction_type, timeframe="1h"):
         """Resolve prediction query"""

@@ -32,6 +32,7 @@ from real_time_analytics import RealTimeAnalytics
 from advanced_query_optimizer import AdvancedQueryOptimizer
 from predictive_analytics_engine import PredictiveAnalyticsEngine
 from graphql_simple import graphql_bp
+from auto_chain_generator import AutoChainGenerator
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -80,10 +81,11 @@ active_learning_system = None
 contextual_memory_router = None
 semantic_guardrail_system = None
 multimodal_ai_integration = None
+auto_chain_generator = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator
     
     try:
         with app.app_context():
@@ -104,6 +106,11 @@ def initialize_router():
             real_time_analytics = RealTimeAnalytics()
             advanced_query_optimizer = AdvancedQueryOptimizer()
             predictive_analytics_engine = PredictiveAnalyticsEngine()
+            
+            # Initialize Auto Chain Generator
+            from auto_chain_generator import AutoChainGenerator
+            global auto_chain_generator
+            auto_chain_generator = AutoChainGenerator()
             
             # Initialize next-generation features
             from active_learning_system import get_active_learning_system
@@ -1457,6 +1464,11 @@ def rag_stats():
 def api_docs():
     """Interactive API documentation"""
     return render_template('api_docs.html')
+
+@app.route('/chains')
+def auto_chain_generator_page():
+    """Auto Chain Generator interface"""
+    return render_template('auto_chain_generator.html')
 
 @app.route('/api/openapi.json', methods=['GET'])
 def openapi_spec():
@@ -2931,6 +2943,175 @@ def get_multimodal_stats():
         
     except Exception as e:
         logger.error(f"Error getting multi-modal stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# Auto Chain Generator API endpoints
+@app.route('/api/chains/analyze', methods=['POST'])
+def analyze_query_for_chain():
+    """Analyze query to determine optimal chain composition"""
+    try:
+        if not auto_chain_generator:
+            return jsonify({"error": "Auto Chain Generator not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        analysis = auto_chain_generator.analyze_query_for_chain(query)
+        
+        return jsonify({
+            "analysis": analysis,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error analyzing query for chain: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chains/generate', methods=['POST'])
+def generate_agent_chain():
+    """Generate optimal agent chain for a query"""
+    try:
+        if not auto_chain_generator:
+            return jsonify({"error": "Auto Chain Generator not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        chain = auto_chain_generator.generate_chain(query)
+        
+        # Convert to dict for JSON serialization
+        chain_dict = {
+            "chain_id": chain.chain_id,
+            "query": chain.query,
+            "steps": [
+                {
+                    "step_id": step.step_id,
+                    "step_type": step.step_type.value,
+                    "agent_id": step.agent_id,
+                    "agent_name": step.agent_name,
+                    "description": step.description,
+                    "input_from": step.input_from,
+                    "parameters": step.parameters,
+                    "expected_output": step.expected_output
+                }
+                for step in chain.steps
+            ],
+            "estimated_cost": chain.estimated_cost,
+            "estimated_time": chain.estimated_time,
+            "complexity_score": chain.complexity_score,
+            "created_at": chain.created_at.isoformat()
+        }
+        
+        return jsonify({
+            "chain": chain_dict,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating agent chain: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chains/execute', methods=['POST'])
+def execute_agent_chain():
+    """Execute a complete agent chain"""
+    try:
+        if not auto_chain_generator:
+            return jsonify({"error": "Auto Chain Generator not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({"error": "Query is required"}), 400
+        
+        query = data['query']
+        
+        # Generate chain
+        chain = auto_chain_generator.generate_chain(query)
+        
+        # Execute chain asynchronously
+        async def execute_chain():
+            return await auto_chain_generator.execute_chain(chain)
+        
+        # Run in async context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            results = loop.run_until_complete(execute_chain())
+        finally:
+            loop.close()
+        
+        # Convert results to dict
+        results_dict = [
+            {
+                "step_id": result.step_id,
+                "success": result.success,
+                "output": result.output,
+                "execution_time": result.execution_time,
+                "tokens_used": result.tokens_used,
+                "cost": result.cost,
+                "error_message": result.error_message,
+                "metadata": result.metadata
+            }
+            for result in results
+        ]
+        
+        return jsonify({
+            "chain_id": chain.chain_id,
+            "query": query,
+            "results": results_dict,
+            "total_cost": sum(r.cost for r in results),
+            "total_time": sum(r.execution_time for r in results),
+            "success_rate": sum(1 for r in results if r.success) / len(results) if results else 0,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error executing agent chain: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chains/templates', methods=['GET'])
+def get_chain_templates():
+    """Get available chain templates"""
+    try:
+        if not auto_chain_generator:
+            return jsonify({"error": "Auto Chain Generator not available"}), 503
+        
+        templates = {}
+        for name, template in auto_chain_generator.chain_templates.items():
+            templates[name] = {
+                "name": name,
+                "steps": [step.value for step in template],
+                "description": f"Template for {name.replace('_', ' ').title()}"
+            }
+        
+        return jsonify({
+            "templates": templates,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting chain templates: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/chains/stats', methods=['GET'])
+def get_chain_stats():
+    """Get Auto Chain Generator statistics"""
+    try:
+        if not auto_chain_generator:
+            return jsonify({"error": "Auto Chain Generator not available"}), 503
+        
+        stats = auto_chain_generator.get_chain_stats()
+        
+        return jsonify({
+            "stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting chain stats: {e}")
         return jsonify({"error": str(e)}), 500
 
 # Register GraphQL blueprint
