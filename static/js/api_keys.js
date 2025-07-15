@@ -225,7 +225,8 @@ function getProviderUrl(provider) {
         'cerebras': 'https://cloud.cerebras.ai/platform',
         'perplexity': 'https://www.perplexity.ai/settings/api',
         'huggingface': 'https://huggingface.co/settings/tokens',
-        'replicate': 'https://replicate.com/account/api-tokens'
+        'replicate': 'https://replicate.com/account/api-tokens',
+        'elevenlabs': 'https://elevenlabs.io/app/settings/api-keys'
     };
     
     return urls[provider] || '#';

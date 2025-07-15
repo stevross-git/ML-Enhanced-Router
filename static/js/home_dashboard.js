@@ -12,7 +12,7 @@ async function loadDashboardData() {
     try {
         // Load multiple data sources in parallel
         const [modelsResponse, statsResponse, agentsResponse] = await Promise.all([
-            fetch('/api/models/detailed'),
+            fetch('/api/ai-models'),
             fetch('/api/stats'),
             fetch('/api/agents')
         ]);
@@ -36,7 +36,10 @@ async function loadDashboardData() {
 function updateStatistics(modelsData, statsData, agentsData) {
     // Update model statistics
     const models = modelsData.models || [];
-    const activeModels = models.filter(m => m.api_key_available || m.deployment_type === 'local').length;
+    const activeModels = models.filter(m => {
+        // Check if model has API key available or is local
+        return m.api_key_available || m.deployment_type === 'local' || m.provider === 'ollama';
+    }).length;
     
     document.getElementById('totalModels').textContent = models.length;
     document.getElementById('activeModels').textContent = activeModels;

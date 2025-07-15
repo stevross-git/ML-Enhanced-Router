@@ -39,6 +39,7 @@ class AIProvider(Enum):
     FIREWORKS = "fireworks"
     ANYSCALE = "anyscale"
     RUNPOD = "runpod"
+    ELEVENLABS = "elevenlabs"
 
 class ModelCapability(Enum):
     """Model capabilities for multi-modal AI"""
@@ -829,6 +830,8 @@ class AIModelManager:
                 result = await self._handle_cohere(model, query, system_message, api_key)
             elif model.provider == AIProvider.MISTRAL:
                 result = await self._handle_mistral(model, query, system_message, api_key)
+            elif model.provider == AIProvider.ELEVENLABS:
+                result = await self._handle_elevenlabs(model, query, system_message, api_key)
             elif model.provider == AIProvider.CUSTOM:
                 result = await self._handle_custom(model, query, system_message, api_key)
             else:
@@ -1142,6 +1145,56 @@ class AIModelManager:
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
+    
+    async def _handle_elevenlabs(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
+        """Handle ElevenLabs API requests for text-to-speech"""
+        headers = {
+            "xi-api-key": api_key,
+            "Content-Type": "application/json"
+        }
+        
+        # ElevenLabs uses a different endpoint format
+        # For TTS, we need to specify voice_id
+        default_voice_id = "21m00Tcm4TlvDq8ikWAM"  # Default voice (Rachel)
+        endpoint = f"https://api.elevenlabs.io/v1/text-to-speech/{default_voice_id}"
+        
+        # Combine system message and query for TTS
+        text_to_speak = query
+        if system_message:
+            text_to_speak = f"{system_message}\n\n{query}"
+        
+        payload = {
+            "text": text_to_speak,
+            "model_id": model.model_name,
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.5,
+                "style": 0.0,
+                "use_speaker_boost": True
+            }
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(endpoint, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    # ElevenLabs returns audio data as binary
+                    audio_data = await response.read()
+                    
+                    # For this implementation, we'll return a success message
+                    # In a real implementation, you'd want to save the audio or return it as base64
+                    return {
+                        "response": f"Successfully generated audio for text: '{text_to_speak[:100]}...' using ElevenLabs {model.model_name}",
+                        "status": "success",
+                        "model": model.id,
+                        "audio_length": len(audio_data),
+                        "content_type": "audio/mpeg"
+                    }
+                else:
+                    try:
+                        error_data = await response.json()
+                        return {"error": error_data.get("detail", {}).get("message", "Unknown ElevenLabs error"), "status": "error"}
+                    except:
+                        return {"error": f"ElevenLabs API error: {response.status}", "status": "error"}
     
     async def _handle_custom(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
         """Handle custom endpoint requests"""

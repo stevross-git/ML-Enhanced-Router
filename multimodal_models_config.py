@@ -732,4 +732,68 @@ def get_comprehensive_multimodal_models():
             deployment_type="cloud",
             specialized_tasks=["real_time_search", "current_information", "web_search", "advanced_reasoning"]
         ),
+        
+        # ===== ELEVENLABS MODELS =====
+        AIModel(
+            id="elevenlabs-tts-multilingual",
+            name="ElevenLabs TTS Multilingual",
+            provider=AIProvider.ELEVENLABS,
+            model_name="eleven_multilingual_v2",
+            endpoint="https://api.elevenlabs.io/v1/text-to-speech",
+            api_key_env="ELEVENLABS_API_KEY",
+            max_tokens=5000,
+            context_window=5000,
+            cost_per_1k_tokens=0.18,
+            capabilities=[
+                ModelCapability.AUDIO_GENERATION
+            ],
+            supports_audio=True,
+            model_type="audio",
+            input_modalities=["text"],
+            output_modalities=["audio"],
+            deployment_type="cloud",
+            specialized_tasks=["speech_synthesis", "voice_cloning", "multilingual_tts"]
+        ),
+        
+        AIModel(
+            id="elevenlabs-tts-turbo",
+            name="ElevenLabs TTS Turbo",
+            provider=AIProvider.ELEVENLABS,
+            model_name="eleven_turbo_v2",
+            endpoint="https://api.elevenlabs.io/v1/text-to-speech",
+            api_key_env="ELEVENLABS_API_KEY",
+            max_tokens=5000,
+            context_window=5000,
+            cost_per_1k_tokens=0.20,
+            capabilities=[
+                ModelCapability.AUDIO_GENERATION
+            ],
+            supports_audio=True,
+            model_type="audio",
+            input_modalities=["text"],
+            output_modalities=["audio"],
+            deployment_type="cloud",
+            specialized_tasks=["fast_speech_synthesis", "low_latency_tts"]
+        ),
+        
+        AIModel(
+            id="elevenlabs-tts-english",
+            name="ElevenLabs TTS English",
+            provider=AIProvider.ELEVENLABS,
+            model_name="eleven_monolingual_v1",
+            endpoint="https://api.elevenlabs.io/v1/text-to-speech",
+            api_key_env="ELEVENLABS_API_KEY",
+            max_tokens=5000,
+            context_window=5000,
+            cost_per_1k_tokens=0.15,
+            capabilities=[
+                ModelCapability.AUDIO_GENERATION
+            ],
+            supports_audio=True,
+            model_type="audio",
+            input_modalities=["text"],
+            output_modalities=["audio"],
+            deployment_type="cloud",
+            specialized_tasks=["english_tts", "high_quality_speech"]
+        ),
     ]
