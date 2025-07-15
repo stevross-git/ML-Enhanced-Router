@@ -3894,6 +3894,72 @@ def test_ollama_connection():
         logger.error(f"Error testing Ollama: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+# Voice Integration API endpoints
+@app.route('/api/personal-ai/voice/settings', methods=['GET', 'POST'])
+def voice_settings():
+    """Get or update voice settings"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        if request.method == 'GET':
+            settings = personal_ai_router.get_voice_settings()
+            return jsonify(settings)
+        
+        elif request.method == 'POST':
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'Request data is required'}), 400
+                
+            result = personal_ai_router.update_voice_settings(
+                api_key=data.get('api_key', ''),
+                model=data.get('model', 'elevenlabs-tts-multilingual'),
+                voice=data.get('voice', 'default'),
+                enabled=data.get('enabled', True)
+            )
+            return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Error handling voice settings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/voice/available', methods=['GET'])
+def available_voices():
+    """Get available voice models and options"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        voices = personal_ai_router.get_available_voices()
+        return jsonify({"voices": voices})
+        
+    except Exception as e:
+        logger.error(f"Error getting available voices: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/voice/generate', methods=['POST'])
+def generate_voice():
+    """Generate voice response"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({"error": "Text is required"}), 400
+        
+        voice_settings = data.get('voice_settings')
+        result = asyncio.run(personal_ai_router.generate_voice_response(
+            text=data['text'],
+            voice_settings=voice_settings
+        ))
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"Error generating voice: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Enhanced Memory and Mood API Endpoints
 @app.route('/api/personal-ai/personas', methods=['GET', 'POST'])
 def manage_personas():

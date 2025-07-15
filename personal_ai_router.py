@@ -50,6 +50,15 @@ except ImportError:
     ADVANCED_FEATURES_AVAILABLE = False
     logger.warning("Enhanced memory and mood systems not available")
 
+# Import AI models for voice integration
+try:
+    from ai_models import get_ai_model_manager
+    AI_MODELS_AVAILABLE = True
+    logger.info("AI models available for voice integration")
+except ImportError:
+    AI_MODELS_AVAILABLE = False
+    logger.warning("AI models not available for voice integration")
+
 class QueryComplexity(Enum):
     """Query complexity levels"""
     TRIVIAL = "trivial"
@@ -484,6 +493,14 @@ class PersonalAIRouter:
         self.complexity_analyzer = QueryComplexityAnalyzer()
         self.adaptive_cache = AdaptiveCache()
         
+        # Initialize AI model manager for voice
+        if AI_MODELS_AVAILABLE:
+            self.ai_model_manager = get_ai_model_manager()
+            logger.info("AI models initialized for voice integration")
+        else:
+            self.ai_model_manager = None
+            logger.warning("AI models not available for voice integration")
+
         # Initialize enhanced memory and mood systems
         if ENHANCED_MEMORY_AVAILABLE:
             self.enhanced_memory = get_personal_memory_system()
@@ -551,6 +568,106 @@ class PersonalAIRouter:
         self.privacy_threshold = 0.7  # Above this, prefer local
         
         logger.info("Personal AI Router initialized")
+    
+    async def generate_voice_response(self, text: str, voice_settings: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Generate voice response using ElevenLabs TTS"""
+        try:
+            if not self.ai_model_manager:
+                return {"error": "AI model manager not available", "status": "error"}
+            
+            # Get voice settings from user preferences or use defaults
+            if not voice_settings:
+                voice_settings = self.memory_store.get_preferences("voice")
+                if voice_settings:
+                    voice_settings = {pref["preference"]: pref["value"] for pref in voice_settings}
+                else:
+                    voice_settings = {"model": "elevenlabs-tts-multilingual", "voice": "default"}
+            
+            # Get the selected voice model
+            voice_model_id = voice_settings.get("model", "elevenlabs-tts-multilingual")
+            selected_voice = voice_settings.get("voice", "default")
+            
+            # Generate speech using AI model manager
+            result = await self.ai_model_manager.generate_response(
+                query=text,
+                model_id=voice_model_id,
+                system_message=f"Generate speech for: {selected_voice} voice"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Voice generation failed: {e}")
+            return {"error": str(e), "status": "error"}
+    
+    def update_voice_settings(self, api_key: str, model: str, voice: str, enabled: bool = True):
+        """Update voice settings for the user"""
+        try:
+            # Store voice preferences
+            self.memory_store.store_preference("voice", "api_key", api_key)
+            self.memory_store.store_preference("voice", "model", model)
+            self.memory_store.store_preference("voice", "voice", voice)
+            self.memory_store.store_preference("voice", "enabled", str(enabled))
+            
+            # Update AI model manager with new API key if provided
+            if self.ai_model_manager and api_key:
+                self.ai_model_manager.update_api_key("elevenlabs", api_key)
+            
+            logger.info(f"Voice settings updated: model={model}, voice={voice}, enabled={enabled}")
+            return {"status": "success", "message": "Voice settings updated"}
+            
+        except Exception as e:
+            logger.error(f"Failed to update voice settings: {e}")
+            return {"error": str(e), "status": "error"}
+    
+    def get_voice_settings(self) -> Dict[str, Any]:
+        """Get current voice settings"""
+        try:
+            preferences = self.memory_store.get_preferences("voice")
+            settings = {}
+            
+            for pref in preferences:
+                settings[pref["preference"]] = pref["value"]
+            
+            # Default settings if none exist
+            if not settings:
+                settings = {
+                    "model": "elevenlabs-tts-multilingual",
+                    "voice": "default",
+                    "enabled": "true",
+                    "api_key": ""
+                }
+            
+            return settings
+            
+        except Exception as e:
+            logger.error(f"Failed to get voice settings: {e}")
+            return {"error": str(e), "status": "error"}
+    
+    def get_available_voices(self) -> List[Dict[str, Any]]:
+        """Get list of available voice models and options"""
+        if not self.ai_model_manager:
+            return []
+        
+        # Get ElevenLabs models
+        elevenlabs_models = [
+            model for model in self.ai_model_manager.get_models() 
+            if model.provider.value == "elevenlabs"
+        ]
+        
+        voices = []
+        for model in elevenlabs_models:
+            voices.append({
+                "model_id": model.id,
+                "name": model.name,
+                "provider": model.provider.value,
+                "available_voices": [
+                    "default", "alloy", "echo", "fable", "onyx", "nova", "shimmer",
+                    "Adam", "Antoni", "Arnold", "Bella", "Domi", "Elli", "Josh", "Rachel", "Sam"
+                ]
+            })
+        
+        return voices
     
     def _init_p2p_network(self):
         """Initialize P2P network for web4ai"""

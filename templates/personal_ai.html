@@ -283,6 +283,14 @@
                             <input type="text" id="message-input" class="form-control" 
                                    placeholder="Ask me anything..." 
                                    onkeypress="handleKeyPress(event)">
+                            <button class="btn btn-outline-secondary" onclick="toggleVoiceSettings()" id="voice-settings-btn">
+                                <i class="fas fa-microphone-alt me-1"></i>
+                                Voice
+                            </button>
+                            <button class="btn btn-outline-info" onclick="toggleVoiceChat()" id="voice-toggle-btn">
+                                <i class="fas fa-volume-mute me-1"></i>
+                                TTS Off
+                            </button>
                             <button class="btn btn-primary" onclick="sendMessage()">
                                 <i class="fas fa-paper-plane me-1"></i>
                                 Send
@@ -594,10 +602,92 @@
         </div>
     </div>
 
+    <!-- Voice Settings Modal -->
+    <div class="modal fade" id="voiceSettingsModal" tabindex="-1" aria-labelledby="voiceSettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="voiceSettingsModalLabel">
+                        <i class="fas fa-microphone-alt me-2"></i>
+                        Voice Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="elevenLabsApiKey" class="form-label">
+                            <i class="fas fa-key me-1"></i>
+                            ElevenLabs API Key
+                        </label>
+                        <input type="password" class="form-control" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API key">
+                        <div class="form-text">
+                            Get your API key from <a href="https://elevenlabs.io/api" target="_blank">ElevenLabs</a>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceModel" class="form-label">
+                            <i class="fas fa-robot me-1"></i>
+                            Voice Model
+                        </label>
+                        <select class="form-select" id="voiceModel">
+                            <option value="elevenlabs-tts-multilingual">ElevenLabs TTS Multilingual</option>
+                            <option value="elevenlabs-tts-turbo">ElevenLabs TTS Turbo</option>
+                            <option value="elevenlabs-tts-english">ElevenLabs TTS English</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceSelection" class="form-label">
+                            <i class="fas fa-user me-1"></i>
+                            Voice Selection
+                        </label>
+                        <select class="form-select" id="voiceSelection">
+                            <option value="default">Default</option>
+                            <option value="alloy">Alloy</option>
+                            <option value="echo">Echo</option>
+                            <option value="fable">Fable</option>
+                            <option value="onyx">Onyx</option>
+                            <option value="nova">Nova</option>
+                            <option value="shimmer">Shimmer</option>
+                            <option value="Adam">Adam</option>
+                            <option value="Antoni">Antoni</option>
+                            <option value="Arnold">Arnold</option>
+                            <option value="Bella">Bella</option>
+                            <option value="Domi">Domi</option>
+                            <option value="Elli">Elli</option>
+                            <option value="Josh">Josh</option>
+                            <option value="Rachel">Rachel</option>
+                            <option value="Sam">Sam</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="voiceEnabled" checked>
+                        <label class="form-check-label" for="voiceEnabled">
+                            Enable voice responses
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveVoiceSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let chatHistory = [];
         let isProcessing = false;
+        let voiceEnabled = false;
+        let voiceSettings = {
+            model: 'elevenlabs-tts-multilingual',
+            voice: 'default',
+            enabled: false,
+            api_key: ''
+        };
         
         // Profile Builder Variables
         let currentQuestionId = null;
@@ -610,6 +700,7 @@
             refreshStats();
             loadPersonalMemory();
             checkProfileStatus();
+            loadVoiceSettings();
             
             // Auto-refresh stats every 30 seconds
             setInterval(refreshStats, 30000);
@@ -936,6 +1027,11 @@
                     // Add assistant response
                     addMessage('assistant', data.response, data.routing_result);
                     
+                    // Generate voice response if enabled
+                    if (voiceEnabled) {
+                        generateVoiceResponse(data.response);
+                    }
+                    
                     // Update chat history
                     chatHistory.push({ user: message, assistant: data.response });
                 }
@@ -1131,6 +1227,156 @@
                         strength: parseFloat(strength)
                     })
                 });
+                
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('preferenceModal')).hide();
+                    loadPersonalMemory();
+                    
+                    // Clear form
+                    document.getElementById('preference-category').value = '';
+                    document.getElementById('preference-key').value = '';
+                    document.getElementById('preference-value').value = '';
+                    document.getElementById('preference-strength').value = 0.8;
+                } else {
+                    alert('Failed to save preference');
+                }
+                
+            } catch (error) {
+                alert('Error saving preference: ' + error.message);
+            }
+        }
+        
+        // Voice-related functions
+        async function loadVoiceSettings() {
+            try {
+                const response = await fetch('/api/personal-ai/voice/settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    voiceSettings = settings;
+                    voiceEnabled = settings.enabled === 'true';
+                    
+                    // Update UI
+                    updateVoiceToggleButton();
+                    
+                    // Update modal with settings
+                    document.getElementById('elevenLabsApiKey').value = settings.api_key || '';
+                    document.getElementById('voiceModel').value = settings.model || 'elevenlabs-tts-multilingual';
+                    document.getElementById('voiceSelection').value = settings.voice || 'default';
+                    document.getElementById('voiceEnabled').checked = voiceEnabled;
+                }
+            } catch (error) {
+                console.error('Error loading voice settings:', error);
+            }
+        }
+        
+        function toggleVoiceSettings() {
+            const modal = new bootstrap.Modal(document.getElementById('voiceSettingsModal'));
+            modal.show();
+        }
+        
+        function toggleVoiceChat() {
+            voiceEnabled = !voiceEnabled;
+            updateVoiceToggleButton();
+            
+            // Update settings
+            voiceSettings.enabled = voiceEnabled;
+            saveVoiceSettings();
+        }
+        
+        function updateVoiceToggleButton() {
+            const btn = document.getElementById('voice-toggle-btn');
+            const icon = btn.querySelector('i');
+            
+            if (voiceEnabled) {
+                btn.className = 'btn btn-success';
+                icon.className = 'fas fa-volume-up me-1';
+                btn.innerHTML = '<i class="fas fa-volume-up me-1"></i>TTS On';
+            } else {
+                btn.className = 'btn btn-outline-info';
+                icon.className = 'fas fa-volume-mute me-1';
+                btn.innerHTML = '<i class="fas fa-volume-mute me-1"></i>TTS Off';
+            }
+        }
+        
+        async function saveVoiceSettings() {
+            const apiKey = document.getElementById('elevenLabsApiKey').value;
+            const model = document.getElementById('voiceModel').value;
+            const voice = document.getElementById('voiceSelection').value;
+            const enabled = document.getElementById('voiceEnabled').checked;
+            
+            try {
+                const response = await fetch('/api/personal-ai/voice/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        model: model,
+                        voice: voice,
+                        enabled: enabled
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        voiceSettings = { api_key: apiKey, model: model, voice: voice, enabled: enabled };
+                        voiceEnabled = enabled;
+                        updateVoiceToggleButton();
+                        
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('voiceSettingsModal')).hide();
+                        
+                        // Show success message
+                        alert('Voice settings saved successfully!');
+                    } else {
+                        alert('Failed to save voice settings: ' + result.error);
+                    }
+                } else {
+                    alert('Failed to save voice settings');
+                }
+                
+            } catch (error) {
+                alert('Error saving voice settings: ' + error.message);
+            }
+        }
+        
+        async function generateVoiceResponse(text) {
+            if (!voiceEnabled || !voiceSettings.api_key) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/personal-ai/voice/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        voice_settings: voiceSettings
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        console.log('Voice generated successfully');
+                        // Here you would typically play the audio
+                        // For now, just show a success message
+                        showMessage('system', 'Voice response generated successfully!');
+                    } else {
+                        console.error('Voice generation failed:', result.error);
+                    }
+                } else {
+                    console.error('Failed to generate voice response');
+                }
+                
+            } catch (error) {
+                console.error('Error generating voice response:', error);
+            }
+        }
                 
                 if (response.ok) {
                     bootstrap.Modal.getInstance(document.getElementById('preferenceModal')).hide();
