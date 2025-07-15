@@ -53,6 +53,8 @@
         .routing-cloud { background: var(--bs-warning); }
         .routing-hybrid { background: var(--bs-info); }
         .routing-cached { background: var(--bs-secondary); }
+        .routing-p2p-network { background: var(--bs-purple); }
+        .routing-distributed-mesh { background: var(--bs-indigo); }
         
         .message-meta {
             font-size: 0.8em;
@@ -306,6 +308,14 @@
                                 <span>Active Preferences:</span>
                                 <span id="preferences-count">0</span>
                             </div>
+                            <div class="stat-item">
+                                <span>P2P Network:</span>
+                                <span id="p2p-status">Disabled</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Network Peers:</span>
+                                <span id="p2p-peers">0</span>
+                            </div>
                         </div>
                         
                         <!-- Query Analysis -->
@@ -509,6 +519,14 @@
                 
                 // Update local models count
                 document.getElementById('local-models-count').textContent = data.local_models || 0;
+                
+                // Update P2P network status
+                if (data.p2p_network) {
+                    document.getElementById('p2p-status').textContent = 
+                        data.p2p_network.enabled ? 'Enabled' : 'Disabled';
+                    document.getElementById('p2p-peers').textContent = 
+                        data.p2p_network.network_stats.peer_count || 0;
+                }
                 
             } catch (error) {
                 console.error('Error checking Ollama status:', error);

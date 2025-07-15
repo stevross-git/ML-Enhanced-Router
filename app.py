@@ -3634,6 +3634,11 @@ def get_personal_ai_status():
             "cache_hit_rate": stats.get("cache_hit_rate", 0.0),
             "total_memories": stats.get("total_memories", 0),
             "routing_stats": stats.get("routing_stats", {}),
+            "p2p_network": stats.get("p2p_network", {
+                "enabled": False,
+                "node_id": None,
+                "network_stats": {"peer_count": 0}
+            }),
             "status": "ready"
         })
         

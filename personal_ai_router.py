@@ -1,6 +1,7 @@
 """
 Personal AI Router with Hybrid Edge-Cloud Routing
 Implements intelligent routing between local Ollama models and cloud LLMs
+Enhanced with decentralized P2P AI routing capabilities for web4ai network
 """
 
 import os
@@ -15,10 +16,24 @@ from dataclasses import dataclass, field
 import sqlite3
 import threading
 from contextlib import contextmanager
+import socket
+import uuid
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Import P2P networking capabilities
+try:
+    from p2p_ai_router import (
+        P2PNetworkManager, AgentCapability, NodeStatus, MessageType,
+        get_p2p_network_manager
+    )
+    P2P_AVAILABLE = True
+    logger.info("P2P AI Router available - enabling web4ai network integration")
+except ImportError:
+    P2P_AVAILABLE = False
+    logger.warning("P2P AI Router not available, running in standalone mode")
 
 class QueryComplexity(Enum):
     """Query complexity levels"""
@@ -48,6 +63,8 @@ class RoutingDecision(Enum):
     HYBRID = "hybrid"
     CACHED = "cached"
     FAILED_OVER = "failed_over"
+    P2P_NETWORK = "p2p_network"
+    DISTRIBUTED_MESH = "distributed_mesh"
 
 @dataclass
 class QueryAnalysis:
@@ -452,6 +469,20 @@ class PersonalAIRouter:
         self.complexity_analyzer = QueryComplexityAnalyzer()
         self.adaptive_cache = AdaptiveCache()
         
+        # Initialize P2P network capabilities
+        self.p2p_network = None
+        self.web4ai_node_id = None
+        self.p2p_capabilities = [
+            AgentCapability.TEXT_GENERATION,
+            AgentCapability.QUESTION_ANSWERING,
+            AgentCapability.SUMMARIZATION,
+            AgentCapability.CREATIVE_WRITING
+        ]
+        
+        # Initialize P2P network if available
+        if P2P_AVAILABLE:
+            self._init_p2p_network()
+        
         # Default models
         self.local_models = {
             "simple": "llama3.2:3b",
@@ -459,17 +490,67 @@ class PersonalAIRouter:
             "complex": "llama3.1:70b"
         }
         
-        # Routing thresholds
+        # Routing thresholds (enhanced with P2P options)
         self.complexity_thresholds = {
             "local_only": [QueryComplexity.TRIVIAL, QueryComplexity.SIMPLE],
             "hybrid": [QueryComplexity.MODERATE],
-            "cloud_preferred": [QueryComplexity.COMPLEX, QueryComplexity.EXPERT]
+            "cloud_preferred": [QueryComplexity.COMPLEX, QueryComplexity.EXPERT],
+            "p2p_preferred": [QueryComplexity.MODERATE, QueryComplexity.COMPLEX]
         }
         
         # Privacy thresholds
         self.privacy_threshold = 0.7  # Above this, prefer local
         
         logger.info("Personal AI Router initialized")
+    
+    def _init_p2p_network(self):
+        """Initialize P2P network for web4ai"""
+        try:
+            # Generate unique node ID for web4ai network
+            self.web4ai_node_id = f"web4ai_personal_{uuid.uuid4().hex[:8]}"
+            
+            # Find available port for P2P network
+            p2p_port = self._find_available_port(9000)
+            
+            # Initialize P2P network manager
+            self.p2p_network = P2PNetworkManager(
+                node_id=self.web4ai_node_id,
+                port=p2p_port,
+                capabilities=self.p2p_capabilities
+            )
+            
+            # Start P2P network
+            self.p2p_network.start_network()
+            
+            # Try to join web4ai network with default bootstrap nodes
+            bootstrap_nodes = [
+                ("127.0.0.1", 9001),
+                ("127.0.0.1", 9002),
+                ("127.0.0.1", 9003)
+            ]
+            
+            # Join the network
+            self.p2p_network.join_network(bootstrap_nodes)
+            
+            logger.info(f"P2P network initialized for web4ai with node ID: {self.web4ai_node_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize P2P network: {e}")
+            self.p2p_network = None
+    
+    def _find_available_port(self, start_port: int) -> int:
+        """Find an available port starting from start_port"""
+        for port in range(start_port, start_port + 100):
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.bind(('127.0.0.1', port))
+                sock.close()
+                return port
+            except OSError:
+                continue
+        
+        raise Exception("No available ports found")
     
     async def process_query(self, query: str, context: Optional[Dict[str, Any]] = None) -> RoutingResult:
         """Process a query with hybrid routing"""
@@ -506,6 +587,10 @@ class PersonalAIRouter:
             result = await self._process_cloud(enhanced_query, analysis)
         elif routing_decision == RoutingDecision.HYBRID:
             result = await self._process_hybrid(enhanced_query, analysis)
+        elif routing_decision == RoutingDecision.P2P_NETWORK:
+            result = await self._process_p2p_network(enhanced_query, analysis)
+        elif routing_decision == RoutingDecision.DISTRIBUTED_MESH:
+            result = await self._process_distributed_mesh(enhanced_query, analysis)
         else:
             result = await self._process_local(enhanced_query, analysis)  # Fallback
         
@@ -572,6 +657,12 @@ class PersonalAIRouter:
         # Privacy-first routing
         if analysis.privacy_score > self.privacy_threshold:
             return RoutingDecision.LOCAL_ONLY
+        
+        # Check P2P network availability first
+        if P2P_AVAILABLE and self.p2p_network and analysis.complexity in self.complexity_thresholds["p2p_preferred"]:
+            # Check if P2P network has suitable agents
+            if self._has_p2p_agents_for_intent(analysis.intent):
+                return RoutingDecision.P2P_NETWORK
         
         # Complexity-based routing
         if analysis.complexity in self.complexity_thresholds["local_only"]:
@@ -646,6 +737,112 @@ class PersonalAIRouter:
         
         return cloud_result
     
+    def _has_p2p_agents_for_intent(self, intent: QueryIntent) -> bool:
+        """Check if P2P network has agents suitable for the query intent"""
+        if not self.p2p_network:
+            return False
+        
+        # Map query intents to agent capabilities
+        intent_capability_map = {
+            QueryIntent.CREATIVE_WRITING: AgentCapability.CREATIVE_WRITING,
+            QueryIntent.TECHNICAL_HELP: AgentCapability.TECHNICAL_ANALYSIS,
+            QueryIntent.CODING: AgentCapability.CODE_GENERATION,
+            QueryIntent.RESEARCH: AgentCapability.RESEARCH,
+            QueryIntent.ANALYSIS: AgentCapability.TECHNICAL_ANALYSIS,
+            QueryIntent.QUICK_FACT: AgentCapability.QUESTION_ANSWERING,
+            QueryIntent.CASUAL_CHAT: AgentCapability.TEXT_GENERATION,
+            QueryIntent.MATH_PROBLEM: AgentCapability.TECHNICAL_ANALYSIS
+        }
+        
+        required_capability = intent_capability_map.get(intent, AgentCapability.TEXT_GENERATION)
+        
+        # Check if discovery system has agents with required capability
+        suitable_agents = self.p2p_network.discovery_system.get_agents_by_capability(required_capability)
+        return len(suitable_agents) > 0
+    
+    async def _process_p2p_network(self, query: str, analysis: QueryAnalysis) -> RoutingResult:
+        """Process query using P2P network"""
+        try:
+            # Map query intent to capability
+            intent_capability_map = {
+                QueryIntent.CREATIVE_WRITING: AgentCapability.CREATIVE_WRITING,
+                QueryIntent.TECHNICAL_HELP: AgentCapability.TECHNICAL_ANALYSIS,
+                QueryIntent.CODING: AgentCapability.CODE_GENERATION,
+                QueryIntent.RESEARCH: AgentCapability.RESEARCH,
+                QueryIntent.ANALYSIS: AgentCapability.TECHNICAL_ANALYSIS,
+                QueryIntent.QUICK_FACT: AgentCapability.QUESTION_ANSWERING,
+                QueryIntent.CASUAL_CHAT: AgentCapability.TEXT_GENERATION,
+                QueryIntent.MATH_PROBLEM: AgentCapability.TECHNICAL_ANALYSIS
+            }
+            
+            required_capability = intent_capability_map.get(analysis.intent, AgentCapability.TEXT_GENERATION)
+            
+            # Route query through P2P network
+            response = self.p2p_network.route_query(query, required_capability)
+            
+            if response:
+                return RoutingResult(
+                    decision=RoutingDecision.P2P_NETWORK,
+                    model_used=f"web4ai_peer_agent",
+                    response=response,
+                    confidence=0.85,
+                    latency=0.0,
+                    cost_estimate=0.0,
+                    reasoning="Processed by web4ai P2P network agent"
+                )
+            else:
+                # Fallback to local processing
+                return await self._process_local(query, analysis)
+                
+        except Exception as e:
+            logger.error(f"P2P network processing failed: {e}")
+            # Fallback to local processing
+            return await self._process_local(query, analysis)
+    
+    async def _process_distributed_mesh(self, query: str, analysis: QueryAnalysis) -> RoutingResult:
+        """Process query using distributed mesh network"""
+        try:
+            # For complex queries, use distributed mesh approach
+            # This would involve multiple P2P agents collaborating
+            
+            # Get network statistics
+            network_stats = self.p2p_network.get_network_stats()
+            
+            if network_stats["peer_count"] < 2:
+                # Not enough peers for distributed processing
+                return await self._process_p2p_network(query, analysis)
+            
+            # Route to multiple agents for consensus
+            responses = []
+            capabilities = [AgentCapability.TEXT_GENERATION, AgentCapability.TECHNICAL_ANALYSIS]
+            
+            for capability in capabilities:
+                response = self.p2p_network.route_query(query, capability)
+                if response:
+                    responses.append(response)
+            
+            if responses:
+                # Combine responses (simple approach)
+                combined_response = f"Distributed mesh response:\n" + "\n".join(responses)
+                
+                return RoutingResult(
+                    decision=RoutingDecision.DISTRIBUTED_MESH,
+                    model_used="web4ai_distributed_mesh",
+                    response=combined_response,
+                    confidence=0.90,
+                    latency=0.0,
+                    cost_estimate=0.0,
+                    reasoning="Processed by web4ai distributed mesh network"
+                )
+            else:
+                # Fallback to single P2P agent
+                return await self._process_p2p_network(query, analysis)
+                
+        except Exception as e:
+            logger.error(f"Distributed mesh processing failed: {e}")
+            # Fallback to P2P network
+            return await self._process_p2p_network(query, analysis)
+    
     def get_stats(self) -> Dict[str, Any]:
         """Get routing statistics"""
         with self.memory_store.get_connection() as conn:
@@ -664,11 +861,21 @@ class PersonalAIRouter:
                 'avg_satisfaction': row['avg_satisfaction']
             } for row in cursor.fetchall()}
         
+        # Get P2P network stats if available
+        p2p_stats = {}
+        if self.p2p_network:
+            p2p_stats = self.p2p_network.get_network_stats()
+        
         return {
             "routing_stats": routing_stats,
             "available_local_models": self.ollama_client.available_models,
             "total_memories": len(self.memory_store.search_memories("", limit=1000)),
-            "cache_hit_rate": self._get_cache_hit_rate()
+            "cache_hit_rate": self._get_cache_hit_rate(),
+            "p2p_network": {
+                "enabled": P2P_AVAILABLE and self.p2p_network is not None,
+                "node_id": self.web4ai_node_id,
+                "network_stats": p2p_stats
+            }
         }
     
     def _get_cache_hit_rate(self) -> float:
