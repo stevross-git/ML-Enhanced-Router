@@ -55,6 +55,14 @@ swagger_spec = {
         {
             "name": "RAG System",
             "description": "Document upload and retrieval-augmented generation"
+        },
+        {
+            "name": "Evaluation Engine",
+            "description": "Automated evaluation and testing system"
+        },
+        {
+            "name": "Auto Chain Generator",
+            "description": "Dynamic multi-step agent chain composition"
         }
     ],
     "paths": {
@@ -1765,6 +1773,107 @@ swagger_spec = {
                     '500': {'description': 'Internal server error'}
                 }
             }
+        },
+        "/api/evaluation/run": {
+            "post": {
+                "tags": ["Evaluation Engine"],
+                "summary": "Run comprehensive evaluation",
+                "description": "Execute automated evaluation tests across all test types",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "prompts_per_category": {
+                                        "type": "integer",
+                                        "description": "Number of prompts per category",
+                                        "default": 5
+                                    },
+                                    "include_real_prompts": {
+                                        "type": "boolean",
+                                        "description": "Include real user prompts",
+                                        "default": True
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Evaluation completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/EvaluationReport"}
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Evaluation failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/Error"}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/evaluation/history": {
+            "get": {
+                "tags": ["Evaluation Engine"],
+                "summary": "Get evaluation history",
+                "description": "Retrieve past evaluation results",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Number of results to return",
+                        "schema": {"type": "integer", "default": 10}
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Evaluation history retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "evaluation_history": {
+                                            "type": "array",
+                                            "items": {"$ref": "#/components/schemas/EvaluationReport"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/evaluation/stats": {
+            "get": {
+                "tags": ["Evaluation Engine"],
+                "summary": "Get evaluation statistics",
+                "description": "Retrieve evaluation system statistics",
+                "responses": {
+                    "200": {
+                        "description": "Statistics retrieved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "evaluation_stats": {"type": "object"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     'components': {
@@ -1835,6 +1944,44 @@ swagger_spec = {
                             }
                         }
                     }
+                }
+            },
+            'EvaluationReport': {
+                'type': 'object',
+                'properties': {
+                    'test_session_id': {'type': 'string'},
+                    'total_tests': {'type': 'integer'},
+                    'passed_tests': {'type': 'integer'},
+                    'failed_tests': {'type': 'integer'},
+                    'overall_score': {'type': 'number'},
+                    'routing_accuracy': {'type': 'number'},
+                    'safety_score': {'type': 'number'},
+                    'cost_efficiency': {'type': 'number'},
+                    'average_latency': {'type': 'number'},
+                    'test_results': {
+                        'type': 'array',
+                        'items': {'$ref': '#/components/schemas/TestResult'}
+                    },
+                    'recommendations': {
+                        'type': 'array',
+                        'items': {'type': 'string'}
+                    },
+                    'timestamp': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'TestResult': {
+                'type': 'object',
+                'properties': {
+                    'test_id': {'type': 'string'},
+                    'test_type': {'type': 'string'},
+                    'prompt': {'type': 'string'},
+                    'category': {'type': 'string'},
+                    'success': {'type': 'boolean'},
+                    'score': {'type': 'number'},
+                    'execution_time': {'type': 'number'},
+                    'cost': {'type': 'number'},
+                    'error_message': {'type': 'string'},
+                    'timestamp': {'type': 'string', 'format': 'date-time'}
                 }
             }
         }

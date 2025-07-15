@@ -33,6 +33,7 @@ from advanced_query_optimizer import AdvancedQueryOptimizer
 from predictive_analytics_engine import PredictiveAnalyticsEngine
 from graphql_simple import graphql_bp
 from auto_chain_generator import AutoChainGenerator
+from automated_evaluation_engine import get_evaluation_engine
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -82,10 +83,11 @@ contextual_memory_router = None
 semantic_guardrail_system = None
 multimodal_ai_integration = None
 auto_chain_generator = None
+evaluation_engine = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine
     
     try:
         with app.app_context():
@@ -111,6 +113,9 @@ def initialize_router():
             from auto_chain_generator import AutoChainGenerator
             global auto_chain_generator
             auto_chain_generator = AutoChainGenerator()
+            
+            # Initialize Evaluation Engine
+            evaluation_engine = get_evaluation_engine()
             
             # Initialize next-generation features
             from active_learning_system import get_active_learning_system
@@ -3113,6 +3118,114 @@ def get_chain_stats():
     except Exception as e:
         logger.error(f"Error getting chain stats: {e}")
         return jsonify({"error": str(e)}), 500
+
+# Automated Evaluation Engine API endpoints
+@app.route('/api/evaluation/run', methods=['POST'])
+def run_evaluation():
+    """Run comprehensive evaluation across all test types"""
+    try:
+        if not evaluation_engine:
+            return jsonify({"error": "Evaluation engine not available"}), 503
+        
+        data = request.get_json() or {}
+        prompts_per_category = data.get('prompts_per_category', 5)
+        include_real_prompts = data.get('include_real_prompts', True)
+        
+        # Run evaluation (async)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            report = loop.run_until_complete(
+                evaluation_engine.run_comprehensive_evaluation(
+                    prompts_per_category=prompts_per_category,
+                    include_real_prompts=include_real_prompts
+                )
+            )
+            
+            # Convert to dict for JSON serialization
+            report_dict = {
+                "test_session_id": report.test_session_id,
+                "total_tests": report.total_tests,
+                "passed_tests": report.passed_tests,
+                "failed_tests": report.failed_tests,
+                "overall_score": report.overall_score,
+                "routing_accuracy": report.routing_accuracy,
+                "safety_score": report.safety_score,
+                "cost_efficiency": report.cost_efficiency,
+                "average_latency": report.average_latency,
+                "test_results": [
+                    {
+                        "test_id": result.test_id,
+                        "test_type": result.test_type.value,
+                        "prompt": result.prompt,
+                        "category": result.category.value,
+                        "success": result.success,
+                        "score": result.score,
+                        "execution_time": result.execution_time,
+                        "cost": result.cost,
+                        "error_message": result.error_message,
+                        "timestamp": result.timestamp.isoformat()
+                    }
+                    for result in report.test_results
+                ],
+                "recommendations": report.recommendations,
+                "timestamp": report.timestamp.isoformat()
+            }
+            
+            return jsonify({
+                "evaluation_report": report_dict,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+        finally:
+            loop.close()
+        
+    except Exception as e:
+        logger.error(f"Error running evaluation: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/evaluation/history', methods=['GET'])
+def get_evaluation_history():
+    """Get evaluation history from database"""
+    try:
+        if not evaluation_engine:
+            return jsonify({"error": "Evaluation engine not available"}), 503
+        
+        limit = request.args.get('limit', 10, type=int)
+        history = evaluation_engine.get_evaluation_history(limit)
+        
+        return jsonify({
+            "evaluation_history": history,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting evaluation history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/evaluation/stats', methods=['GET'])
+def get_evaluation_stats():
+    """Get evaluation statistics"""
+    try:
+        if not evaluation_engine:
+            return jsonify({"error": "Evaluation engine not available"}), 503
+        
+        stats = evaluation_engine.get_evaluation_stats()
+        
+        return jsonify({
+            "evaluation_stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting evaluation stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/evaluation')
+def evaluation_page():
+    """Automated Evaluation Engine interface"""
+    return render_template('evaluation.html')
 
 # Register GraphQL blueprint
 app.register_blueprint(graphql_bp)
