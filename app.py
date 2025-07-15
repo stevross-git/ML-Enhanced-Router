@@ -3894,6 +3894,156 @@ def test_ollama_connection():
         logger.error(f"Error testing Ollama: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+# Enhanced Memory and Mood API Endpoints
+@app.route('/api/personal-ai/personas', methods=['GET', 'POST'])
+def manage_personas():
+    """Manage user personas"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        if request.method == 'GET':
+            # Get all personas for the user
+            if hasattr(personal_ai_router, 'enhanced_memory') and personal_ai_router.enhanced_memory:
+                # This would require implementing get_personas method
+                return jsonify({"personas": []})
+            else:
+                return jsonify({"personas": []})
+                
+        elif request.method == 'POST':
+            # Create a new persona
+            data = request.get_json()
+            if not data or not all(key in data for key in ['name', 'type']):
+                return jsonify({'error': 'Name and type are required'}), 400
+            
+            persona = personal_ai_router.create_persona(
+                name=data['name'],
+                persona_type=data['type'],
+                description=data.get('description', ''),
+                tone=data.get('tone', 'friendly'),
+                formality=data.get('formality', 0.5),
+                verbosity=data.get('verbosity', 0.5),
+                active_hours=data.get('active_hours', []),
+                context_keywords=data.get('context_keywords', [])
+            )
+            
+            if persona:
+                return jsonify({"success": True, "persona": {
+                    "id": persona.id,
+                    "name": persona.name,
+                    "type": persona.type.value,
+                    "description": persona.description
+                }})
+            else:
+                return jsonify({"error": "Failed to create persona"}), 500
+                
+    except Exception as e:
+        logger.error(f"Error managing personas: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/timeline', methods=['GET', 'POST'])
+def manage_timeline():
+    """Manage user timeline events"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        if request.method == 'GET':
+            # Get timeline events
+            days_back = request.args.get('days', 30, type=int)
+            events = personal_ai_router.get_timeline_events(days_back)
+            
+            return jsonify({
+                "events": [
+                    {
+                        "id": event.id,
+                        "title": event.title,
+                        "description": event.description,
+                        "date": event.date.isoformat(),
+                        "category": event.category,
+                        "importance": event.importance,
+                        "tags": event.tags
+                    } for event in events
+                ],
+                "total": len(events)
+            })
+            
+        elif request.method == 'POST':
+            # Add timeline event
+            data = request.get_json()
+            if not data or not all(key in data for key in ['title', 'date', 'category']):
+                return jsonify({'error': 'Title, date, and category are required'}), 400
+            
+            if hasattr(personal_ai_router, 'enhanced_memory') and personal_ai_router.enhanced_memory:
+                from datetime import datetime
+                success = personal_ai_router.enhanced_memory.add_timeline_event(
+                    user_id=personal_ai_router.user_id,
+                    title=data['title'],
+                    description=data.get('description', ''),
+                    date=datetime.fromisoformat(data['date']),
+                    category=data['category'],
+                    importance=data.get('importance', 0.5),
+                    tags=data.get('tags', [])
+                )
+                
+                if success:
+                    return jsonify({"success": True, "message": "Timeline event added successfully"})
+                else:
+                    return jsonify({"error": "Failed to add timeline event"}), 500
+            else:
+                return jsonify({"error": "Enhanced memory not available"}), 503
+                
+    except Exception as e:
+        logger.error(f"Error managing timeline: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/analysis', methods=['GET'])
+def get_user_analysis():
+    """Get comprehensive user analysis"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        analysis = personal_ai_router.get_user_analysis()
+        return jsonify({
+            "analysis": analysis,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting user analysis: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/personal-ai/mood-test', methods=['POST'])
+def test_mood_analysis():
+    """Test mood analysis on provided text"""
+    try:
+        if not personal_ai_router:
+            return jsonify({"error": "Personal AI router not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({'error': 'Text is required'}), 400
+        
+        if hasattr(personal_ai_router, 'mood_system') and personal_ai_router.mood_system:
+            mood_analysis = personal_ai_router.mood_system.analyze_mood(data['text'])
+            
+            return jsonify({
+                "mood_analysis": {
+                    "primary_mood": mood_analysis.primary_mood.value,
+                    "confidence": mood_analysis.confidence,
+                    "secondary_moods": [(mood.value, score) for mood, score in mood_analysis.secondary_moods],
+                    "suggested_style": mood_analysis.suggested_style.value,
+                    "tone_adjustments": mood_analysis.tone_adjustments
+                }
+            })
+        else:
+            return jsonify({"error": "Mood analysis not available"}), 503
+            
+    except Exception as e:
+        logger.error(f"Error testing mood analysis: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # Register GraphQL blueprint
 app.register_blueprint(graphql_bp)
 

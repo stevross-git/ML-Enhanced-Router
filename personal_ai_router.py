@@ -35,6 +35,16 @@ except ImportError:
     P2P_AVAILABLE = False
     logger.warning("P2P AI Router not available, running in standalone mode")
 
+# Import enhanced memory and mood systems
+try:
+    from personal_memory import get_personal_memory_system, PersonaType, MemoryCategory
+    from mood_aware_system import get_mood_aware_system, MoodType
+    ENHANCED_MEMORY_AVAILABLE = True
+    logger.info("Enhanced memory and mood systems available")
+except ImportError:
+    ENHANCED_MEMORY_AVAILABLE = False
+    logger.warning("Enhanced memory and mood systems not available")
+
 class QueryComplexity(Enum):
     """Query complexity levels"""
     TRIVIAL = "trivial"
@@ -469,6 +479,17 @@ class PersonalAIRouter:
         self.complexity_analyzer = QueryComplexityAnalyzer()
         self.adaptive_cache = AdaptiveCache()
         
+        # Initialize enhanced memory and mood systems
+        if ENHANCED_MEMORY_AVAILABLE:
+            self.enhanced_memory = get_personal_memory_system()
+            self.mood_system = get_mood_aware_system()
+            self.user_id = "default_user"  # Could be configured per user
+            logger.info("Enhanced memory and mood systems initialized")
+        else:
+            self.enhanced_memory = None
+            self.mood_system = None
+            self.user_id = None
+        
         # Initialize P2P network capabilities
         self.p2p_network = None
         self.web4ai_node_id = None
@@ -553,19 +574,33 @@ class PersonalAIRouter:
         raise Exception("No available ports found")
     
     async def process_query(self, query: str, context: Optional[Dict[str, Any]] = None) -> RoutingResult:
-        """Process a query with hybrid routing"""
+        """Process a query with hybrid routing and mood-aware responses"""
         start_time = datetime.now()
         
         # Step 1: Analyze query
         analysis = self.complexity_analyzer.analyze_query(query)
         
-        # Step 2: Check cache first
+        # Step 2: Analyze mood if available
+        mood_analysis = None
+        if ENHANCED_MEMORY_AVAILABLE and self.mood_system:
+            mood_analysis = self.mood_system.analyze_mood(query, {
+                "time": datetime.now(),
+                "query_complexity": analysis.complexity.value,
+                "user_id": self.user_id
+            })
+        
+        # Step 3: Check cache first
         cached_response = self.adaptive_cache.get_cached_response(query)
         if cached_response:
+            response = cached_response['response']
+            # Apply mood-aware styling to cached response
+            if mood_analysis:
+                response = self.mood_system.adjust_response_style(response, mood_analysis)
+            
             return RoutingResult(
                 decision=RoutingDecision.CACHED,
                 model_used=cached_response['model_used'],
-                response=cached_response['response'],
+                response=response,
                 confidence=cached_response['confidence'],
                 latency=0.1,
                 cost_estimate=0.0,
@@ -573,14 +608,14 @@ class PersonalAIRouter:
                 cached=True
             )
         
-        # Step 3: Enhance with personal context
+        # Step 4: Enhance with personal context
         personal_context = self._get_personal_context(query, analysis)
-        enhanced_query = self._enhance_with_context(query, personal_context)
+        enhanced_query = self._enhance_with_context(query, personal_context, mood_analysis)
         
-        # Step 4: Make routing decision
+        # Step 5: Make routing decision
         routing_decision = self._decide_routing(analysis)
         
-        # Step 5: Execute based on routing decision
+        # Step 6: Execute based on routing decision
         if routing_decision == RoutingDecision.LOCAL_ONLY:
             result = await self._process_local(enhanced_query, analysis)
         elif routing_decision == RoutingDecision.CLOUD_ONLY:
@@ -594,17 +629,31 @@ class PersonalAIRouter:
         else:
             result = await self._process_local(enhanced_query, analysis)  # Fallback
         
-        # Step 6: Calculate metrics
+        # Step 7: Apply mood-aware response styling
+        if mood_analysis and result.response:
+            # Add mood-aware prefix
+            prefix = self.mood_system.get_response_prefix(mood_analysis)
+            if prefix and not result.response.startswith(prefix):
+                result.response = f"{prefix} {result.response}"
+            
+            # Adjust response style based on mood
+            result.response = self.mood_system.adjust_response_style(result.response, mood_analysis)
+        
+        # Step 8: Store enhanced memories if available
+        if ENHANCED_MEMORY_AVAILABLE and self.enhanced_memory:
+            self._store_enhanced_memory(query, result, analysis, mood_analysis)
+        
+        # Step 9: Calculate metrics
         end_time = datetime.now()
         result.latency = (end_time - start_time).total_seconds()
         
-        # Step 7: Cache successful responses
+        # Step 10: Cache successful responses
         if result.confidence > 0.7:
             self.adaptive_cache.cache_response(
                 query, result.response, result.model_used, result.confidence
             )
         
-        # Step 8: Record interaction
+        # Step 11: Record interaction
         self.memory_store.record_interaction(
             query, result.response, result.model_used, result.decision.value
         )
@@ -625,12 +674,16 @@ class PersonalAIRouter:
             "analysis": analysis
         }
     
-    def _enhance_with_context(self, query: str, context: Dict[str, Any]) -> str:
-        """Enhance query with personal context"""
-        if not context.get("memories") and not context.get("preferences"):
+    def _enhance_with_context(self, query: str, context: Dict[str, Any], mood_analysis=None) -> str:
+        """Enhance query with personal context and mood awareness"""
+        if not context.get("memories") and not context.get("preferences") and not mood_analysis:
             return query
         
         enhanced = query
+        
+        # Add mood context if available
+        if mood_analysis and mood_analysis.confidence > 0.5:
+            enhanced = f"User seems {mood_analysis.primary_mood.value} - adjust response style accordingly.\n\n{enhanced}"
         
         # Add relevant memories
         if context.get("memories"):
@@ -650,7 +703,95 @@ class PersonalAIRouter:
                 ])
                 enhanced = f"{enhanced}\n\nPreferences:\n{pref_context}"
         
+        # Add persona context if available
+        if ENHANCED_MEMORY_AVAILABLE and self.enhanced_memory:
+            active_persona = self.enhanced_memory.get_active_persona(self.user_id, query)
+            if active_persona:
+                enhanced = f"{enhanced}\n\nActive Persona: {active_persona.name} ({active_persona.description})"
+        
         return enhanced
+    
+    def _store_enhanced_memory(self, query: str, result: RoutingResult, analysis: QueryAnalysis, mood_analysis=None):
+        """Store enhanced memory information"""
+        if not ENHANCED_MEMORY_AVAILABLE or not self.enhanced_memory:
+            return
+        
+        try:
+            # Store the query and response as a memory
+            self.enhanced_memory.store_memory(
+                user_id=self.user_id,
+                content=f"Query: {query}\nResponse: {result.response[:200]}...",
+                category=MemoryCategory.PERSONAL,
+                confidence=result.confidence,
+                source="ai_interaction",
+                tags=[analysis.intent.value, analysis.complexity.value]
+            )
+            
+            # Store mood information if available
+            if mood_analysis and mood_analysis.confidence > 0.6:
+                self.enhanced_memory.update_user_trait(
+                    user_id=self.user_id,
+                    trait_name="communication_mood",
+                    trait_value=mood_analysis.primary_mood.value,
+                    confidence=mood_analysis.confidence,
+                    evidence=f"Query: {query[:100]}..."
+                )
+            
+            # Store routing preferences
+            self.enhanced_memory.update_user_trait(
+                user_id=self.user_id,
+                trait_name="preferred_routing",
+                trait_value=result.decision.value,
+                confidence=0.3,
+                evidence=f"Complexity: {analysis.complexity.value}, Result: {result.decision.value}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error storing enhanced memory: {e}")
+    
+    def create_persona(self, name: str, persona_type: str, description: str = "", **kwargs):
+        """Create a new persona for the user"""
+        if not ENHANCED_MEMORY_AVAILABLE or not self.enhanced_memory:
+            return None
+        
+        try:
+            persona_type_enum = PersonaType(persona_type)
+            return self.enhanced_memory.create_persona(
+                user_id=self.user_id,
+                name=name,
+                persona_type=persona_type_enum,
+                description=description,
+                **kwargs
+            )
+        except Exception as e:
+            logger.error(f"Error creating persona: {e}")
+            return None
+    
+    def get_user_analysis(self):
+        """Get comprehensive user analysis"""
+        if not ENHANCED_MEMORY_AVAILABLE or not self.enhanced_memory:
+            return {}
+        
+        try:
+            return self.enhanced_memory.analyze_interaction_patterns(self.user_id)
+        except Exception as e:
+            logger.error(f"Error getting user analysis: {e}")
+            return {}
+    
+    def get_timeline_events(self, days_back: int = 30):
+        """Get recent timeline events"""
+        if not ENHANCED_MEMORY_AVAILABLE or not self.enhanced_memory:
+            return []
+        
+        try:
+            start_date = datetime.now() - timedelta(days=days_back)
+            return self.enhanced_memory.get_timeline_events(
+                user_id=self.user_id,
+                start_date=start_date
+            )
+        except Exception as e:
+            logger.error(f"Error getting timeline events: {e}")
+            return []
     
     def _decide_routing(self, analysis: QueryAnalysis) -> RoutingDecision:
         """Decide routing strategy based on analysis"""
