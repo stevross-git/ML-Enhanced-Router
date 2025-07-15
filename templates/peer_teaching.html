@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Peer Teaching & Collaborative Agents{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="fas fa-users"></i> Peer Teaching & Collaborative Agents
+            </h1>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-user-plus"></i> Agent Registration</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="agentRegistrationForm">
+                                <div class="mb-3">
+                                    <label for="agentName" class="form-label">Agent Name</label>
+                                    <input type="text" class="form-control" id="agentName" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="agentSpecialization" class="form-label">Specialization</label>
+                                    <select class="form-select" id="agentSpecialization" required>
+                                        <option value="">Select Specialization...</option>
+                                        <option value="math_solver">Math Solver</option>
+                                        <option value="writing_assistant">Writing Assistant</option>
+                                        <option value="code_helper">Code Helper</option>
+                                        <option value="grammar_checker">Grammar Checker</option>
+                                        <option value="research_assistant">Research Assistant</option>
+                                        <option value="creative_writer">Creative Writer</option>
+                                        <option value="analyzer">Analyzer</option>
+                                        <option value="synthesizer">Synthesizer</option>
+                                        <option value="translator">Translator</option>
+                                        <option value="debugger">Debugger</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="agentCapabilities" class="form-label">Capabilities (comma-separated)</label>
+                                    <input type="text" class="form-control" id="agentCapabilities" placeholder="e.g., algebra, calculus, statistics">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Register Agent</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-lightbulb"></i> Contribute Lesson</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="lessonContributionForm">
+                                <div class="mb-3">
+                                    <label for="lessonAgentId" class="form-label">Agent ID</label>
+                                    <input type="text" class="form-control" id="lessonAgentId" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="lessonType" class="form-label">Lesson Type</label>
+                                    <select class="form-select" id="lessonType" required>
+                                        <option value="">Select Type...</option>
+                                        <option value="strategy">Strategy</option>
+                                        <option value="pattern">Pattern</option>
+                                        <option value="solution">Solution</option>
+                                        <option value="optimization">Optimization</option>
+                                        <option value="error_correction">Error Correction</option>
+                                        <option value="domain_insight">Domain Insight</option>
+                                        <option value="toolkit_usage">Toolkit Usage</option>
+                                        <option value="collaborative_approach">Collaborative Approach</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="lessonDomain" class="form-label">Domain</label>
+                                    <input type="text" class="form-control" id="lessonDomain" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="lessonTitle" class="form-label">Title</label>
+                                    <input type="text" class="form-control" id="lessonTitle" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="lessonContent" class="form-label">Content</label>
+                                    <textarea class="form-control" id="lessonContent" rows="4" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="lessonSteps" class="form-label">Strategy Steps (one per line)</label>
+                                    <textarea class="form-control" id="lessonSteps" rows="3"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="effectivenessScore" class="form-label">Effectiveness Score (0-1)</label>
+                                    <input type="number" class="form-control" id="effectivenessScore" min="0" max="1" step="0.1" value="0.8">
+                                </div>
+                                <button type="submit" class="btn btn-success">Contribute Lesson</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-search"></i> Find Lessons</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="lessonSearchForm">
+                                <div class="mb-3">
+                                    <label for="searchAgentId" class="form-label">Agent ID</label>
+                                    <input type="text" class="form-control" id="searchAgentId" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="searchDomain" class="form-label">Domain</label>
+                                    <input type="text" class="form-control" id="searchDomain" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="searchLessonType" class="form-label">Lesson Type (Optional)</label>
+                                    <select class="form-select" id="searchLessonType">
+                                        <option value="">All Types</option>
+                                        <option value="strategy">Strategy</option>
+                                        <option value="pattern">Pattern</option>
+                                        <option value="solution">Solution</option>
+                                        <option value="optimization">Optimization</option>
+                                        <option value="error_correction">Error Correction</option>
+                                        <option value="domain_insight">Domain Insight</option>
+                                        <option value="toolkit_usage">Toolkit Usage</option>
+                                        <option value="collaborative_approach">Collaborative Approach</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-info">Find Lessons</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-users-cog"></i> Start Collaboration</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="collaborationForm">
+                                <div class="mb-3">
+                                    <label for="initiatorAgent" class="form-label">Initiator Agent ID</label>
+                                    <input type="text" class="form-control" id="initiatorAgent" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="taskDescription" class="form-label">Task Description</label>
+                                    <textarea class="form-control" id="taskDescription" rows="3" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="sessionType" class="form-label">Session Type</label>
+                                    <input type="text" class="form-control" id="sessionType" value="general">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="requiredSpecs" class="form-label">Required Specializations</label>
+                                    <select class="form-select" id="requiredSpecs" multiple>
+                                        <option value="math_solver">Math Solver</option>
+                                        <option value="writing_assistant">Writing Assistant</option>
+                                        <option value="code_helper">Code Helper</option>
+                                        <option value="grammar_checker">Grammar Checker</option>
+                                        <option value="research_assistant">Research Assistant</option>
+                                        <option value="creative_writer">Creative Writer</option>
+                                        <option value="analyzer">Analyzer</option>
+                                        <option value="synthesizer">Synthesizer</option>
+                                        <option value="translator">Translator</option>
+                                        <option value="debugger">Debugger</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-warning">Start Collaboration</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-comments"></i> Multi-Agent Debate</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="debateForm">
+                                <div class="mb-3">
+                                    <label for="debateSessionId" class="form-label">Session ID</label>
+                                    <input type="text" class="form-control" id="debateSessionId" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="debateQuestion" class="form-label">Question</label>
+                                    <textarea class="form-control" id="debateQuestion" rows="3" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="consensusMethod" class="form-label">Consensus Method</label>
+                                    <select class="form-select" id="consensusMethod">
+                                        <option value="majority_vote">Majority Vote</option>
+                                        <option value="confidence_weighted">Confidence Weighted</option>
+                                        <option value="ranked_choice">Ranked Choice</option>
+                                        <option value="expert_weighted">Expert Weighted</option>
+                                        <option value="debate_resolution">Debate Resolution</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-secondary">Start Debate</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5><i class="fas fa-edit"></i> Cross-Correction</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="crossCorrectionForm">
+                                <div class="mb-3">
+                                    <label for="correctionSessionId" class="form-label">Session ID</label>
+                                    <input type="text" class="form-control" id="correctionSessionId" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="primaryAgent" class="form-label">Primary Agent ID</label>
+                                    <input type="text" class="form-control" id="primaryAgent" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="secondaryAgent" class="form-label">Secondary Agent ID</label>
+                                    <input type="text" class="form-control" id="secondaryAgent" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="correctionContent" class="form-label">Content to Correct</label>
+                                    <textarea class="form-control" id="correctionContent" rows="4" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-danger">Cross-Correct</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-bar"></i> System Statistics</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card bg-primary text-white">
+                                        <div class="card-body">
+                                            <h5 id="totalAgents">0</h5>
+                                            <small>Total Agents</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-success text-white">
+                                        <div class="card-body">
+                                            <h5 id="totalLessons">0</h5>
+                                            <small>Total Lessons</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-warning text-white">
+                                        <div class="card-body">
+                                            <h5 id="activeSessions">0</h5>
+                                            <small>Active Sessions</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card bg-info text-white">
+                                        <div class="card-body">
+                                            <h5 id="knowledgeContributions">0</h5>
+                                            <small>Knowledge Contributions</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <button class="btn btn-outline-primary" onclick="loadStats()">
+                                <i class="fas fa-refresh"></i> Refresh Statistics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list"></i> Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="results">
+                                <div class="text-muted">
+                                    <i class="fas fa-info-circle"></i> Results will appear here after performing actions.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Helper function to display results
+function displayResult(title, data, type = 'success') {
+    const resultsDiv = document.getElementById('results');
+    const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
+    
+    const resultHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            <strong>${title}:</strong>
+            <pre class="mt-2 mb-0">${JSON.stringify(data, null, 2)}</pre>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    resultsDiv.innerHTML = resultHtml + resultsDiv.innerHTML;
+}
+
+// Agent Registration
+document.getElementById('agentRegistrationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        agent_name: document.getElementById('agentName').value,
+        specialization: document.getElementById('agentSpecialization').value,
+        capabilities: document.getElementById('agentCapabilities').value.split(',').map(s => s.trim()).filter(s => s)
+    };
+    
+    try {
+        const response = await fetch('/api/peer-teaching/agents/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayResult('Agent Registered', result);
+            document.getElementById('agentRegistrationForm').reset();
+        } else {
+            displayResult('Registration Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+});
+
+// Lesson Contribution
+document.getElementById('lessonContributionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        agent_id: document.getElementById('lessonAgentId').value,
+        lesson_type: document.getElementById('lessonType').value,
+        domain: document.getElementById('lessonDomain').value,
+        title: document.getElementById('lessonTitle').value,
+        content: document.getElementById('lessonContent').value,
+        strategy_steps: document.getElementById('lessonSteps').value.split('\n').map(s => s.trim()).filter(s => s),
+        effectiveness_score: parseFloat(document.getElementById('effectivenessScore').value)
+    };
+    
+    try {
+        const response = await fetch('/api/peer-teaching/lessons/contribute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayResult('Lesson Contributed', result);
+            document.getElementById('lessonContributionForm').reset();
+        } else {
+            displayResult('Contribution Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+});
+
+// Lesson Search
+document.getElementById('lessonSearchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        agent_id: document.getElementById('searchAgentId').value,
+        domain: document.getElementById('searchDomain').value
+    };
+    
+    const lessonType = document.getElementById('searchLessonType').value;
+    if (lessonType) {
+        formData.lesson_type = lessonType;
+    }
+    
+    try {
+        const response = await fetch('/api/peer-teaching/lessons/find', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayResult('Lessons Found', result);
+        } else {
+            displayResult('Search Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+});
+
+// Collaboration Start
+document.getElementById('collaborationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const specializations = Array.from(document.getElementById('requiredSpecs').selectedOptions)
+        .map(option => option.value);
+    
+    const formData = {
+        initiator_agent: document.getElementById('initiatorAgent').value,
+        task_description: document.getElementById('taskDescription').value,
+        session_type: document.getElementById('sessionType').value,
+        required_specializations: specializations
+    };
+    
+    try {
+        const response = await fetch('/api/peer-teaching/collaborate/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayResult('Collaboration Started', result);
+            document.getElementById('collaborationForm').reset();
+        } else {
+            displayResult('Collaboration Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+});
+
+// Multi-Agent Debate
+document.getElementById('debateForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        session_id: document.getElementById('debateSessionId').value,
+        question: document.getElementById('debateQuestion').value,
+        consensus_method: document.getElementById('consensusMethod').value
+    };
+    
+    try {
+        const response = await fetch('/api/peer-teaching/debate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayResult('Debate Completed', result);
+        } else {
+            displayResult('Debate Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+});
+
+// Cross-Correction
+document.getElementById('crossCorrectionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        session_id: document.getElementById('correctionSessionId').value,
+        primary_agent: document.getElementById('primaryAgent').value,
+        secondary_agent: document.getElementById('secondaryAgent').value,
+        content: document.getElementById('correctionContent').value
+    };
+    
+    try {
+        const response = await fetch('/api/peer-teaching/cross-correct', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            displayResult('Cross-Correction Completed', result);
+        } else {
+            displayResult('Cross-Correction Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+});
+
+// Load Statistics
+async function loadStats() {
+    try {
+        const response = await fetch('/api/peer-teaching/stats');
+        const result = await response.json();
+        
+        if (response.ok) {
+            const stats = result.peer_teaching_stats;
+            document.getElementById('totalAgents').textContent = stats.total_agents || 0;
+            document.getElementById('totalLessons').textContent = stats.total_lessons || 0;
+            document.getElementById('activeSessions').textContent = stats.active_sessions || 0;
+            document.getElementById('knowledgeContributions').textContent = stats.knowledge_contributions || 0;
+            
+            displayResult('Statistics Loaded', stats);
+        } else {
+            displayResult('Statistics Error', result, 'error');
+        }
+    } catch (error) {
+        displayResult('Network Error', { error: error.message }, 'error');
+    }
+}
+
+// Load statistics on page load
+document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+{% endblock %}

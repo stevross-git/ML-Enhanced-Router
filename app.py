@@ -34,6 +34,7 @@ from predictive_analytics_engine import PredictiveAnalyticsEngine
 from graphql_simple import graphql_bp
 from auto_chain_generator import AutoChainGenerator
 from automated_evaluation_engine import get_evaluation_engine
+from peer_teaching_system import get_peer_teaching_system, AgentSpecialization, LessonType, ConsensusMethod
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -84,10 +85,11 @@ semantic_guardrail_system = None
 multimodal_ai_integration = None
 auto_chain_generator = None
 evaluation_engine = None
+peer_teaching_system = None
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine, peer_teaching_system
     
     try:
         with app.app_context():
@@ -116,6 +118,9 @@ def initialize_router():
             
             # Initialize Evaluation Engine
             evaluation_engine = get_evaluation_engine()
+            
+            # Initialize Peer Teaching System
+            peer_teaching_system = get_peer_teaching_system()
             
             # Initialize next-generation features
             from active_learning_system import get_active_learning_system
@@ -3226,6 +3231,354 @@ def get_evaluation_stats():
 def evaluation_page():
     """Automated Evaluation Engine interface"""
     return render_template('evaluation.html')
+
+# Peer Teaching & Collaborative Agents API endpoints
+@app.route('/api/peer-teaching/agents/register', methods=['POST'])
+def register_peer_agent():
+    """Register a new agent in the peer teaching system"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'agent_name' not in data or 'specialization' not in data:
+            return jsonify({"error": "Agent name and specialization are required"}), 400
+        
+        agent_id = data.get('agent_id', str(uuid.uuid4()))
+        agent_name = data['agent_name']
+        specialization = AgentSpecialization(data['specialization'])
+        capabilities = data.get('capabilities', [])
+        
+        success = peer_teaching_system.register_agent(agent_id, agent_name, specialization, capabilities)
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "agent_id": agent_id,
+                "message": f"Agent {agent_name} registered successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to register agent"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error registering peer agent: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/lessons/contribute', methods=['POST'])
+def contribute_lesson():
+    """Contribute a lesson to the peer teaching system"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        required_fields = ['agent_id', 'lesson_type', 'domain', 'title', 'content', 'strategy_steps']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        lesson_id = peer_teaching_system.contribute_lesson(
+            agent_id=data['agent_id'],
+            lesson_type=LessonType(data['lesson_type']),
+            domain=data['domain'],
+            title=data['title'],
+            content=data['content'],
+            strategy_steps=data['strategy_steps'],
+            effectiveness_score=data.get('effectiveness_score', 0.8),
+            usage_context=data.get('usage_context', ''),
+            success_metrics=data.get('success_metrics', {})
+        )
+        
+        if lesson_id:
+            return jsonify({
+                "success": True,
+                "lesson_id": lesson_id,
+                "message": "Lesson contributed successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to contribute lesson"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error contributing lesson: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/lessons/find', methods=['POST'])
+def find_lessons():
+    """Find relevant lessons for an agent"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'agent_id' not in data or 'domain' not in data:
+            return jsonify({"error": "Agent ID and domain are required"}), 400
+        
+        agent_id = data['agent_id']
+        domain = data['domain']
+        lesson_type = LessonType(data['lesson_type']) if 'lesson_type' in data else None
+        
+        lessons = peer_teaching_system.find_relevant_lessons(agent_id, domain, lesson_type)
+        
+        lessons_data = []
+        for lesson in lessons:
+            lessons_data.append({
+                "lesson_id": lesson.lesson_id,
+                "title": lesson.title,
+                "content": lesson.content,
+                "lesson_type": lesson.lesson_type.value,
+                "domain": lesson.domain,
+                "effectiveness_score": lesson.effectiveness_score,
+                "adoption_count": lesson.adoption_count,
+                "strategy_steps": lesson.strategy_steps,
+                "created_at": lesson.created_at.isoformat()
+            })
+        
+        return jsonify({
+            "lessons": lessons_data,
+            "total_found": len(lessons_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error finding lessons: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/lessons/adopt', methods=['POST'])
+def adopt_lesson():
+    """Adopt a lesson from a peer"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'agent_id' not in data or 'lesson_id' not in data:
+            return jsonify({"error": "Agent ID and lesson ID are required"}), 400
+        
+        success = peer_teaching_system.adopt_lesson(data['agent_id'], data['lesson_id'])
+        
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "Lesson adopted successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to adopt lesson"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error adopting lesson: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/knowledge/contribute', methods=['POST'])
+def contribute_federated_knowledge():
+    """Contribute anonymized knowledge for federated learning"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        required_fields = ['agent_id', 'specialization', 'query_type', 'toolkit_used', 'approach_summary']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        contribution_id = peer_teaching_system.contribute_federated_knowledge(
+            agent_id=data['agent_id'],
+            specialization=AgentSpecialization(data['specialization']),
+            query_type=data['query_type'],
+            toolkit_used=data['toolkit_used'],
+            approach_summary=data['approach_summary'],
+            performance_metrics=data.get('performance_metrics', {}),
+            lessons_learned=data.get('lessons_learned', []),
+            optimization_tips=data.get('optimization_tips', []),
+            error_patterns=data.get('error_patterns', [])
+        )
+        
+        if contribution_id:
+            return jsonify({
+                "success": True,
+                "contribution_id": contribution_id,
+                "message": "Knowledge contributed successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to contribute knowledge"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error contributing federated knowledge: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/knowledge/get', methods=['POST'])
+def get_federated_knowledge():
+    """Get relevant federated knowledge"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'specialization' not in data or 'query_type' not in data:
+            return jsonify({"error": "Specialization and query type are required"}), 400
+        
+        specialization = AgentSpecialization(data['specialization'])
+        query_type = data['query_type']
+        
+        contributions = peer_teaching_system.get_federated_knowledge(specialization, query_type)
+        
+        contributions_data = []
+        for contrib in contributions:
+            contributions_data.append({
+                "contribution_id": contrib.contribution_id,
+                "toolkit_used": contrib.toolkit_used,
+                "approach_summary": contrib.approach_summary,
+                "performance_metrics": contrib.performance_metrics,
+                "lessons_learned": contrib.lessons_learned,
+                "optimization_tips": contrib.optimization_tips,
+                "error_patterns": contrib.error_patterns,
+                "timestamp": contrib.timestamp.isoformat()
+            })
+        
+        return jsonify({
+            "contributions": contributions_data,
+            "total_found": len(contributions_data)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting federated knowledge: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/collaborate/start', methods=['POST'])
+def start_collaboration():
+    """Start a collaborative session"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'initiator_agent' not in data or 'task_description' not in data:
+            return jsonify({"error": "Initiator agent and task description are required"}), 400
+        
+        initiator_agent = data['initiator_agent']
+        task_description = data['task_description']
+        session_type = data.get('session_type', 'general')
+        required_specializations = [
+            AgentSpecialization(spec) for spec in data.get('required_specializations', [])
+        ]
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            session_id = loop.run_until_complete(
+                peer_teaching_system.start_collaborative_session(
+                    initiator_agent, task_description, session_type, required_specializations
+                )
+            )
+        finally:
+            loop.close()
+        
+        if session_id:
+            return jsonify({
+                "success": True,
+                "session_id": session_id,
+                "message": "Collaborative session started successfully"
+            })
+        else:
+            return jsonify({"error": "Failed to start collaborative session"}), 500
+        
+    except Exception as e:
+        logger.error(f"Error starting collaboration: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/debate', methods=['POST'])
+def multi_agent_debate():
+    """Conduct multi-agent debate"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        if not data or 'session_id' not in data or 'question' not in data:
+            return jsonify({"error": "Session ID and question are required"}), 400
+        
+        session_id = data['session_id']
+        question = data['question']
+        consensus_method = ConsensusMethod(data.get('consensus_method', 'majority_vote'))
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            debate_result = loop.run_until_complete(
+                peer_teaching_system.multi_agent_debate(
+                    session_id, question, consensus_method
+                )
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            "debate_result": debate_result,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in multi-agent debate: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/cross-correct', methods=['POST'])
+def cross_correct_agents():
+    """Enable cross-correction between agents"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        data = request.get_json()
+        required_fields = ['session_id', 'primary_agent', 'secondary_agent', 'content']
+        
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            corrections = loop.run_until_complete(
+                peer_teaching_system.cross_correct_agents(
+                    data['session_id'], data['primary_agent'], 
+                    data['secondary_agent'], data['content']
+                )
+            )
+        finally:
+            loop.close()
+        
+        return jsonify({
+            "corrections": corrections,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in cross-correction: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/peer-teaching/stats', methods=['GET'])
+def get_peer_teaching_stats():
+    """Get peer teaching system statistics"""
+    try:
+        if not peer_teaching_system:
+            return jsonify({"error": "Peer teaching system not available"}), 503
+        
+        stats = peer_teaching_system.get_peer_teaching_stats()
+        
+        return jsonify({
+            "peer_teaching_stats": stats,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting peer teaching stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/peer-teaching')
+def peer_teaching_page():
+    """Peer Teaching & Collaborative Agents interface"""
+    return render_template('peer_teaching.html')
 
 # Register GraphQL blueprint
 app.register_blueprint(graphql_bp)

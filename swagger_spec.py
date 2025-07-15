@@ -1874,6 +1874,235 @@ swagger_spec = {
                     }
                 }
             }
+        },
+        "/api/peer-teaching/agents/register": {
+            "post": {
+                "tags": ["Peer Teaching"],
+                "summary": "Register a new agent in the peer teaching system",
+                "description": "Register a new agent with specialization and capabilities",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "agent_id": {"type": "string"},
+                                    "agent_name": {"type": "string"},
+                                    "specialization": {"type": "string"},
+                                    "capabilities": {"type": "array", "items": {"type": "string"}}
+                                },
+                                "required": ["agent_name", "specialization"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Agent registered successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {"type": "boolean"},
+                                        "agent_id": {"type": "string"},
+                                        "message": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/peer-teaching/lessons/contribute": {
+            "post": {
+                "tags": ["Peer Teaching"],
+                "summary": "Contribute a lesson to the peer teaching system",
+                "description": "Submit a lesson for other agents to learn from",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "agent_id": {"type": "string"},
+                                    "lesson_type": {"type": "string"},
+                                    "domain": {"type": "string"},
+                                    "title": {"type": "string"},
+                                    "content": {"type": "string"},
+                                    "strategy_steps": {"type": "array", "items": {"type": "string"}},
+                                    "effectiveness_score": {"type": "number"},
+                                    "usage_context": {"type": "string"},
+                                    "success_metrics": {"type": "object"}
+                                },
+                                "required": ["agent_id", "lesson_type", "domain", "title", "content", "strategy_steps"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lesson contributed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {"type": "boolean"},
+                                        "lesson_id": {"type": "string"},
+                                        "message": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/peer-teaching/lessons/find": {
+            "post": {
+                "tags": ["Peer Teaching"],
+                "summary": "Find relevant lessons for an agent",
+                "description": "Search for lessons based on domain and type",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "agent_id": {"type": "string"},
+                                    "domain": {"type": "string"},
+                                    "lesson_type": {"type": "string"}
+                                },
+                                "required": ["agent_id", "domain"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Lessons found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "lessons": {"type": "array", "items": {"$ref": "#/components/schemas/AgentLesson"}},
+                                        "total_found": {"type": "integer"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/peer-teaching/collaborate/start": {
+            "post": {
+                "tags": ["Peer Teaching"],
+                "summary": "Start a collaborative session",
+                "description": "Initialize a multi-agent collaborative session",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "initiator_agent": {"type": "string"},
+                                    "task_description": {"type": "string"},
+                                    "session_type": {"type": "string"},
+                                    "required_specializations": {"type": "array", "items": {"type": "string"}}
+                                },
+                                "required": ["initiator_agent", "task_description"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Collaborative session started",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {"type": "boolean"},
+                                        "session_id": {"type": "string"},
+                                        "message": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/peer-teaching/debate": {
+            "post": {
+                "tags": ["Peer Teaching"],
+                "summary": "Conduct multi-agent debate",
+                "description": "Start a debate session with multiple agents",
+                "requestBody": {
+                    "required": True,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "session_id": {"type": "string"},
+                                    "question": {"type": "string"},
+                                    "consensus_method": {"type": "string"}
+                                },
+                                "required": ["session_id", "question"]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Debate completed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "debate_result": {"$ref": "#/components/schemas/DebateResult"},
+                                        "timestamp": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/peer-teaching/stats": {
+            "get": {
+                "tags": ["Peer Teaching"],
+                "summary": "Get peer teaching system statistics",
+                "description": "Retrieve comprehensive statistics about the peer teaching system",
+                "responses": {
+                    "200": {
+                        "description": "Peer teaching statistics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "peer_teaching_stats": {"$ref": "#/components/schemas/PeerTeachingStats"},
+                                        "timestamp": {"type": "string"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     'components': {
@@ -1982,6 +2211,64 @@ swagger_spec = {
                     'cost': {'type': 'number'},
                     'error_message': {'type': 'string'},
                     'timestamp': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'AgentLesson': {
+                'type': 'object',
+                'properties': {
+                    'lesson_id': {'type': 'string'},
+                    'title': {'type': 'string'},
+                    'content': {'type': 'string'},
+                    'lesson_type': {'type': 'string'},
+                    'domain': {'type': 'string'},
+                    'effectiveness_score': {'type': 'number'},
+                    'adoption_count': {'type': 'integer'},
+                    'strategy_steps': {'type': 'array', 'items': {'type': 'string'}},
+                    'created_at': {'type': 'string', 'format': 'date-time'}
+                }
+            },
+            'DebateResult': {
+                'type': 'object',
+                'properties': {
+                    'session_id': {'type': 'string'},
+                    'consensus_result': {'type': 'object'},
+                    'agent_positions': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'agent_id': {'type': 'string'},
+                                'specialization': {'type': 'string'},
+                                'position': {'type': 'string'},
+                                'confidence': {'type': 'number'},
+                                'reasoning': {'type': 'string'}
+                            }
+                        }
+                    },
+                    'lessons_generated': {'type': 'array', 'items': {'type': 'string'}}
+                }
+            },
+            'PeerTeachingStats': {
+                'type': 'object',
+                'properties': {
+                    'total_agents': {'type': 'integer'},
+                    'total_lessons': {'type': 'integer'},
+                    'active_sessions': {'type': 'integer'},
+                    'knowledge_contributions': {'type': 'integer'},
+                    'lesson_adoption_rate': {'type': 'number'},
+                    'collaboration_success_rate': {'type': 'number'},
+                    'specialization_distribution': {'type': 'object'},
+                    'top_lesson_contributors': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'agent_id': {'type': 'string'},
+                                'agent_name': {'type': 'string'},
+                                'lessons_contributed': {'type': 'integer'}
+                            }
+                        }
+                    }
                 }
             }
         }
