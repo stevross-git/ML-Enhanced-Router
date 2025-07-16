@@ -695,19 +695,19 @@
         let profileBuilderActive = false;
         
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        function initPersonalAI() {
             checkOllamaStatus();
             refreshStats();
             loadPersonalMemory();
             checkProfileStatus();
             loadVoiceSettings();
-            
+
             // Auto-refresh stats every 30 seconds
             setInterval(refreshStats, 30000);
-            
+
             // Profile submit button handler
             document.getElementById('profile-submit').addEventListener('click', submitProfileAnswer);
-            
+
             // Allow Enter key to submit profile answer
             document.getElementById('profile-answer').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -715,7 +715,13 @@
                     submitProfileAnswer();
                 }
             });
-        });
+        }
+
+        if (document.readyState !== 'loading') {
+            initPersonalAI();
+        } else {
+            document.addEventListener('DOMContentLoaded', initPersonalAI);
+        }
         
         // Profile Builder Functions
         function checkProfileStatus() {
