@@ -62,7 +62,7 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 }
 
 # Initialize extensions
-db.init_app(app)
+
 
 # Simple rate limiting dictionary
 rate_limits = {}
@@ -1800,6 +1800,9 @@ def configure_model(model_id):
         logger.error(f"Error configuring model {model_id}: {e}")
         return jsonify({'error': str(e)}), 500
 
+import asyncio
+import logging
+
 @app.route('/api/models/<model_id>/test', methods=['POST'])
 def test_model(model_id):
     """Test API key for a specific model"""
@@ -1818,30 +1821,48 @@ def test_model(model_id):
         
         # Check if API key is available
         api_key = os.environ.get(model.api_key_env)
+        print(f"DEBUG: Testing model {model_id}, API key env: {model.api_key_env}")
+        print(f"DEBUG: API key present: {bool(api_key)}")
+        
         if not api_key:
             return jsonify({
                 'success': False,
-                'message': 'API key not configured',
+                'message': f'API key not configured. Please set {model.api_key_env} environment variable.',
                 'model_id': model_id
             })
         
         # Test the API key with a simple request
         test_message = "Hello"
+        print(f"DEBUG: Attempting to test API key for {model_id}")
+        
         try:
-            response = ai_model_manager.generate_response(
+            # Use asyncio.run() to properly await the coroutine
+            response = asyncio.run(ai_model_manager.generate_response(
                 model_id=model_id,
                 query=test_message,
                 system_message="Respond with 'Test successful'"
-            )
+            ))
             
-            return jsonify({
-                'success': True,
-                'message': 'API key test successful',
-                'model_id': model_id,
-                'response': response.get('response', 'No response')
-            })
+            print(f"DEBUG: Response received: {response}")
+            
+            # Check if response indicates success or failure
+            if response and response.get('response'):
+                return jsonify({
+                    'success': True,
+                    'message': 'API key test successful',
+                    'model_id': model_id,
+                    'response': response.get('response', 'No response')
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'API key test failed: No valid response received',
+                    'model_id': model_id
+                })
             
         except Exception as e:
+            print(f"DEBUG: Exception during API test: {str(e)}")
+            logger.error(f"API key test failed for {model_id}: {e}")
             return jsonify({
                 'success': False,
                 'message': f'API key test failed: {str(e)}',
@@ -1851,7 +1872,64 @@ def test_model(model_id):
     except Exception as e:
         logger.error(f"Error testing model {model_id}: {e}")
         return jsonify({'error': str(e)}), 500
-
+    
+@app.route('/api/multimodal/generate-image', methods=['POST'])
+def generate_image():
+    """Generate an image using AI models like DALL-E"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+            
+        prompt = data.get('prompt')
+        model_id = data.get('model_id', 'dall-e-3')  # Default to DALL-E 3
+        
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
+        
+        # Check if model exists and is an image generation model
+        model = ai_model_manager.get_model(model_id)
+        if not model:
+            return jsonify({'error': 'Model not found'}), 404
+            
+        # Check if it's an image generation model
+        if model.model_type != 'image':  # Adjust this based on your model configuration
+            return jsonify({'error': 'Model is not an image generation model'}), 400
+        
+        try:
+            # Generate image using the AI model manager
+            response = asyncio.run(ai_model_manager.generate_image(
+                model_id=model_id,
+                prompt=prompt,
+                **data  # Pass any additional parameters
+            ))
+            
+            if response.get('status') == 'error' or response.get('error'):
+                error_msg = response.get('error', 'Unknown error')
+                return jsonify({
+                    'success': False,
+                    'error': error_msg
+                }), 400
+            
+            return jsonify({
+                'success': True,
+                'image_url': response.get('image_url'),
+                'model': model_id,
+                'prompt': prompt
+            })
+            
+        except Exception as e:
+            logger.error(f"Image generation failed for {model_id}: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Image generation failed: {str(e)}'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error in image generation endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/api/models/detailed')
 def get_models_detailed():
     """Get all available models with their detailed status"""
@@ -1905,6 +1983,7 @@ def chat_endpoint():
         
         message = data['message']
         model_id = data.get('model_id', 'gpt-4o')
+        system_message = data.get('system_message')
         temperature = data.get('temperature', 0.7)
         max_tokens = data.get('max_tokens', 1000)
         enable_rag = data.get('enable_rag', False)
@@ -1917,23 +1996,62 @@ def chat_endpoint():
             return jsonify({'error': 'Model not found'}), 404
         
         # Check if API key is available
-        api_key_available = bool(os.environ.get(model.api_key_env)) or model.deployment_type == 'local'
+        api_key_available = bool(os.environ.get(model.api_key_env)) or getattr(model, 'deployment_type', 'cloud') == 'local'
         if not api_key_available:
             return jsonify({'error': 'API key not configured for this model'}), 400
         
-        # Generate response using AI model manager
-        response = ai_model_manager.generate_response(
-            model_id=model_id,
-            query=message,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
+        # Handle different model types
+        if model.provider.value == 'ollama' or getattr(model, 'deployment_type', 'cloud') == 'local':
+            # Ollama/Local models - use basic parameters
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                response = loop.run_until_complete(
+                    ai_model_manager.generate_response(
+                        query=message,
+                        system_message=system_message,
+                        model_id=model_id,
+                        user_id=session.get('user_id', 'anonymous')
+                    )
+                )
+            finally:
+                loop.close()
+                
+        else:
+            # Cloud models - temporarily update model settings for this request
+            original_temp = model.temperature
+            original_max_tokens = model.max_tokens
+            
+            # Update model settings temporarily
+            model.temperature = temperature
+            model.max_tokens = max_tokens
+            
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                response = loop.run_until_complete(
+                    ai_model_manager.generate_response(
+                        query=message,
+                        system_message=system_message,
+                        model_id=model_id,
+                        user_id=session.get('user_id', 'anonymous')
+                    )
+                )
+            finally:
+                # Restore original settings
+                model.temperature = original_temp
+                model.max_tokens = original_max_tokens
+                loop.close()
         
         return jsonify({
             'response': response.get('response', 'No response generated'),
             'model_used': model.name,
-            'tokens_used': response.get('tokens_used', 0),
-            'processing_time': response.get('processing_time', 0)
+            'tokens_used': response.get('usage', {}).get('total_tokens', 0),
+            'processing_time': response.get('processing_time', 0),
+            'cached': response.get('cached', False),
+            'model_type': model.provider.value
         })
         
     except Exception as e:
@@ -4744,10 +4862,15 @@ app.register_blueprint(graphql_bp)
 # Initialize database
 with app.app_context():
     import models
-    db.create_all()
+    # db.create_all()
+    
     
     # Initialize router after models are imported
     threading.Thread(target=initialize_router, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
+else:
+    # When imported, just set up the models but don't create tables
+    with app.app_context():
+        import models

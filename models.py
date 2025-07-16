@@ -1,11 +1,14 @@
-from app import db
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, JSON, ForeignKey
 import hashlib
 import uuid
+from flask_sqlalchemy.model import Model
 
-class QueryLog(db.Model):
+# Use the imported Model base class instead of db.Model
+class QueryLog(Model):
     """Log of all queries processed by the router"""
+    __tablename__ = 'query_log'
     id = Column(Integer, primary_key=True)
     query = Column(Text, nullable=False)
     user_id = Column(String(64), nullable=True)
@@ -18,8 +21,9 @@ class QueryLog(db.Model):
     timestamp = Column(DateTime, default=datetime.utcnow)
     meta_data = Column(JSON, nullable=True)
 
-class AgentRegistration(db.Model):
+class AgentRegistration(Model):
     """Registry of all agents"""
+    __tablename__ = 'agent_registrations'
     id = Column(String(64), primary_key=True)
     name = Column(String(128), nullable=False)
     description = Column(Text, nullable=True)
@@ -31,16 +35,18 @@ class AgentRegistration(db.Model):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_seen = Column(DateTime, default=datetime.utcnow)
 
-class RouterMetrics(db.Model):
+class RouterMetrics(Model):
     """Performance metrics for the router"""
+    __tablename__ = 'router_metrics'
     id = Column(Integer, primary_key=True)
     metric_name = Column(String(64), nullable=False)
     metric_value = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
     meta_data = Column(JSON, nullable=True)
 
-class MLModelRegistry(db.Model):
+class MLModelRegistry(Model):
     """Registry of ML models"""
+    __tablename__ = 'ml_model_registry'
     id = Column(String(64), primary_key=True)
     name = Column(String(128), nullable=False)
     description = Column(Text, nullable=True)
@@ -54,7 +60,7 @@ class MLModelRegistry(db.Model):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
-class AICacheEntry(db.Model):
+class AICacheEntry(Model):
     """AI response cache entries"""
     __tablename__ = 'ai_cache_entries'
     
@@ -85,7 +91,7 @@ class AICacheEntry(db.Model):
         self.hit_count += 1
         self.last_accessed = datetime.utcnow()
 
-class AICacheStats(db.Model):
+class AICacheStats(Model):
     """AI cache statistics and metrics"""
     __tablename__ = 'ai_cache_stats'
     
@@ -114,7 +120,7 @@ class AICacheStats(db.Model):
             return 0.0
         return (self.cache_misses / self.total_requests) * 100
 
-class ChatSession(db.Model):
+class ChatSession(Model):
     """Chat session model for storing conversation history"""
     __tablename__ = 'chat_sessions'
     
@@ -127,18 +133,15 @@ class ChatSession(db.Model):
     message_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
     
-    # Relationship to messages
-    messages = db.relationship('ChatMessage', backref='session', lazy=True, cascade='all, delete-orphan')
-    
     def __repr__(self):
         return f'<ChatSession {self.id}: {self.title}>'
 
-class ChatMessage(db.Model):
+class ChatMessage(Model):
     """Chat message model for storing individual messages"""
     __tablename__ = 'chat_messages'
     
     id = Column(Integer, primary_key=True)
-    session_id = Column(String(100), db.ForeignKey('chat_sessions.id'), nullable=False)
+    session_id = Column(String(100), ForeignKey('chat_sessions.id'), nullable=False)
     role = Column(String(20), nullable=False)  # 'user', 'assistant', 'system'
     content = Column(Text, nullable=False)
     model_id = Column(String(100), nullable=True)
@@ -152,7 +155,7 @@ class ChatMessage(db.Model):
         return f'<ChatMessage {self.id}: {self.role} - {self.content[:50]}...>'
 
 # RAG System Models
-class Document(db.Model):
+class Document(Model):
     """Document model for storing uploaded documents"""
     __tablename__ = 'documents'
     
@@ -173,12 +176,12 @@ class Document(db.Model):
     def __repr__(self):
         return f'<Document {self.id}: {self.original_name}>'
 
-class DocumentChunk(db.Model):
+class DocumentChunk(Model):
     """Document chunk model for storing text chunks with embeddings"""
     __tablename__ = 'document_chunks'
     
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    document_id = Column(String(36), db.ForeignKey('documents.id'), nullable=False)
+    document_id = Column(String(36), ForeignKey('documents.id'), nullable=False)
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     chunk_metadata = Column(JSON, nullable=True)
@@ -188,7 +191,7 @@ class DocumentChunk(db.Model):
     def __repr__(self):
         return f'<DocumentChunk {self.id}: {self.document_id}[{self.chunk_index}]>'
 
-class RAGQuery(db.Model):
+class RAGQuery(Model):
     """RAG query model for storing search queries and results"""
     __tablename__ = 'rag_queries'
     
