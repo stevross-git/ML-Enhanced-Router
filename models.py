@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, JSON, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Integer, String, Float, DateTime, Boolean, Text, JSON
 import hashlib
 import uuid
 from flask_sqlalchemy.model import Model
@@ -8,73 +9,77 @@ from flask_sqlalchemy.model import Model
 # Use the imported Model base class instead of db.Model
 class QueryLog(Model):
     """Log of all queries processed by the router"""
-    __tablename__ = 'query_log'
-    id = Column(Integer, primary_key=True)
-    query = Column(Text, nullable=False)
-    user_id = Column(String(64), nullable=True)
-    category = Column(String(32), nullable=False)
-    confidence = Column(Float, nullable=False)
-    agent_id = Column(String(64), nullable=True)
-    agent_name = Column(String(128), nullable=True)
-    status = Column(String(32), nullable=False)
-    response_time = Column(Float, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    meta_data = Column(JSON, nullable=True)
+    __tablename__ = "query_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    category: Mapped[str] = mapped_column(String(32), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    agent_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    agent_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 class AgentRegistration(Model):
     """Registry of all agents"""
-    __tablename__ = 'agent_registrations'
-    id = Column(String(64), primary_key=True)
-    name = Column(String(128), nullable=False)
-    description = Column(Text, nullable=True)
-    endpoint = Column(String(256), nullable=False)
-    categories = Column(JSON, nullable=False)
-    capabilities = Column(JSON, nullable=True)
-    meta_data = Column(JSON, nullable=True)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    last_seen = Column(DateTime, default=datetime.utcnow)
+    __tablename__ = "agent_registrations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    endpoint: Mapped[str] = mapped_column(String(256), nullable=False)
+    categories: Mapped[dict] = mapped_column(JSON, nullable=False)
+    capabilities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 class RouterMetrics(Model):
     """Performance metrics for the router"""
-    __tablename__ = 'router_metrics'
-    id = Column(Integer, primary_key=True)
-    metric_name = Column(String(64), nullable=False)
-    metric_value = Column(Float, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    meta_data = Column(JSON, nullable=True)
+    __tablename__ = "router_metrics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    metric_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    metric_value: Mapped[float] = mapped_column(Float, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 class MLModelRegistry(Model):
     """Registry of ML models"""
-    __tablename__ = 'ml_model_registry'
-    id = Column(String(64), primary_key=True)
-    name = Column(String(128), nullable=False)
-    description = Column(Text, nullable=True)
-    model_type = Column(String(32), nullable=False)
-    categories = Column(JSON, nullable=False)
-    config = Column(JSON, nullable=False)
-    status = Column(String(32), default='inactive')
-    accuracy = Column(Float, nullable=True)
-    is_active = Column(Boolean, default=False)
-    version = Column(Integer, default=1)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    __tablename__ = "ml_model_registry"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    categories: Mapped[dict] = mapped_column(JSON, nullable=False)
+    config: Mapped[dict] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="inactive")
+    accuracy: Mapped[float | None] = mapped_column(Float, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 class AICacheEntry(Model):
     """AI response cache entries"""
-    __tablename__ = 'ai_cache_entries'
-    
-    id = Column(Integer, primary_key=True)
-    cache_key = Column(String(64), unique=True, nullable=False, index=True)
-    query = Column(Text, nullable=False)
-    response = Column(Text, nullable=False)
-    model_id = Column(String(64), nullable=False, index=True)
-    system_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    expires_at = Column(DateTime, nullable=False, index=True)
-    meta_data = Column(JSON, nullable=True)
-    hit_count = Column(Integer, default=0)
-    last_accessed = Column(DateTime, nullable=True)
+    __tablename__ = "ai_cache_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cache_key: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    response: Mapped[str] = mapped_column(Text, nullable=False)
+    model_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    system_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    meta_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    hit_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_accessed: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     
     @classmethod
     def generate_cache_key(cls, query: str, model_id: str, system_message: str = None) -> str:
@@ -93,18 +98,18 @@ class AICacheEntry(Model):
 
 class AICacheStats(Model):
     """AI cache statistics and metrics"""
-    __tablename__ = 'ai_cache_stats'
-    
-    id = Column(Integer, primary_key=True)
-    date = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    total_requests = Column(Integer, default=0)
-    cache_hits = Column(Integer, default=0)
-    cache_misses = Column(Integer, default=0)
-    total_entries = Column(Integer, default=0)
-    expired_entries = Column(Integer, default=0)
-    cache_size_mb = Column(Float, default=0.0)
-    average_response_time = Column(Float, default=0.0)
-    model_id = Column(String(64), nullable=True, index=True)
+    __tablename__ = "ai_cache_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    total_requests: Mapped[int] = mapped_column(Integer, default=0)
+    cache_hits: Mapped[int] = mapped_column(Integer, default=0)
+    cache_misses: Mapped[int] = mapped_column(Integer, default=0)
+    total_entries: Mapped[int] = mapped_column(Integer, default=0)
+    expired_entries: Mapped[int] = mapped_column(Integer, default=0)
+    cache_size_mb: Mapped[float] = mapped_column(Float, default=0.0)
+    average_response_time: Mapped[float] = mapped_column(Float, default=0.0)
+    model_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     
     @property
     def hit_rate(self) -> float:
@@ -122,34 +127,37 @@ class AICacheStats(Model):
 
 class ChatSession(Model):
     """Chat session model for storing conversation history"""
-    __tablename__ = 'chat_sessions'
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="anonymous")
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    model_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    message_count: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     
-    id = Column(String(100), primary_key=True)
-    user_id = Column(String(100), nullable=False, default='anonymous')
-    title = Column(String(200), nullable=False)
-    model_id = Column(String(100), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    message_count = Column(Integer, default=0)
-    is_active = Column(Boolean, default=True)
+    # Relationship to messages
+    messages = db.relationship('ChatMessage', backref='session', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<ChatSession {self.id}: {self.title}>'
 
 class ChatMessage(Model):
     """Chat message model for storing individual messages"""
-    __tablename__ = 'chat_messages'
-    
-    id = Column(Integer, primary_key=True)
-    session_id = Column(String(100), ForeignKey('chat_sessions.id'), nullable=False)
-    role = Column(String(20), nullable=False)  # 'user', 'assistant', 'system'
-    content = Column(Text, nullable=False)
-    model_id = Column(String(100), nullable=True)
-    system_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    usage_tokens = Column(Integer, default=0)
-    cached = Column(Boolean, default=False)
-    attachments = Column(JSON, nullable=True)
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(100), db.ForeignKey("chat_sessions.id"), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)  # 'user', 'assistant', 'system'
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    model_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    system_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    usage_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cached: Mapped[bool] = mapped_column(Boolean, default=False)
+    attachments: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     def __repr__(self):
         return f'<ChatMessage {self.id}: {self.role} - {self.content[:50]}...>'
@@ -157,52 +165,52 @@ class ChatMessage(Model):
 # RAG System Models
 class Document(Model):
     """Document model for storing uploaded documents"""
-    __tablename__ = 'documents'
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    filename = Column(String(255), nullable=False)
-    original_name = Column(String(255), nullable=False)
-    file_type = Column(String(50), nullable=False)
-    file_size = Column(Integer, nullable=False)
-    file_hash = Column(String(64), nullable=False, unique=True)
-    content = Column(Text, nullable=True)
-    document_metadata = Column(JSON, nullable=True)
-    uploaded_by = Column(String(100), nullable=False, default='anonymous')
-    uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    processed_at = Column(DateTime, nullable=True)
-    is_processed = Column(Boolean, default=False)
-    chunk_count = Column(Integer, default=0)
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    original_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    document_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    uploaded_by: Mapped[str] = mapped_column(String(100), nullable=False, default="anonymous")
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    is_processed: Mapped[bool] = mapped_column(Boolean, default=False)
+    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
     
     def __repr__(self):
         return f'<Document {self.id}: {self.original_name}>'
 
 class DocumentChunk(Model):
     """Document chunk model for storing text chunks with embeddings"""
-    __tablename__ = 'document_chunks'
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    document_id = Column(String(36), ForeignKey('documents.id'), nullable=False)
-    chunk_index = Column(Integer, nullable=False)
-    content = Column(Text, nullable=False)
-    chunk_metadata = Column(JSON, nullable=True)
-    embedding_id = Column(String(100), nullable=True)  # ChromaDB embedding ID
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    __tablename__ = "document_chunks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    document_id: Mapped[str] = mapped_column(String(36), db.ForeignKey("documents.id"), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    chunk_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    embedding_id: Mapped[str | None] = mapped_column(String(100), nullable=True)  # ChromaDB embedding ID
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     
     def __repr__(self):
         return f'<DocumentChunk {self.id}: {self.document_id}[{self.chunk_index}]>'
 
 class RAGQuery(Model):
     """RAG query model for storing search queries and results"""
-    __tablename__ = 'rag_queries'
-    
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    query = Column(Text, nullable=False)
-    query_hash = Column(String(64), nullable=False, index=True)
-    user_id = Column(String(100), nullable=False, default='anonymous')
-    retrieved_chunks = Column(JSON, nullable=True)
-    context_used = Column(Text, nullable=True)
-    response_generated = Column(Boolean, default=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    __tablename__ = "rag_queries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    query_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False, default="anonymous")
+    retrieved_chunks: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    context_used: Mapped[str | None] = mapped_column(Text, nullable=True)
+    response_generated: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     
     def __repr__(self):
         return f'<RAGQuery {self.id}: {self.query[:50]}...>'
