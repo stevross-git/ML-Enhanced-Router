@@ -688,11 +688,9 @@ class PersonalAIRouter:
             # Start P2P network
             self.p2p_network.start_network()
             
-            # Try to join web4ai network with default bootstrap nodes
+            # Try to join the Peoples AI network using the public bootstrap node
             bootstrap_nodes = [
-                ("127.0.0.1", 9001),
-                ("127.0.0.1", 9002),
-                ("127.0.0.1", 9003)
+                ("genesis.peoplesainetwork.com", 30300)
             ]
             
             # Join the network
