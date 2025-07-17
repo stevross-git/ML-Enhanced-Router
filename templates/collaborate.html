@@ -527,6 +527,9 @@ async function loadAgentConfigurations() {
     try {
         const response = await fetch('/api/collaborate/agents');
         agentConfigurations = await response.json();
+        if (document.getElementById('manualAgentSelection').checked) {
+            populateAgentCheckboxes();
+        }
     } catch (error) {
         console.error('Error loading agent configurations:', error);
     }
@@ -538,21 +541,28 @@ function populateAgentCheckboxes() {
         container.innerHTML = '<p class="text-muted">No agents available</p>';
         return;
     }
-    
+
+    // Preserve any previously selected agents
+    const previouslySelected = Array.from(container.querySelectorAll('input:checked'))
+        .map(cb => cb.value);
+
     let html = '';
     Object.entries(agentConfigurations.agents).forEach(([agentId, agent]) => {
+        const checkedAttr = previouslySelected.includes(agentId) ? 'checked' : '';
+        const disabledAttr = agent.is_active ? '' : 'disabled';
+        const statusBadge = agent.is_active ? '' : '<span class="badge bg-secondary ms-2">Inactive</span>';
         html += `
             <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" id="agent_${agentId}" value="${agentId}">
+                <input class="form-check-input" type="checkbox" id="agent_${agentId}" value="${agentId}" ${checkedAttr} ${disabledAttr}>
                 <label class="form-check-label" for="agent_${agentId}">
-                    <strong>${agent.name}</strong>
+                    <strong>${agent.name}</strong> ${statusBadge}
                     <small class="text-muted d-block">${agent.specialization}</small>
                     <small class="text-info">Model: ${agent.current_model.name}</small>
                 </label>
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -582,7 +592,7 @@ async function configureAgents() {
                 <div class="card bg-secondary border-secondary mb-3">
                     <div class="card-body">
                         <div class="row align-items-center">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <h6 class="card-title">${agent.name}</h6>
                                 <p class="text-muted mb-0">${agent.specialization}</p>
                             </div>
@@ -590,17 +600,22 @@ async function configureAgents() {
                                 <label class="form-label">AI Model:</label>
                                 <select class="form-select" id="model_${agentId}" onchange="updateAgentModel('${agentId}', this.value)">
                                     ${agentConfigurations.available_models.map(model => `
-                                        <option value="${model.id}" ${model.id === agent.current_model.id ? 'selected' : ''}>
+                                        <option value="${model.id}" ${model.id == agent.current_model.id ? 'selected' : ''}>
                                             ${model.name} (${model.provider})
                                         </option>
                                     `).join('')}
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="text-end">
                                     <small class="text-muted d-block">Sessions: ${agent.current_sessions}/${agent.max_concurrent_sessions}</small>
                                     <small class="text-muted d-block">Confidence: ${(agent.confidence_threshold * 100).toFixed(0)}%</small>
-                                    <span class="badge ${agent.is_active ? 'bg-success' : 'bg-secondary'}">${agent.is_active ? 'Active' : 'Inactive'}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-check form-switch text-end">
+                                    <input class="form-check-input" type="checkbox" id="active_${agentId}" ${agent.is_active ? 'checked' : ''} onchange="toggleAgentActive('${agentId}', this.checked)">
+                                    <label class="form-check-label" for="active_${agentId}">${agent.is_active ? 'Active' : 'Inactive'}</label>
                                 </div>
                             </div>
                         </div>
@@ -650,6 +665,33 @@ async function updateAgentModel(agentId, modelId) {
         
     } catch (error) {
         alert('Error updating agent model: ' + error.message);
+    }
+}
+
+async function toggleAgentActive(agentId, isActive) {
+    try {
+        const response = await fetch(`/api/collaborate/agents/${agentId}/active`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                is_active: isActive
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            alert('Error updating agent status: ' + result.error);
+            return;
+        }
+
+        // Refresh configurations and manual selection
+        await loadAgentConfigurations();
+
+    } catch (error) {
+        alert('Error updating agent status: ' + error.message);
     }
 }
 </script>

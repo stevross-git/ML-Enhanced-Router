@@ -1607,6 +1607,7 @@ def collaborate():
         enable_rag = data.get('enable_rag', False)
         max_agents = data.get('max_agents', 3)
         collaboration_timeout = data.get('timeout', 300)
+        selected_agents = data.get('selected_agents')
         
         # Run collaborative processing
         import asyncio
@@ -1619,7 +1620,8 @@ def collaborate():
                     query=query,
                     enable_rag=enable_rag,
                     max_agents=max_agents,
-                    collaboration_timeout=collaboration_timeout
+                    collaboration_timeout=collaboration_timeout,
+                    selected_agents=selected_agents
                 )
             )
             return jsonify(result)
@@ -2086,6 +2088,31 @@ def update_agent_model(agent_id):
         
     except Exception as e:
         logger.error(f"Error updating agent model: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/collaborate/agents/<agent_id>/active', methods=['PUT'])
+def update_agent_active(agent_id):
+    """Enable or disable a collaborative agent"""
+    try:
+        global collaborative_router
+        if not collaborative_router:
+            return jsonify({'error': 'Collaborative router not initialized'}), 500
+
+        data = request.get_json()
+        if not data or 'is_active' not in data:
+            return jsonify({'error': 'is_active is required'}), 400
+
+        is_active = bool(data['is_active'])
+        success = collaborative_router.set_agent_active(agent_id, is_active)
+
+        if success:
+            status = 'activated' if is_active else 'deactivated'
+            return jsonify({'message': f'Agent {agent_id} {status}'})
+        else:
+            return jsonify({'error': 'Failed to update agent status'}), 400
+
+    except Exception as e:
+        logger.error(f"Error updating agent active status: {e}")
         return jsonify({'error': str(e)}), 500
 
 # Token Management Endpoints
