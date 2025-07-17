@@ -6,6 +6,10 @@ import hashlib
 import uuid
 from flask_sqlalchemy.model import Model
 
+from app import db
+
+
+
 # Use the imported Model base class instead of db.Model
 class QueryLog(Model):
     """Log of all queries processed by the router"""

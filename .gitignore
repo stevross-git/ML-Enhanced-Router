@@ -1,3 +1,6 @@
 p2p_network_web4ai_personal_*.db
 p2p_network_web4ai_personal_e15dfaf7.db
 __pycache__/*
+.env
+env
+.env

@@ -1371,7 +1371,7 @@
                         console.log('Voice generated successfully');
                         // Here you would typically play the audio
                         // For now, just show a success message
-                        showMessage('system', 'Voice response generated successfully!');
+                        addMessage('system', 'Voice response generated successfully!');
                     } else {
                         console.error('Voice generation failed:', result.error);
                     }
@@ -1381,23 +1381,6 @@
                 
             } catch (error) {
                 console.error('Error generating voice response:', error);
-            }
-        }
-                
-                if (response.ok) {
-                    bootstrap.Modal.getInstance(document.getElementById('preferenceModal')).hide();
-                    loadPersonalMemory();
-                    
-                    // Clear form
-                    document.getElementById('preference-key').value = '';
-                    document.getElementById('preference-value').value = '';
-                    document.getElementById('preference-strength').value = '0.8';
-                } else {
-                    alert('Failed to save preference');
-                }
-                
-            } catch (error) {
-                alert('Error saving preference: ' + error.message);
             }
         }
         

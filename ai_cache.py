@@ -48,13 +48,31 @@ class AICacheManager:
         self.ttl_seconds = ttl_seconds
         self.max_size = max_size
         self.memory_cache: Dict[str, CacheEntry] = {}
+        self.AICacheEntry = None
+        self.AICacheStats = None
         
-        # Import models here to avoid circular imports
-        from models import AICacheEntry, AICacheStats
-        self.AICacheEntry = AICacheEntry
-        self.AICacheStats = AICacheStats
+        # Initialize models with proper error handling
+        self._init_models()
         
         logger.info(f"AI Cache initialized with database backend, TTL: {ttl_seconds}s, max size: {max_size}")
+    
+    def _init_models(self):
+        """Initialize model classes with proper error handling"""
+        try:
+            if self.db is not None:
+                # Import models lazily to avoid circular imports
+                from models import AICacheEntry, AICacheStats
+                self.AICacheEntry = AICacheEntry
+                self.AICacheStats = AICacheStats
+                logger.debug("AI Cache models initialized successfully")
+        except ImportError as e:
+            logger.warning(f"Could not import models: {e}")
+            self.AICacheEntry = None
+            self.AICacheStats = None
+        except Exception as e:
+            logger.error(f"Error initializing AI Cache models: {e}")
+            self.AICacheEntry = None
+            self.AICacheStats = None
     
     def _init_sqlite(self):
         """Initialize SQLite cache storage"""
@@ -116,7 +134,7 @@ class AICacheManager:
         Returns:
             Cached response data or None if not found/expired
         """
-        if not self.db:
+        if not self.db or not self.AICacheEntry:
             return None
             
         cache_key = self._generate_cache_key(query, model_id, system_message)
@@ -132,7 +150,8 @@ class AICacheManager:
             
             if entry:
                 # Update hit count and last accessed
-                entry.increment_hit_count()
+                entry.hit_count += 1
+                entry.last_accessed = datetime.now()
                 self.db.session.commit()
                 
                 return {
@@ -147,6 +166,7 @@ class AICacheManager:
             
         except Exception as e:
             logger.error(f"Error retrieving from database cache: {e}")
+            self.db.session.rollback()
             return None
     
     def set(self, query: str, model_id: str, response: str, system_message: Optional[str] = None, 
@@ -164,7 +184,7 @@ class AICacheManager:
         Returns:
             True if cached successfully
         """
-        if not self.db:
+        if not self.db or not self.AICacheEntry:
             return False
             
         cache_key = self._generate_cache_key(query, model_id, system_message)
@@ -204,7 +224,7 @@ class AICacheManager:
     
     def _cleanup_expired(self):
         """Clean up expired entries from database"""
-        if not self.db:
+        if not self.db or not self.AICacheEntry:
             return
             
         try:
@@ -223,7 +243,7 @@ class AICacheManager:
     
     def clear(self, model_id: Optional[str] = None):
         """Clear cache entries"""
-        if not self.db:
+        if not self.db or not self.AICacheEntry:
             return
             
         try:
@@ -249,7 +269,7 @@ class AICacheManager:
             'max_size': self.max_size
         }
         
-        if not self.db:
+        if not self.db or not self.AICacheEntry:
             return stats
             
         try:
@@ -285,10 +305,11 @@ class AICacheManager:
         """Get recent cache entries for debugging/monitoring"""
         entries = []
         
-        if not self.db:
+        if not self.db or not self.AICacheEntry:
             return entries
             
         try:
+            # Build the query properly
             query = self.db.session.query(self.AICacheEntry).filter(
                 self.AICacheEntry.expires_at > datetime.now()
             )
@@ -296,8 +317,10 @@ class AICacheManager:
             if model_id:
                 query = query.filter(self.AICacheEntry.model_id == model_id)
             
+            # Order by created_at descending and limit results
             query = query.order_by(self.AICacheEntry.created_at.desc()).limit(limit)
             
+            # Execute the query and process results
             for entry in query.all():
                 query_preview = entry.query[:100] + '...' if len(entry.query) > 100 else entry.query
                 entries.append({
@@ -314,6 +337,116 @@ class AICacheManager:
             logger.error(f"Error getting cache entries: {e}")
             
         return entries
+    
+    def get_memory_usage(self) -> Dict[str, Any]:
+        """Get memory usage statistics"""
+        try:
+            memory_stats = {
+                'memory_cache_size': len(self.memory_cache),
+                'memory_cache_keys': list(self.memory_cache.keys())[:10]  # First 10 keys
+            }
+            
+            # Calculate approximate memory usage
+            total_size = 0
+            for entry in self.memory_cache.values():
+                total_size += len(entry.query) + len(entry.response) + len(str(entry.metadata))
+            
+            memory_stats['estimated_memory_mb'] = round(total_size / (1024 * 1024), 2)
+            
+            return memory_stats
+            
+        except Exception as e:
+            logger.error(f"Error getting memory usage: {e}")
+            return {}
+    
+    def get_model_stats(self, model_id: str) -> Dict[str, Any]:
+        """Get statistics for a specific model"""
+        if not self.db or not self.AICacheEntry:
+            return {}
+            
+        try:
+            # Get model-specific stats
+            model_entries = self.db.session.query(self.AICacheEntry).filter(
+                self.AICacheEntry.model_id == model_id
+            ).count()
+            
+            model_valid = self.db.session.query(self.AICacheEntry).filter(
+                and_(
+                    self.AICacheEntry.model_id == model_id,
+                    self.AICacheEntry.expires_at > datetime.now()
+                )
+            ).count()
+            
+            model_hits = self.db.session.query(func.sum(self.AICacheEntry.hit_count)).filter(
+                self.AICacheEntry.model_id == model_id
+            ).scalar() or 0
+            
+            return {
+                'model_id': model_id,
+                'total_entries': model_entries,
+                'valid_entries': model_valid,
+                'expired_entries': model_entries - model_valid,
+                'total_hits': model_hits,
+                'hit_rate': round((model_hits / max(model_entries, 1)) * 100, 2)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting model stats: {e}")
+            return {}
+    
+    def cleanup_old_entries(self, days_old: int = 7):
+        """Clean up entries older than specified days"""
+        if not self.db or not self.AICacheEntry:
+            return
+            
+        try:
+            cutoff_date = datetime.now() - timedelta(days=days_old)
+            
+            old_count = self.db.session.query(self.AICacheEntry).filter(
+                self.AICacheEntry.created_at < cutoff_date
+            ).delete()
+            
+            self.db.session.commit()
+            
+            if old_count > 0:
+                logger.info(f"Cleaned up {old_count} old cache entries (>{days_old} days)")
+                
+        except Exception as e:
+            logger.error(f"Error cleaning up old entries: {e}")
+            self.db.session.rollback()
+    
+    def get_cache_efficiency(self) -> Dict[str, Any]:
+        """Get cache efficiency metrics"""
+        if not self.db or not self.AICacheEntry:
+            return {}
+            
+        try:
+            # Calculate efficiency metrics
+            total_entries = self.db.session.query(self.AICacheEntry).count()
+            total_hits = self.db.session.query(func.sum(self.AICacheEntry.hit_count)).scalar() or 0
+            
+            # Get entries that have been hit more than once
+            popular_entries = self.db.session.query(self.AICacheEntry).filter(
+                self.AICacheEntry.hit_count > 1
+            ).count()
+            
+            # Get average age of entries
+            avg_age = self.db.session.query(
+                func.avg(func.julianday('now') - func.julianday(self.AICacheEntry.created_at))
+            ).scalar() or 0
+            
+            return {
+                'total_entries': total_entries,
+                'total_hits': total_hits,
+                'popular_entries': popular_entries,
+                'efficiency_ratio': round((popular_entries / max(total_entries, 1)) * 100, 2),
+                'average_age_days': round(float(avg_age), 2),
+                'average_hits_per_entry': round(total_hits / max(total_entries, 1), 2)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting cache efficiency: {e}")
+            return {}
 
 # Global cache instance
 cache_manager = None
@@ -330,12 +463,35 @@ def get_cache_manager(db=None) -> AICacheManager:
             ttl_seconds=ttl_seconds,
             max_size=max_size
         )
-    elif db is not None and cache_manager.db is None:
+    elif db is not None and (cache_manager.db is None or cache_manager.AICacheEntry is None):
         # Update existing cache manager with database instance
         cache_manager.db = db
-        # Re-import models with proper database context
-        from models import AICacheEntry, AICacheStats
-        cache_manager.AICacheEntry = AICacheEntry
-        cache_manager.AICacheStats = AICacheStats
+        cache_manager._init_models()
     
     return cache_manager
+
+def clear_cache(model_id: Optional[str] = None):
+    """Clear cache entries (utility function)"""
+    cache_manager = get_cache_manager()
+    if cache_manager:
+        cache_manager.clear(model_id)
+
+def get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics (utility function)"""
+    cache_manager = get_cache_manager()
+    if cache_manager:
+        return cache_manager.get_stats()
+    return {}
+
+def cleanup_expired_cache():
+    """Clean up expired cache entries (utility function)"""
+    cache_manager = get_cache_manager()
+    if cache_manager:
+        cache_manager._cleanup_expired()
+
+def get_cache_entries(model_id: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+    """Get cache entries (utility function)"""
+    cache_manager = get_cache_manager()
+    if cache_manager:
+        return cache_manager.get_cache_entries(model_id, limit)
+    return []
