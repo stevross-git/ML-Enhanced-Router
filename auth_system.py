@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from persistent_storage import load_json, save_json
 
 class UserRole(Enum):
     ADMIN = "admin"
@@ -65,15 +66,49 @@ class User:
                 "system_config": False
             }
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize user to dictionary for JSON storage."""
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "role": self.role.value,
+            "api_key": self.api_key,
+            "created_at": self.created_at.isoformat(),
+            "last_login": self.last_login.isoformat() if self.last_login else None,
+            "is_active": self.is_active,
+            "permissions": self.permissions,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "User":
+        """Create a User from a dictionary."""
+        user = cls(
+            id=data["id"],
+            username=data["username"],
+            email=data.get("email", ""),
+            role=UserRole(data.get("role", "user")),
+            api_key=data.get("api_key", ""),
+            created_at=datetime.fromisoformat(data.get("created_at")),
+            last_login=datetime.fromisoformat(data["last_login"]) if data.get("last_login") else None,
+            is_active=data.get("is_active", True),
+            permissions=data.get("permissions"),
+        )
+        return user
+
 class AuthManager:
     """Authentication and authorization manager"""
-    
-    def __init__(self, secret_key: str = None):
+
+    def __init__(self, secret_key: str = None, storage_path: str = "instance/auth_data.json"):
         self.secret_key = secret_key or os.getenv("JWT_SECRET", "dev-secret-change-in-production")
+        self.storage_path = storage_path
         self.users: Dict[str, User] = {}
         self.api_keys: Dict[str, str] = {}  # api_key -> user_id
         self.sessions: Dict[str, Dict[str, Any]] = {}
-        self._initialize_default_users()
+        self._load_data()
+        if not self.users:
+            self._initialize_default_users()
+            self._save_data()
     
     def _initialize_default_users(self):
         """Initialize default admin user"""
@@ -89,6 +124,21 @@ class AuthManager:
         
         self.users["admin"] = admin_user
         self.api_keys[admin_api_key] = "admin"
+        self._save_data()
+
+    def _load_data(self):
+        """Load users and API keys from persistent storage."""
+        data = load_json(self.storage_path)
+        users = data.get("users", [])
+        for u in users:
+            user = User.from_dict(u)
+            self.users[user.id] = user
+            self.api_keys[user.api_key] = user.id
+
+    def _save_data(self):
+        """Persist users and API keys to disk."""
+        data = {"users": [u.to_dict() for u in self.users.values()]}
+        save_json(self.storage_path, data)
     
     def _generate_api_key(self) -> str:
         """Generate a secure API key"""
@@ -123,7 +173,8 @@ class AuthManager:
         
         self.users[user_id] = user
         self.api_keys[api_key] = user_id
-        
+
+        self._save_data()
         return user
     
     def authenticate_user(self, username: str, password: str) -> Optional[User]:
@@ -190,6 +241,7 @@ class AuthManager:
         user = self.users.get(user_id)
         if user:
             user.is_active = False
+            self._save_data()
             return True
         return False
     
@@ -205,7 +257,7 @@ class AuthManager:
             new_api_key = self._generate_api_key()
             user.api_key = new_api_key
             self.api_keys[new_api_key] = user_id
-            
+            self._save_data()
             return new_api_key
         return None
     

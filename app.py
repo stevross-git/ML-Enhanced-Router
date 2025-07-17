@@ -21,6 +21,8 @@ from config import EnhancedRouterConfig
 from model_manager import ModelManager, ModelType
 from ai_models import AIModelManager, AIProvider
 from auth_system import AuthManager, UserRole
+from api_keys_storage import load_api_keys, save_api_keys
+from settings_storage import load_settings, save_settings
 from ai_cache import get_cache_manager
 from rag_chat import get_rag_chat
 from swagger_spec import swagger_spec
@@ -92,13 +94,17 @@ auto_chain_generator = None
 evaluation_engine = None
 peer_teaching_system = None
 personal_ai_router = None
+global_settings = {}
 
 def initialize_router():
     """Initialize the ML router in a background thread"""
-    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine, peer_teaching_system, personal_ai_router
+    global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine, peer_teaching_system, personal_ai_router, global_settings
     
     try:
         with app.app_context():
+            load_api_keys()
+            global_settings = load_settings()
+
             router_config = EnhancedRouterConfig.from_env()
             model_manager = ModelManager(db)
             ai_model_manager = AIModelManager(db)
@@ -859,8 +865,10 @@ def save_api_keys():
         for form_key, env_key in key_mappings.items():
             if form_key in data and data[form_key]:
                 saved_keys[env_key] = data[form_key]
-                # In production, you would save to secure storage
-                # os.environ[env_key] = data[form_key]
+                os.environ[env_key] = data[form_key]
+
+        if saved_keys:
+            save_api_keys(saved_keys)
         
         return jsonify({
             'status': 'success',
@@ -876,26 +884,19 @@ def save_api_keys():
 def general_settings():
     """Get or save general settings"""
     try:
-        if request.method == 'GET':
-            # Return current settings
-            settings = {
-                'default_model': 'gpt-4o-mini',
-                'max_tokens': 4096,
-                'temperature': 0.7,
-                'auto_retry': True
-            }
-            return jsonify({'status': 'success', 'settings': settings})
-            
-        elif request.method == 'POST':
+        global global_settings
+        if request.method == "GET":
+            settings = global_settings.get("general", {"default_model": "gpt-4o-mini", "max_tokens": 4096, "temperature": 0.7, "auto_retry": True})
+            return jsonify({"status": "success", "settings": settings})
+
+        elif request.method == "POST":
             data = request.get_json()
             if not data:
-                return jsonify({'error': 'No data provided'}), 400
-            
-            # Save settings (in production, save to database)
-            return jsonify({
-                'status': 'success',
-                'message': 'General settings saved successfully'
-            })
+                return jsonify({"error": "No data provided"}), 400
+
+            global_settings["general"] = data
+            save_settings(global_settings)
+            return jsonify({"status": "success", "message": "General settings saved successfully"})
             
     except Exception as e:
         logger.error(f"Error with general settings: {e}")
@@ -905,24 +906,19 @@ def general_settings():
 def security_settings():
     """Get or save security settings"""
     try:
-        if request.method == 'GET':
-            settings = {
-                'rate_limit': 60,
-                'session_timeout': 60,
-                'require_auth': True,
-                'log_requests': True
-            }
-            return jsonify({'status': 'success', 'settings': settings})
-            
-        elif request.method == 'POST':
+        global global_settings
+        if request.method == "GET":
+            settings = global_settings.get("security", {"rate_limit": 60, "session_timeout": 60, "require_auth": True, "log_requests": True})
+            return jsonify({"status": "success", "settings": settings})
+
+        elif request.method == "POST":
             data = request.get_json()
             if not data:
-                return jsonify({'error': 'No data provided'}), 400
-            
-            return jsonify({
-                'status': 'success',
-                'message': 'Security settings saved successfully'
-            })
+                return jsonify({"error": "No data provided"}), 400
+
+            global_settings["security"] = data
+            save_settings(global_settings)
+            return jsonify({"status": "success", "message": "Security settings saved successfully"})
             
     except Exception as e:
         logger.error(f"Error with security settings: {e}")
@@ -932,24 +928,19 @@ def security_settings():
 def performance_settings():
     """Get or save performance settings"""
     try:
-        if request.method == 'GET':
-            settings = {
-                'cache_ttl': 3600,
-                'max_concurrent': 10,
-                'request_timeout': 30,
-                'enable_cache': True
-            }
-            return jsonify({'status': 'success', 'settings': settings})
-            
-        elif request.method == 'POST':
+        global global_settings
+        if request.method == "GET":
+            settings = global_settings.get("performance", {"cache_ttl": 3600, "max_concurrent": 10, "request_timeout": 30, "enable_cache": True})
+            return jsonify({"status": "success", "settings": settings})
+
+        elif request.method == "POST":
             data = request.get_json()
             if not data:
-                return jsonify({'error': 'No data provided'}), 400
-            
-            return jsonify({
-                'status': 'success',
-                'message': 'Performance settings saved successfully'
-            })
+                return jsonify({"error": "No data provided"}), 400
+
+            global_settings["performance"] = data
+            save_settings(global_settings)
+            return jsonify({"status": "success", "message": "Performance settings saved successfully"})
             
     except Exception as e:
         logger.error(f"Error with performance settings: {e}")
