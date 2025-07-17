@@ -106,9 +106,6 @@ class NetworkBridge:
             # Connect to existing network
             config.p2p.bootstrap_nodes = [
                 "/ip4/genesis.peoplesainetwork.com/tcp/30300",
-                "/ip4/127.0.0.1/tcp/30301",  # Local CSP network node
-                "/ip4/127.0.0.1/tcp/30302",
-                "/ip4/127.0.0.1/tcp/30303",
             ]
             config.p2p.dns_seed_domain = "peoplesainetwork.com"
             
