@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "id": "admin",
+      "username": "admin",
+      "email": "admin@localhost",
+      "role": "admin",
+      "api_key": "mr_1PxvIR4jNfmvWePOPsMf3-71O69_3l71_i4FSxRzXmk",
+      "created_at": "2025-07-17T03:37:10.924633",
+      "last_login": null,
+      "is_active": true,
+      "permissions": {
+        "create_models": true,
+        "delete_models": true,
+        "manage_agents": true,
+        "view_analytics": true,
+        "manage_users": true,
+        "system_config": true
+      }
+    }
+  ]
+}

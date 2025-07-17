@@ -83,118 +83,202 @@ class AIModel:
     model_type: str = "llm"  # llm, embedding, image, audio, video, multimodal
     input_modalities: List[str] = None
     output_modalities: List[str] = None
-    deployment_type: str = "cloud"  # cloud, local, edge
-    region: str = "us-east-1"
-    specialized_tasks: List[str] = None
-    
-    def __post_init__(self):
-        if self.custom_headers is None:
-            self.custom_headers = {}
-        if self.capabilities is None:
-            self.capabilities = [ModelCapability.TEXT_GENERATION]
-        if self.input_modalities is None:
-            self.input_modalities = ["text"]
-        if self.output_modalities is None:
-            self.output_modalities = ["text"]
-        if self.specialized_tasks is None:
-            self.specialized_tasks = []
+    deployment_type: str = "cloud"  # cloud, local, hybrid
 
 class AIModelManager:
-    """Manages AI model configurations and interactions"""
+    """Manages AI models and handles requests to different providers"""
     
-    def __init__(self, db=None):
-        self.db = db
-        self.models: Dict[str, AIModel] = {}
-        self.active_model_id: Optional[str] = None
-        self.cache_manager = get_cache_manager(db)
-        self._initialize_default_models()
-    
-    def _initialize_default_models(self):
-        """Initialize default AI models with comprehensive multi-modal capabilities"""
-        # Import comprehensive models configuration
-        try:
-            from multimodal_models_config import get_comprehensive_multimodal_models
-            default_models = get_comprehensive_multimodal_models()
-        except ImportError:
-            # Fallback to basic models if comprehensive config not available
-            default_models = [
-                # OpenAI Models - Multi-modal
-                AIModel(
-                    id="gpt-4o",
-                    name="GPT-4o (Multi-modal)",
-                    provider=AIProvider.OPENAI,
-                    model_name="gpt-4o",
-                    endpoint="https://api.openai.com/v1/chat/completions",
-                    api_key_env="OPENAI_API_KEY",
-                    max_tokens=4096,
-                    context_window=128000,
-                    cost_per_1k_tokens=0.03,
-                    capabilities=[
-                        ModelCapability.TEXT_GENERATION,
-                        ModelCapability.IMAGE_ANALYSIS,
-                        ModelCapability.MULTIMODAL
-                    ],
-                    supports_vision=True,
-                    model_type="multimodal",
-                    input_modalities=["text", "image"],
-                    output_modalities=["text"]
-                ),
+    def __init__(self):
+        self.models = self._initialize_models()
+        self.active_model_id = None
+        self.cache_manager = get_cache_manager()
+        
+    def _initialize_models(self) -> Dict[str, AIModel]:
+        """Initialize all available AI models"""
+        models = [
+            # OpenAI Models
             AIModel(
-                id="gpt-4-turbo",
-                name="GPT-4 Turbo",
+                id="gpt-4o",
+                name="GPT-4o",
                 provider=AIProvider.OPENAI,
-                model_name="gpt-4-turbo",
+                model_name="gpt-4o",
                 endpoint="https://api.openai.com/v1/chat/completions",
                 api_key_env="OPENAI_API_KEY",
                 max_tokens=4096,
                 context_window=128000,
-                cost_per_1k_tokens=0.01
+                cost_per_1k_tokens=0.005,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.IMAGE_ANALYSIS,
+                    ModelCapability.REASONING,
+                    ModelCapability.CODE_GENERATION,
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.MULTIMODAL
+                ],
+                supports_vision=True,
+                supports_functions=True,
+                model_type="multimodal",
+                input_modalities=["text", "image"],
+                output_modalities=["text"]
             ),
             AIModel(
-                id="gpt-3.5-turbo",
-                name="GPT-3.5 Turbo",
+                id="gpt-4o-mini",
+                name="GPT-4o Mini",
                 provider=AIProvider.OPENAI,
-                model_name="gpt-3.5-turbo",
+                model_name="gpt-4o-mini",
                 endpoint="https://api.openai.com/v1/chat/completions",
                 api_key_env="OPENAI_API_KEY",
-                max_tokens=4096,
-                context_window=16385,
-                cost_per_1k_tokens=0.0005
+                max_tokens=16384,
+                context_window=128000,
+                cost_per_1k_tokens=0.00015,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.IMAGE_ANALYSIS,
+                    ModelCapability.REASONING,
+                    ModelCapability.CODE_GENERATION,
+                    ModelCapability.FUNCTION_CALLING,
+                    ModelCapability.MULTIMODAL
+                ],
+                supports_vision=True,
+                supports_functions=True,
+                model_type="multimodal",
+                input_modalities=["text", "image"],
+                output_modalities=["text"]
+            ),
+            AIModel(
+                id="o1-preview",
+                name="O1 Preview",
+                provider=AIProvider.OPENAI,
+                model_name="o1-preview",
+                endpoint="https://api.openai.com/v1/chat/completions",
+                api_key_env="OPENAI_API_KEY",
+                max_tokens=32768,
+                context_window=128000,
+                cost_per_1k_tokens=0.015,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.REASONING,
+                    ModelCapability.CODE_GENERATION
+                ],
+                supports_functions=False,
+                model_type="llm",
+                input_modalities=["text"],
+                output_modalities=["text"]
+            ),
+            AIModel(
+                id="o1-mini",
+                name="O1 Mini",
+                provider=AIProvider.OPENAI,
+                model_name="o1-mini",
+                endpoint="https://api.openai.com/v1/chat/completions",
+                api_key_env="OPENAI_API_KEY",
+                max_tokens=65536,
+                context_window=128000,
+                cost_per_1k_tokens=0.003,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.REASONING,
+                    ModelCapability.CODE_GENERATION
+                ],
+                supports_functions=False,
+                model_type="llm",
+                input_modalities=["text"],
+                output_modalities=["text"]
+            ),
+            AIModel(
+                id="dall-e-3",
+                name="DALL-E 3",
+                provider=AIProvider.OPENAI,
+                model_name="dall-e-3",
+                endpoint="https://api.openai.com/v1/images/generations",
+                api_key_env="OPENAI_API_KEY",
+                max_tokens=4000,
+                cost_per_1k_tokens=0.04,
+                capabilities=[
+                    ModelCapability.IMAGE_GENERATION
+                ],
+                model_type="image",
+                input_modalities=["text"],
+                output_modalities=["image"]
             ),
             # Anthropic Models
             AIModel(
-                id="claude-sonnet-4",
-                name="Claude Sonnet 4",
-                provider=AIProvider.ANTHROPIC,
-                model_name="claude-sonnet-4-20250514",
-                endpoint="https://api.anthropic.com/v1/messages",
-                api_key_env="ANTHROPIC_API_KEY",
-                max_tokens=4096,
-                context_window=200000,
-                cost_per_1k_tokens=0.015
-            ),
-            AIModel(
-                id="claude-3-5-sonnet",
+                id="claude-3-5-sonnet-20241022",
                 name="Claude 3.5 Sonnet",
                 provider=AIProvider.ANTHROPIC,
                 model_name="claude-3-5-sonnet-20241022",
                 endpoint="https://api.anthropic.com/v1/messages",
                 api_key_env="ANTHROPIC_API_KEY",
-                max_tokens=4096,
+                max_tokens=8192,
                 context_window=200000,
-                cost_per_1k_tokens=0.003
+                cost_per_1k_tokens=0.003,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.IMAGE_ANALYSIS,
+                    ModelCapability.REASONING,
+                    ModelCapability.CODE_GENERATION,
+                    ModelCapability.MULTIMODAL
+                ],
+                supports_vision=True,
+                model_type="multimodal",
+                input_modalities=["text", "image"],
+                output_modalities=["text"]
+            ),
+            AIModel(
+                id="claude-3-5-haiku-20241022",
+                name="Claude 3.5 Haiku",
+                provider=AIProvider.ANTHROPIC,
+                model_name="claude-3-5-haiku-20241022",
+                endpoint="https://api.anthropic.com/v1/messages",
+                api_key_env="ANTHROPIC_API_KEY",
+                max_tokens=8192,
+                context_window=200000,
+                cost_per_1k_tokens=0.0008,
+                capabilities=[
+                    ModelCapability.TEXT_GENERATION,
+                    ModelCapability.IMAGE_ANALYSIS,
+                    ModelCapability.REASONING,
+                    ModelCapability.CODE_GENERATION,
+                    ModelCapability.MULTIMODAL
+                ],
+                supports_vision=True,
+                model_type="multimodal",
+                input_modalities=["text", "image"],
+                output_modalities=["text"]
             ),
             # Google Models
             AIModel(
-                id="gemini-2.5-flash",
-                name="Gemini 2.5 Flash",
+                id="gemini-2.0-flash-exp",
+                name="Gemini 2.0 Flash (Experimental)",
                 provider=AIProvider.GOOGLE,
-                model_name="gemini-2.5-flash",
-                endpoint="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+                model_name="gemini-2.0-flash-exp",
+                endpoint="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
                 api_key_env="GEMINI_API_KEY",
                 max_tokens=8192,
                 context_window=1048576,
-                cost_per_1k_tokens=0.000125
+                cost_per_1k_tokens=0.000075
+            ),
+            AIModel(
+                id="gemini-1.5-pro",
+                name="Gemini 1.5 Pro",
+                provider=AIProvider.GOOGLE,
+                model_name="gemini-1.5-pro",
+                endpoint="https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+                api_key_env="GEMINI_API_KEY",
+                max_tokens=8192,
+                context_window=2097152,
+                cost_per_1k_tokens=0.00125
+            ),
+            AIModel(
+                id="gemini-1.5-flash",
+                name="Gemini 1.5 Flash",
+                provider=AIProvider.GOOGLE,
+                model_name="gemini-1.5-flash",
+                endpoint="https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+                api_key_env="GEMINI_API_KEY",
+                max_tokens=8192,
+                context_window=1048576,
+                cost_per_1k_tokens=0.000075
             ),
             AIModel(
                 id="gemini-2.5-pro",
@@ -242,17 +326,18 @@ class AIModelManager:
                 context_window=128000,
                 cost_per_1k_tokens=0.0002
             ),
-            # Ollama Local Models
+            # Ollama Local Models - UPDATED CONFIGURATION
             AIModel(
                 id="ollama-llama3.1",
                 name="Ollama Llama 3.1 (Local)",
                 provider=AIProvider.OLLAMA,
-                model_name="llama3.1",
-                endpoint="http://localhost:11434/api/generate",
+                model_name="llama3.1:latest",  # FIXED: Added :latest tag
+                endpoint="http://localhost:11434/api/chat",  # FIXED: Use /api/chat endpoint
                 api_key_env="",
                 max_tokens=4096,
                 context_window=131072,
                 cost_per_1k_tokens=0.0,
+                supports_streaming=True,  # Ensure streaming is supported
                 capabilities=[
                     ModelCapability.TEXT_GENERATION,
                     ModelCapability.REASONING
@@ -262,71 +347,87 @@ class AIModelManager:
                 output_modalities=["text"],
                 deployment_type="local"
             ),
+            # ElevenLabs Models
             AIModel(
-                id="ollama-llava",
-                name="Ollama LLaVA (Local Vision)",
-                provider=AIProvider.OLLAMA,
-                model_name="llava",
-                endpoint="http://localhost:11434/api/generate",
-                api_key_env="",
-                max_tokens=4096,
-                context_window=4096,
-                cost_per_1k_tokens=0.0,
+                id="eleven-multilingual-v2",
+                name="ElevenLabs Multilingual V2",
+                provider=AIProvider.ELEVENLABS,
+                model_name="eleven_multilingual_v2",
+                endpoint="https://api.elevenlabs.io/v1/text-to-speech",
+                api_key_env="ELEVENLABS_API_KEY",
+                max_tokens=5000,
+                cost_per_1k_tokens=0.015,
                 capabilities=[
-                    ModelCapability.TEXT_GENERATION,
-                    ModelCapability.IMAGE_ANALYSIS,
-                    ModelCapability.MULTIMODAL
+                    ModelCapability.AUDIO_GENERATION
                 ],
-                supports_vision=True,
-                model_type="multimodal",
-                input_modalities=["text", "image"],
-                output_modalities=["text"],
-                deployment_type="local"
+                model_type="audio",
+                input_modalities=["text"],
+                output_modalities=["audio"]
+            ),
+            AIModel(
+                id="eleven-turbo-v2_5",
+                name="ElevenLabs Turbo V2.5",
+                provider=AIProvider.ELEVENLABS,
+                model_name="eleven_turbo_v2_5",
+                endpoint="https://api.elevenlabs.io/v1/text-to-speech",
+                api_key_env="ELEVENLABS_API_KEY",
+                max_tokens=5000,
+                cost_per_1k_tokens=0.010,
+                capabilities=[
+                    ModelCapability.AUDIO_GENERATION
+                ],
+                model_type="audio",
+                input_modalities=["text"],
+                output_modalities=["audio"]
+            ),
+            AIModel(
+                id="eleven-monolingual-v1",
+                name="ElevenLabs English V1",
+                provider=AIProvider.ELEVENLABS,
+                model_name="eleven_monolingual_v1",
+                endpoint="https://api.elevenlabs.io/v1/text-to-speech",
+                api_key_env="ELEVENLABS_API_KEY",
+                max_tokens=5000,
+                cost_per_1k_tokens=0.012,
+                capabilities=[
+                    ModelCapability.AUDIO_GENERATION
+                ],
+                model_type="audio",
+                input_modalities=["text"],
+                output_modalities=["audio"]
             )
-            ]
+        ]
         
-        # Initialize models with validation
-        for model in default_models:
-            try:
-                self.models[model.id] = model
-                logger.info(f"Initialized model: {model.name} ({model.provider.value})")
-            except Exception as e:
-                logger.error(f"Failed to initialize model {model.id}: {e}")
-                continue
-        
-        # Set default active model
-        if "gpt-4o" in self.models:
-            self.active_model_id = "gpt-4o"
-        elif self.models:
-            self.active_model_id = next(iter(self.models.keys()))
-        
-        logger.info(f"Initialized {len(self.models)} AI models with multi-modal capabilities")
+        return {model.id: model for model in models}
     
-    def get_model(self, model_id: str) -> Optional[AIModel]:
-        """Get a model by ID"""
-        return self.models.get(model_id)
-    
-    def get_all_models(self) -> List[AIModel]:
+    def get_models(self) -> List[AIModel]:
         """Get all available models"""
         return list(self.models.values())
     
-    def get_models_by_provider(self, provider: AIProvider) -> List[AIModel]:
-        """Get models by provider"""
-        return [model for model in self.models.values() if model.provider == provider]
+    def get_model(self, model_id: str) -> Optional[AIModel]:
+        """Get a specific model by ID"""
+        return self.models.get(model_id)
     
     def get_active_model(self) -> Optional[AIModel]:
         """Get the currently active model"""
-        return self.models.get(self.active_model_id) if self.active_model_id else None
+        if self.active_model_id:
+            return self.get_model(self.active_model_id)
+        return None
     
     def set_active_model(self, model_id: str) -> bool:
         """Set the active model"""
         if model_id in self.models:
             self.active_model_id = model_id
+            self.models[model_id].is_active = True
+            # Deactivate other models
+            for mid, model in self.models.items():
+                if mid != model_id:
+                    model.is_active = False
             return True
         return False
     
     def add_custom_model(self, model_id: str, name: str, endpoint: str, 
-                        api_key_env: str, model_name: str = None,
+                        api_key_env: str = "", model_name: str = "", 
                         max_tokens: int = 4096, temperature: float = 0.7,
                         custom_headers: Dict[str, str] = None) -> AIModel:
         """Add a custom model"""
@@ -341,7 +442,6 @@ class AIModelManager:
             temperature=temperature,
             custom_headers=custom_headers or {}
         )
-        
         self.models[model_id] = model
         return model
     
@@ -350,520 +450,114 @@ class AIModelManager:
         if model_id in self.models:
             del self.models[model_id]
             if self.active_model_id == model_id:
-                self.active_model_id = next(iter(self.models.keys())) if self.models else None
+                self.active_model_id = None
             return True
         return False
     
-    def _apply_token_settings(self, query: str, system_message: str = None, model: AIModel = None) -> tuple:
-        """Apply token management settings to reduce token usage"""
-        # Get token settings from environment or defaults
-        token_settings = self._get_token_settings()
+    async def generate_response(self, model_id: str, query: str, system_message: str = None, 
+                              user_id: str = "anonymous", stream: bool = False) -> Dict[str, Any]:
+        """
+        Generate AI response with optional streaming support
         
-        processed_query = query
-        processed_system = system_message
+        Args:
+            model_id: ID of the model to use
+            query: User query
+            system_message: System message (optional)
+            user_id: User identifier for caching
+            stream: Whether to use streaming mode (default: False)
+        """
+        start_time = time.time()
         
-        # Apply content optimization based on strategy
-        if token_settings.get('remove_whitespace', True):
-            processed_query = ' '.join(processed_query.split())
-            if processed_system:
-                processed_system = ' '.join(processed_system.split())
-        
-        if token_settings.get('compress_messages', True):
-            # Compress system messages by removing unnecessary words
-            if processed_system:
-                processed_system = self._compress_system_message(processed_system)
-        
-        # Apply token limits
-        max_input_tokens = token_settings.get('max_input_tokens', 4000)
-        
-        # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
-        estimated_tokens = len(processed_query + (processed_system or '')) / 4
-        
-        if estimated_tokens > max_input_tokens:
-            if token_settings.get('truncate_history', False):
-                # Truncate the query to fit within limits
-                max_chars = max_input_tokens * 4
-                if processed_system:
-                    max_chars -= len(processed_system)
-                processed_query = processed_query[:max_chars]
-            elif token_settings.get('summarize_context', False):
-                # This would need a summarization service
-                # For now, just truncate
-                max_chars = max_input_tokens * 4
-                if processed_system:
-                    max_chars -= len(processed_system)
-                processed_query = processed_query[:max_chars]
-        
-        return processed_query, processed_system
-    
-    def _get_token_settings(self) -> dict:
-        """Get token settings from environment or defaults"""
-        return {
-            # Basic settings
-            'strategy': os.environ.get('TOKEN_REDUCTION_STRATEGY', 'light'),
-            'max_input_tokens': int(os.environ.get('MAX_INPUT_TOKENS', '4000')),
-            'max_output_tokens': int(os.environ.get('MAX_OUTPUT_TOKENS', '1000')),
-            'temperature': float(os.environ.get('TOKEN_TEMPERATURE', '0.7')),
-            'top_p': float(os.environ.get('TOKEN_TOP_P', '0.9')),
-            
-            # Content optimization
-            'remove_whitespace': os.environ.get('REMOVE_WHITESPACE', 'true').lower() == 'true',
-            'compress_messages': os.environ.get('COMPRESS_MESSAGES', 'true').lower() == 'true',
-            'truncate_history': os.environ.get('TRUNCATE_HISTORY', 'false').lower() == 'true',
-            'summarize_context': os.environ.get('SUMMARIZE_CONTEXT', 'false').lower() == 'true',
-            'use_model_limits': os.environ.get('USE_MODEL_LIMITS', 'true').lower() == 'true',
-            
-            # Advanced features
-            'smart_batching': os.environ.get('SMART_BATCHING', 'false').lower() == 'true',
-            'adaptive_context': os.environ.get('ADAPTIVE_CONTEXT', 'false').lower() == 'true',
-            'semantic_deduplication': os.environ.get('SEMANTIC_DEDUPLICATION', 'false').lower() == 'true',
-            'priority_queuing': os.environ.get('PRIORITY_QUEUING', 'false').lower() == 'true',
-            
-            # Budget management
-            'daily_token_limit': int(os.environ.get('DAILY_TOKEN_LIMIT', '100000')),
-            'hourly_token_limit': int(os.environ.get('HOURLY_TOKEN_LIMIT', '10000')),
-            'cost_threshold': float(os.environ.get('COST_THRESHOLD', '10.0')),
-            'auto_scale': os.environ.get('AUTO_SCALE', 'aggressive'),
-            
-            # Model optimization
-            'auto_model_selection': os.environ.get('AUTO_MODEL_SELECTION', 'true').lower() == 'true',
-            'cheap_model_threshold': os.environ.get('CHEAP_MODEL_THRESHOLD', 'medium'),
-            'fallback_model': os.environ.get('FALLBACK_MODEL', 'gpt-3.5-turbo'),
-            
-            # Alerts
-            'usage_alerts': os.environ.get('USAGE_ALERTS', 'true').lower() == 'true',
-            'cost_alerts': os.environ.get('COST_ALERTS', 'true').lower() == 'true',
-            'efficiency_alerts': os.environ.get('EFFICIENCY_ALERTS', 'false').lower() == 'true',
-            'model_suggestions': os.environ.get('MODEL_SUGGESTIONS', 'false').lower() == 'true'
-        }
-    
-    def _compress_system_message(self, system_message: str) -> str:
-        """Compress system message by removing unnecessary words"""
-        import re
-        # Simple compression - remove common words and phrases
-        compression_patterns = [
-            r'\b(please|kindly|you should|you must|you will|you can|you may)\b',
-            r'\b(the following|as follows|listed below|shown below)\b',
-            r'\b(very|quite|rather|really|actually|basically|essentially)\b',
-            r'\s+', # Multiple spaces
-        ]
-        
-        compressed = system_message
-        for pattern in compression_patterns:
-            compressed = re.sub(pattern, ' ', compressed, flags=re.IGNORECASE)
-        
-        return compressed.strip()
-    
-    def _apply_advanced_optimizations(self, query: str, system_message: str = None, token_settings: dict = None) -> tuple:
-        """Apply advanced token optimizations"""
-        if not token_settings:
-            token_settings = self._get_token_settings()
-        
-        processed_query = query
-        processed_system = system_message
-        
-        # Smart batching optimization
-        if token_settings.get('smart_batching', False):
-            # This would group similar requests in production
-            # For now, we'll apply basic optimization
-            processed_query = self._optimize_for_batching(processed_query)
-        
-        # Adaptive context window
-        if token_settings.get('adaptive_context', False):
-            max_context = self._calculate_adaptive_context_size(processed_query)
-            # Adjust context based on query complexity
-            if len(processed_query) < 100:  # Simple query
-                max_context = min(max_context, 2000)
-            elif len(processed_query) < 500:  # Medium query
-                max_context = min(max_context, 4000)
-            
-            # Apply context limit
-            if processed_system and len(processed_system) > max_context:
-                processed_system = processed_system[:max_context]
-        
-        # Semantic deduplication
-        if token_settings.get('semantic_deduplication', False):
-            processed_query = self._remove_semantic_duplicates(processed_query)
-        
-        return processed_query, processed_system
-    
-    def _optimize_for_batching(self, query: str) -> str:
-        """Optimize query for batching"""
-        # Remove redundant phrases that are common in batch requests
-        import re
-        batch_patterns = [
-            r'\b(can you|could you|please|would you mind)\b',
-            r'\b(i need|i want|i would like)\b',
-            r'\b(thanks|thank you|please help)\b'
-        ]
-        
-        optimized = query
-        for pattern in batch_patterns:
-            optimized = re.sub(pattern, '', optimized, flags=re.IGNORECASE)
-        
-        return ' '.join(optimized.split())
-    
-    def _calculate_adaptive_context_size(self, query: str) -> int:
-        """Calculate optimal context size based on query complexity"""
-        # Simple heuristic - in production this would use ML
-        base_size = 4000
-        
-        # Adjust based on query characteristics
-        if len(query.split()) > 100:  # Long query
-            return base_size * 2
-        elif any(word in query.lower() for word in ['code', 'programming', 'debug', 'error']):
-            return base_size * 1.5  # Code queries need more context
-        elif any(word in query.lower() for word in ['summary', 'brief', 'quick']):
-            return base_size * 0.5  # Brief queries need less context
-        
-        return base_size
-    
-    def _remove_semantic_duplicates(self, text: str) -> str:
-        """Remove semantically duplicate content"""
-        # Simple implementation - in production this would use embeddings
-        sentences = text.split('.')
-        unique_sentences = []
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if sentence and not any(self._are_similar(sentence, existing) for existing in unique_sentences):
-                unique_sentences.append(sentence)
-        
-        return '. '.join(unique_sentences)
-    
-    def _are_similar(self, text1: str, text2: str, threshold: float = 0.8) -> bool:
-        """Check if two texts are semantically similar"""
-        # Simple similarity check based on word overlap
-        words1 = set(text1.lower().split())
-        words2 = set(text2.lower().split())
-        
-        if not words1 or not words2:
-            return False
-        
-        intersection = words1.intersection(words2)
-        union = words1.union(words2)
-        
-        return len(intersection) / len(union) > threshold
-    
-    def get_token_usage_stats(self) -> Dict[str, Any]:
-        """Get current token usage statistics"""
-        # This would typically query a database in production
-        import random
-        
-        # Generate realistic but varied statistics
-        current_usage = random.randint(25000, 45000)
-        daily_limit = 100000
-        hourly_usage = random.randint(1500, 3000)
-        hourly_limit = 10000
-        
-        return {
-            'current_usage': current_usage,
-            'daily_limit': daily_limit,
-            'hourly_usage': hourly_usage,
-            'hourly_limit': hourly_limit,
-            'cost_today': round((current_usage / 1000) * 0.002, 2),
-            'avg_tokens_per_query': random.randint(600, 1200),
-            'efficiency_score': round(random.uniform(0.8, 0.95), 2),
-            'usage_percentage': round((current_usage / daily_limit) * 100, 2),
-            'projected_monthly_cost': round((current_usage / 1000) * 0.002 * 30, 2),
-            'optimization_savings': round(random.uniform(0.15, 0.35), 2),
-            'compression_ratio': round(random.uniform(1.5, 3.0), 1),
-            'cache_hit_rate': random.randint(75, 95),
-            'optimization_score': random.randint(85, 98),
-            'response_quality': random.randint(92, 99),
-            'peak_hours_active': random.choice([True, False]),
-            'burst_allowance_used': random.randint(0, 15),
-            'predictive_scaling_enabled': False,
-            'ai_optimizations_active': 0
-        }
-    
-    def get_predictive_insights(self) -> Dict[str, Any]:
-        """Get AI-powered predictive insights for token optimization"""
-        import random
-        
-        # Simulate predictive analytics
-        predictions = []
-        
-        # Usage pattern predictions
-        predictions.append({
-            'type': 'usage_pattern',
-            'confidence': random.uniform(0.8, 0.95),
-            'prediction': 'Usage will increase by 25% in the next 3 hours',
-            'recommendation': 'Consider enabling aggressive optimization',
-            'impact': 'medium'
-        })
-        
-        # Cost optimization predictions
-        predictions.append({
-            'type': 'cost_optimization',
-            'confidence': random.uniform(0.7, 0.9),
-            'prediction': 'Switching to semantic deduplication could save 30% tokens',
-            'recommendation': 'Enable semantic deduplication for similar queries',
-            'impact': 'high'
-        })
-        
-        # Model efficiency predictions
-        predictions.append({
-            'type': 'model_efficiency',
-            'confidence': random.uniform(0.75, 0.88),
-            'prediction': 'GPT-3.5 Turbo performs 95% as well for current query types',
-            'recommendation': 'Consider using GPT-3.5 Turbo for routine queries',
-            'impact': 'high'
-        })
-        
-        return {
-            'predictions': predictions,
-            'overall_optimization_potential': random.uniform(0.2, 0.5),
-            'recommended_actions': [
-                'Enable predictive scaling for peak hours',
-                'Implement intelligent caching for repeated patterns',
-                'Use dynamic compression for large contexts'
-            ],
-            'risk_assessment': {
-                'quality_impact': 'low',
-                'performance_impact': 'minimal',
-                'cost_benefit_ratio': random.uniform(2.5, 4.0)
-            }
-        }
-    
-    def apply_ai_optimizations(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Apply AI-powered optimizations to a query"""
-        token_settings = self._get_token_settings()
-        optimizations_applied = []
-        
-        # Predictive scaling
-        if token_settings.get('predictive_scaling', False):
-            # Simulate predictive scaling logic
-            if len(query) > 500:  # Long query
-                optimizations_applied.append('predictive_scaling')
-        
-        # Intelligent caching
-        if token_settings.get('intelligent_caching', False):
-            # Simulate intelligent caching decision
-            cache_score = self._calculate_cache_relevance(query)
-            if cache_score > 0.8:
-                optimizations_applied.append('intelligent_caching')
-        
-        # Dynamic compression
-        if token_settings.get('dynamic_compression', False):
-            compression_ratio = self._calculate_optimal_compression(query)
-            if compression_ratio > 1.5:
-                optimizations_applied.append('dynamic_compression')
-        
-        # Quality monitoring
-        if token_settings.get('quality_monitoring', False):
-            quality_threshold = self._assess_quality_requirements(query)
-            if quality_threshold > 0.9:
-                optimizations_applied.append('quality_monitoring')
-        
-        return {
-            'optimizations_applied': optimizations_applied,
-            'estimated_savings': len(optimizations_applied) * 0.1,
-            'quality_impact': 'minimal' if len(optimizations_applied) <= 2 else 'low',
-            'processing_time_ms': len(optimizations_applied) * 50
-        }
-    
-    def _calculate_cache_relevance(self, query: str) -> float:
-        """Calculate cache relevance score for intelligent caching"""
-        # Simulate cache relevance calculation
-        import random
-        
-        # Check for common patterns
-        common_patterns = ['explain', 'what is', 'how to', 'define', 'summary']
-        pattern_score = sum(1 for pattern in common_patterns if pattern in query.lower()) * 0.2
-        
-        # Add randomness to simulate real ML model
-        return min(pattern_score + random.uniform(0.3, 0.7), 1.0)
-    
-    def _calculate_optimal_compression(self, query: str) -> float:
-        """Calculate optimal compression ratio"""
-        # Simulate compression ratio calculation
-        base_ratio = 1.0
-        
-        # Longer queries have higher compression potential
-        if len(query) > 1000:
-            base_ratio += 1.0
-        elif len(query) > 500:
-            base_ratio += 0.5
-        
-        # Add variability
-        import random
-        return base_ratio + random.uniform(0.2, 0.8)
-    
-    def _assess_quality_requirements(self, query: str) -> float:
-        """Assess quality requirements for a query"""
-        # Simulate quality assessment
-        import random
-        
-        # Technical queries need higher quality
-        technical_keywords = ['code', 'programming', 'algorithm', 'debug', 'error']
-        if any(keyword in query.lower() for keyword in technical_keywords):
-            return random.uniform(0.9, 1.0)
-        
-        # General queries can tolerate more optimization
-        return random.uniform(0.6, 0.9)
-    
-    def get_optimization_recommendations(self, usage_history: Dict[str, Any] = None) -> List[Dict[str, Any]]:
-        """Get AI-powered optimization recommendations"""
-        recommendations = []
-        current_settings = self._get_token_settings()
-        
-        # Analyze current configuration
-        if not current_settings.get('smart_batching', False):
-            recommendations.append({
-                'type': 'efficiency',
-                'title': 'Enable Smart Batching',
-                'description': 'Group similar requests to reduce processing overhead',
-                'estimated_savings': '15-25%',
-                'difficulty': 'easy',
-                'priority': 'high'
-            })
-        
-        if not current_settings.get('semantic_deduplication', False):
-            recommendations.append({
-                'type': 'cost',
-                'title': 'Enable Semantic Deduplication',
-                'description': 'Remove redundant content from queries and responses',
-                'estimated_savings': '20-35%',
-                'difficulty': 'medium',
-                'priority': 'high'
-            })
-        
-        if not current_settings.get('predictive_scaling', False):
-            recommendations.append({
-                'type': 'automation',
-                'title': 'Enable Predictive Scaling',
-                'description': 'AI automatically adjusts limits based on usage patterns',
-                'estimated_savings': '10-20%',
-                'difficulty': 'easy',
-                'priority': 'medium'
-            })
-        
-        if current_settings.get('max_output_tokens', 1000) > 1500:
-            recommendations.append({
-                'type': 'configuration',
-                'title': 'Optimize Output Token Limits',
-                'description': 'Reduce maximum output tokens for better cost control',
-                'estimated_savings': '5-15%',
-                'difficulty': 'easy',
-                'priority': 'medium'
-            })
-        
-        return recommendations
-    
-    def update_token_settings(self, settings: Dict[str, Any]) -> bool:
-        """Update token management settings"""
-        try:
-            # In production, this would update environment variables or database
-            # For now, we'll just validate the settings
-            required_fields = ['strategy', 'max_input_tokens', 'max_output_tokens']
-            
-            for field in required_fields:
-                if field not in settings:
-                    return False
-            
-            # Validate ranges
-            if not 100 <= settings['max_input_tokens'] <= 100000:
-                return False
-            if not 10 <= settings['max_output_tokens'] <= 10000:
-                return False
-            if not 0.0 <= settings.get('temperature', 0.7) <= 2.0:
-                return False
-            
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error updating token settings: {e}")
-            return False
-    
-    async def generate_response(self, query: str, system_message: str = None, 
-                              model_id: str = None, user_id: str = None) -> Dict[str, Any]:
-        """Generate response using the specified or active model"""
-        model = self.get_model(model_id) if model_id else self.get_active_model()
+        # Get the model
+        model = self.get_model(model_id)
         if not model:
-            return {"error": "No model available", "status": "error"}
+            return {"error": f"Model '{model_id}' not found", "status": "error"}
         
-        # Apply token management settings and advanced optimizations
-        processed_query, processed_system = self._apply_token_settings(query, system_message, model)
+        if not model.is_active:
+            return {"error": f"Model '{model_id}' is not active", "status": "error"}
         
-        # Apply advanced optimizations if enabled
-        token_settings = self._get_token_settings()
-        if any(token_settings.get(key, False) for key in ['smart_batching', 'adaptive_context', 'semantic_deduplication']):
-            processed_query, processed_system = self._apply_advanced_optimizations(
-                processed_query, processed_system, token_settings
+        # Check cache first (only for non-streaming requests)
+        if not stream:
+            cached_response = self.cache_manager.get(
+                query=query,
+                model_id=model_id,
+                system_message=system_message
             )
-        
-        try:
-            # Check cache first
-            cached_response = self.cache_manager.get(processed_query, model.id, processed_system)
             if cached_response:
-                logger.info(f"Cache hit for model {model.id}")
+                logger.info(f"Cache hit for model {model_id}")
                 return {
-                    "response": cached_response['response'],
-                    "model_id": cached_response['model_id'],
+                    "response": cached_response,
+                    "status": "success",
+                    "model": model_id,
                     "cached": True,
-                    "cached_at": cached_response['cached_at'],
-                    "hit_count": cached_response.get('hit_count', 1),
-                    "metadata": cached_response.get('metadata', {}),
-                    "status": "success"
+                    "response_time": time.time() - start_time
                 }
-            
-            # Check if API key is available
-            api_key = os.getenv(model.api_key_env) if model.api_key_env else None
-            if model.provider != AIProvider.OLLAMA and not api_key:
+        
+        # Get API key (skip for local models)
+        api_key = None
+        if model.provider != AIProvider.OLLAMA and model.api_key_env:
+            api_key = os.environ.get(model.api_key_env)
+            if not api_key:
                 return {"error": f"API key not configured for {model.provider.value}", "status": "error"}
-            
-            # Route to appropriate handler
+        
+        # Route to appropriate handler with stream parameter
+        try:
             if model.provider == AIProvider.OPENAI:
-                result = await self._handle_openai(model, query, system_message, api_key)
+                result = await self._handle_openai(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.ANTHROPIC:
-                result = await self._handle_anthropic(model, query, system_message, api_key)
+                result = await self._handle_anthropic(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.GOOGLE:
-                result = await self._handle_google(model, query, system_message, api_key)
+                result = await self._handle_google(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.XAI:
-                result = await self._handle_xai(model, query, system_message, api_key)
+                result = await self._handle_xai(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.PERPLEXITY:
-                result = await self._handle_perplexity(model, query, system_message, api_key)
+                result = await self._handle_perplexity(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.OLLAMA:
-                result = await self._handle_ollama(model, query, system_message)
+                result = await self._handle_ollama(model, query, system_message, stream=stream)
             elif model.provider == AIProvider.COHERE:
-                result = await self._handle_cohere(model, query, system_message, api_key)
+                result = await self._handle_cohere(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.MISTRAL:
-                result = await self._handle_mistral(model, query, system_message, api_key)
+                result = await self._handle_mistral(model, query, system_message, api_key, stream=stream)
             elif model.provider == AIProvider.ELEVENLABS:
                 result = await self._handle_elevenlabs(model, query, system_message, api_key)
             elif model.provider == AIProvider.CUSTOM:
-                result = await self._handle_custom(model, query, system_message, api_key)
+                result = await self._handle_custom(model, query, system_message, api_key, stream=stream)
             else:
                 return {"error": f"Unsupported provider: {model.provider.value}", "status": "error"}
             
-            # Cache the response if successful
-            if result.get("status") == "success" and "response" in result:
+            # Cache successful non-streaming responses
+            if not stream and result.get("status") == "success" and "response" in result:
                 metadata = {
                     "user_id": user_id,
                     "provider": model.provider.value,
                     "model_name": model.model_name,
                     "timestamp": datetime.now().isoformat(),
-                    "cost_per_1k_tokens": model.cost_per_1k_tokens
+                    "cost_per_1k_tokens": model.cost_per_1k_tokens,
+                    "response_time": time.time() - start_time
                 }
                 self.cache_manager.set(
                     query=query,
-                    model_id=model.id,
+                    model_id=model_id,
                     response=result["response"],
                     system_message=system_message,
                     metadata=metadata
                 )
-                logger.info(f"Cached response for model {model.id}")
-                result["cached"] = False
             
+            # Add response time to result
+            result["response_time"] = time.time() - start_time
             return result
-                
+            
         except Exception as e:
-            logger.error(f"Error generating response with model {model.id}: {e}")
-            return {"error": str(e), "status": "error"}
+            logger.error(f"Error in generate_response for {model_id}: {e}")
+            return {
+                "error": f"Internal error: {str(e)}",
+                "status": "error",
+                "model": model_id,
+                "response_time": time.time() - start_time
+            }
     
-    async def _handle_openai(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
-        """Handle OpenAI API requests"""
+    async def _handle_openai(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
+        """Handle OpenAI API requests with optional streaming"""
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -874,33 +568,83 @@ class AIModelManager:
             messages.append({"role": "system", "content": system_message})
         messages.append({"role": "user", "content": query})
         
-        # Apply token settings for request parameters
-        token_settings = self._get_token_settings()
-        
         payload = {
             "model": model.model_name,
             "messages": messages,
-            "max_tokens": min(token_settings.get('max_output_tokens', 1000), model.max_tokens),
-            "temperature": token_settings.get('temperature', model.temperature),
-            "top_p": token_settings.get('top_p', model.top_p)
+            "max_tokens": model.max_tokens,
+            "temperature": model.temperature,
+            "top_p": model.top_p,
+            "stream": stream
         }
         
         async with aiohttp.ClientSession() as session:
             async with session.post(model.endpoint, headers=headers, json=payload) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    return {
-                        "response": data["choices"][0]["message"]["content"],
-                        "status": "success",
-                        "model": model.id,
-                        "usage": data.get("usage", {})
-                    }
+                    if stream:
+                        return await self._handle_openai_streaming(response, model)
+                    else:
+                        data = await response.json()
+                        return {
+                            "response": data["choices"][0]["message"]["content"],
+                            "status": "success",
+                            "model": model.id,
+                            "usage": data.get("usage", {}),
+                            "streaming": False
+                        }
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_anthropic(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
-        """Handle Anthropic API requests"""
+    async def _handle_openai_streaming(self, response, model: AIModel) -> Dict[str, Any]:
+        """Handle streaming response from OpenAI API"""
+        full_content = ""
+        usage_stats = {}
+        
+        try:
+            async for line in response.content:
+                line = line.decode('utf-8').strip()
+                if not line:
+                    continue
+                    
+                if line.startswith('data: '):
+                    line = line[6:]  # Remove 'data: ' prefix
+                    
+                if line == '[DONE]':
+                    break
+                    
+                try:
+                    chunk_data = json.loads(line)
+                    
+                    if 'choices' in chunk_data and len(chunk_data['choices']) > 0:
+                        delta = chunk_data['choices'][0].get('delta', {})
+                        if 'content' in delta:
+                            full_content += delta['content']
+                    
+                    # Capture usage from final chunk
+                    if 'usage' in chunk_data:
+                        usage_stats = chunk_data['usage']
+                        
+                except json.JSONDecodeError:
+                    continue
+                    
+            return {
+                "response": full_content,
+                "status": "success",
+                "model": model.id,
+                "usage": usage_stats,
+                "streaming": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error processing OpenAI streaming response: {e}")
+            return {
+                "error": f"Error processing streaming response: {str(e)}",
+                "status": "error",
+                "model": model.id
+            }
+    
+    async def _handle_anthropic(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
+        """Handle Anthropic API requests with optional streaming"""
         headers = {
             "x-api-key": api_key,
             "Content-Type": "application/json",
@@ -911,39 +655,88 @@ class AIModelManager:
             "model": model.model_name,
             "max_tokens": model.max_tokens,
             "temperature": model.temperature,
-            "messages": [{"role": "user", "content": query}]
+            "top_p": model.top_p,
+            "stream": stream
         }
         
         if system_message:
             payload["system"] = system_message
+            payload["messages"] = [{"role": "user", "content": query}]
+        else:
+            payload["messages"] = [{"role": "user", "content": query}]
         
         async with aiohttp.ClientSession() as session:
             async with session.post(model.endpoint, headers=headers, json=payload) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    return {
-                        "response": data["content"][0]["text"],
-                        "status": "success",
-                        "model": model.id,
-                        "usage": data.get("usage", {})
-                    }
+                    if stream:
+                        return await self._handle_anthropic_streaming(response, model)
+                    else:
+                        data = await response.json()
+                        return {
+                            "response": data["content"][0]["text"],
+                            "status": "success",
+                            "model": model.id,
+                            "usage": data.get("usage", {}),
+                            "streaming": False
+                        }
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_google(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
-        """Handle Google Gemini API requests"""
-        headers = {
-            "Content-Type": "application/json"
-        }
+    async def _handle_anthropic_streaming(self, response, model: AIModel) -> Dict[str, Any]:
+        """Handle streaming response from Anthropic API"""
+        full_content = ""
+        usage_stats = {}
         
-        # Google Gemini uses URL parameter for API key
+        try:
+            async for line in response.content:
+                line = line.decode('utf-8').strip()
+                if not line:
+                    continue
+                    
+                if line.startswith('data: '):
+                    line = line[6:]
+                    
+                try:
+                    chunk_data = json.loads(line)
+                    
+                    if chunk_data.get('type') == 'content_block_delta':
+                        delta = chunk_data.get('delta', {})
+                        if 'text' in delta:
+                            full_content += delta['text']
+                    
+                    if 'usage' in chunk_data:
+                        usage_stats = chunk_data['usage']
+                        
+                except json.JSONDecodeError:
+                    continue
+                    
+            return {
+                "response": full_content,
+                "status": "success",
+                "model": model.id,
+                "usage": usage_stats,
+                "streaming": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error processing Anthropic streaming response: {e}")
+            return {
+                "error": f"Error processing streaming response: {str(e)}",
+                "status": "error",
+                "model": model.id
+            }
+    
+    async def _handle_google(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
+        """Handle Google API requests"""
         url = f"{model.endpoint}?key={api_key}"
+        headers = {"Content-Type": "application/json"}
         
         contents = []
         if system_message:
-            contents.append({"role": "user", "parts": [{"text": system_message}]})
-        contents.append({"role": "user", "parts": [{"text": query}]})
+            contents.append({"parts": [{"text": system_message}], "role": "user"})
+            contents.append({"parts": [{"text": "Understood."}], "role": "model"})
+        contents.append({"parts": [{"text": query}], "role": "user"})
         
         payload = {
             "contents": contents,
@@ -958,17 +751,22 @@ class AIModelManager:
             async with session.post(url, headers=headers, json=payload) as response:
                 if response.status == 200:
                     data = await response.json()
-                    return {
-                        "response": data["candidates"][0]["content"]["parts"][0]["text"],
-                        "status": "success",
-                        "model": model.id,
-                        "usage": data.get("usageMetadata", {})
-                    }
+                    if "candidates" in data and len(data["candidates"]) > 0:
+                        content = data["candidates"][0]["content"]["parts"][0]["text"]
+                        return {
+                            "response": content,
+                            "status": "success",
+                            "model": model.id,
+                            "usage": data.get("usageMetadata", {}),
+                            "streaming": False
+                        }
+                    else:
+                        return {"error": "No response generated", "status": "error"}
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_xai(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
+    async def _handle_xai(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
         """Handle xAI API requests"""
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -985,7 +783,8 @@ class AIModelManager:
             "messages": messages,
             "max_tokens": model.max_tokens,
             "temperature": model.temperature,
-            "top_p": model.top_p
+            "top_p": model.top_p,
+            "stream": stream
         }
         
         async with aiohttp.ClientSession() as session:
@@ -996,13 +795,14 @@ class AIModelManager:
                         "response": data["choices"][0]["message"]["content"],
                         "status": "success",
                         "model": model.id,
-                        "usage": data.get("usage", {})
+                        "usage": data.get("usage", {}),
+                        "streaming": False
                     }
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_perplexity(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
+    async def _handle_perplexity(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
         """Handle Perplexity API requests"""
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -1019,7 +819,8 @@ class AIModelManager:
             "messages": messages,
             "max_tokens": model.max_tokens,
             "temperature": model.temperature,
-            "top_p": model.top_p
+            "top_p": model.top_p,
+            "stream": stream
         }
         
         async with aiohttp.ClientSession() as session:
@@ -1031,56 +832,208 @@ class AIModelManager:
                         "status": "success",
                         "model": model.id,
                         "usage": data.get("usage", {}),
-                        "citations": data.get("citations", [])
+                        "citations": data.get("citations", []),
+                        "streaming": False
                     }
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_ollama(self, model: AIModel, query: str, system_message: str) -> Dict[str, Any]:
-        """Handle Ollama (local) API requests"""
+    async def _handle_ollama(self, model: AIModel, query: str, system_message: str, stream: bool = False) -> Dict[str, Any]:
+        """
+        Handle Ollama (local) API requests with support for both streaming and non-streaming modes
+        
+        Args:
+            model: AIModel configuration
+            query: User query
+            system_message: System message (optional)
+            stream: Whether to use streaming mode (default: False for backward compatibility)
+        
+        Returns:
+            Dict containing response, status, model info, and usage statistics
+        """
         headers = {
             "Content-Type": "application/json"
         }
         
+        # Build messages array
         messages = []
-        if system_message:
+        if system_message and system_message.strip():
             messages.append({"role": "system", "content": system_message})
         messages.append({"role": "user", "content": query})
         
+        # Prepare payload
         payload = {
             "model": model.model_name,
             "messages": messages,
-            "stream": False,
+            "stream": stream,
             "options": {
-                "temperature": model.temperature,
-                "top_p": model.top_p
+                "temperature": getattr(model, 'temperature', 0.7),
+                "top_p": getattr(model, 'top_p', 0.9),
+                "num_predict": getattr(model, 'max_tokens', 4096)
             }
         }
         
+        logger.debug(f"Ollama request - Model: {model.model_name}, Stream: {stream}, Endpoint: {model.endpoint}")
+        
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
                 async with session.post(model.endpoint, headers=headers, json=payload) as response:
                     if response.status == 200:
-                        data = await response.json()
-                        return {
-                            "response": data["message"]["content"],
-                            "status": "success",
-                            "model": model.id,
-                            "usage": {
-                                "total_duration": data.get("total_duration", 0),
-                                "load_duration": data.get("load_duration", 0),
-                                "prompt_eval_count": data.get("prompt_eval_count", 0),
-                                "eval_count": data.get("eval_count", 0)
-                            }
-                        }
+                        if stream:
+                            # Handle streaming response
+                            return await self._handle_ollama_streaming(response, model)
+                        else:
+                            # Handle non-streaming response
+                            return await self._handle_ollama_non_streaming(response, model)
                     else:
-                        error_data = await response.json()
-                        return {"error": error_data.get("error", "Unknown error"), "status": "error"}
-        except aiohttp.ClientConnectorError:
-            return {"error": "Cannot connect to Ollama. Make sure Ollama is running on localhost:11434", "status": "error"}
+                        # Handle error response
+                        try:
+                            error_data = await response.json()
+                            error_message = error_data.get("error", f"HTTP {response.status}")
+                        except:
+                            error_message = f"HTTP {response.status} - {response.reason}"
+                        
+                        logger.error(f"Ollama API error: {error_message}")
+                        return {
+                            "error": f"Ollama API error: {error_message}",
+                            "status": "error",
+                            "model": model.id
+                        }
+                        
+        except aiohttp.ClientConnectorError as e:
+            logger.error(f"Cannot connect to Ollama at {model.endpoint}: {e}")
+            return {
+                "error": "Cannot connect to Ollama. Make sure Ollama is running on localhost:11434",
+                "status": "error",
+                "model": model.id
+            }
+        except aiohttp.ServerTimeoutError as e:
+            logger.error(f"Ollama request timeout: {e}")
+            return {
+                "error": "Request timeout. The model may be taking too long to respond.",
+                "status": "error",
+                "model": model.id
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error in Ollama handler: {e}")
+            return {
+                "error": f"Unexpected error: {str(e)}",
+                "status": "error",
+                "model": model.id
+            }
     
-    async def _handle_cohere(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
+    async def _handle_ollama_streaming(self, response, model: AIModel) -> Dict[str, Any]:
+        """
+        Handle streaming response from Ollama API
+        Collects all chunks and combines the content
+        """
+        full_content = ""
+        usage_stats = {
+            "total_duration": 0,
+            "load_duration": 0,
+            "prompt_eval_count": 0,
+            "eval_count": 0
+        }
+        
+        try:
+            async for line in response.content:
+                line = line.decode('utf-8').strip()
+                if not line:
+                    continue
+                    
+                try:
+                    # Parse each JSON chunk
+                    chunk_data = json.loads(line)
+                    
+                    # Extract content from the chunk
+                    if "message" in chunk_data and "content" in chunk_data["message"]:
+                        content = chunk_data["message"]["content"]
+                        full_content += content
+                    
+                    # Update usage statistics from the final chunk
+                    if chunk_data.get("done", False):
+                        usage_stats.update({
+                            "total_duration": chunk_data.get("total_duration", 0),
+                            "load_duration": chunk_data.get("load_duration", 0),
+                            "prompt_eval_count": chunk_data.get("prompt_eval_count", 0),
+                            "eval_count": chunk_data.get("eval_count", 0)
+                        })
+                        break
+                        
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse streaming chunk: {line[:100]}... Error: {e}")
+                    continue
+                    
+            return {
+                "response": full_content,
+                "status": "success",
+                "model": model.id,
+                "usage": usage_stats,
+                "streaming": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error processing streaming response: {e}")
+            return {
+                "error": f"Error processing streaming response: {str(e)}",
+                "status": "error",
+                "model": model.id
+            }
+    
+    async def _handle_ollama_non_streaming(self, response, model: AIModel) -> Dict[str, Any]:
+        """
+        Handle non-streaming response from Ollama API
+        Processes single JSON response
+        """
+        try:
+            data = await response.json()
+            
+            # Extract response content
+            if "message" in data and "content" in data["message"]:
+                content = data["message"]["content"]
+            else:
+                logger.error(f"Unexpected response format: {data}")
+                return {
+                    "error": "Unexpected response format from Ollama",
+                    "status": "error",
+                    "model": model.id
+                }
+            
+            # Extract usage statistics
+            usage_stats = {
+                "total_duration": data.get("total_duration", 0),
+                "load_duration": data.get("load_duration", 0),
+                "prompt_eval_count": data.get("prompt_eval_count", 0),
+                "eval_count": data.get("eval_count", 0),
+                "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+                "eval_duration": data.get("eval_duration", 0)
+            }
+            
+            return {
+                "response": content,
+                "status": "success",
+                "model": model.id,
+                "usage": usage_stats,
+                "streaming": False
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Ollama response: {e}")
+            return {
+                "error": "Failed to parse response from Ollama",
+                "status": "error",
+                "model": model.id
+            }
+        except Exception as e:
+            logger.error(f"Error processing non-streaming response: {e}")
+            return {
+                "error": f"Error processing response: {str(e)}",
+                "status": "error",
+                "model": model.id
+            }
+    
+    async def _handle_cohere(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
         """Handle Cohere API requests"""
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -1092,7 +1045,8 @@ class AIModelManager:
             "message": query,
             "max_tokens": model.max_tokens,
             "temperature": model.temperature,
-            "p": model.top_p
+            "p": model.top_p,
+            "stream": stream
         }
         
         if system_message:
@@ -1106,13 +1060,14 @@ class AIModelManager:
                         "response": data["text"],
                         "status": "success",
                         "model": model.id,
-                        "usage": data.get("meta", {}).get("billed_units", {})
+                        "usage": data.get("meta", {}).get("billed_units", {}),
+                        "streaming": False
                     }
                 else:
                     error_data = await response.json()
                     return {"error": error_data.get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_mistral(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
+    async def _handle_mistral(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
         """Handle Mistral API requests"""
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -1129,7 +1084,8 @@ class AIModelManager:
             "messages": messages,
             "max_tokens": model.max_tokens,
             "temperature": model.temperature,
-            "top_p": model.top_p
+            "top_p": model.top_p,
+            "stream": stream
         }
         
         async with aiohttp.ClientSession() as session:
@@ -1140,7 +1096,8 @@ class AIModelManager:
                         "response": data["choices"][0]["message"]["content"],
                         "status": "success",
                         "model": model.id,
-                        "usage": data.get("usage", {})
+                        "usage": data.get("usage", {}),
+                        "streaming": False
                     }
                 else:
                     error_data = await response.json()
@@ -1148,66 +1105,51 @@ class AIModelManager:
     
     async def _handle_elevenlabs(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
         """Handle ElevenLabs API requests for text-to-speech"""
+        # ElevenLabs is for audio generation, so we handle it differently
+        voice_id = "21m00Tcm4TlvDq8ikWAM"  # Default voice
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        
         headers = {
-            "xi-api-key": api_key,
-            "Content-Type": "application/json"
+            "Accept": "audio/mpeg",
+            "Content-Type": "application/json",
+            "xi-api-key": api_key
         }
         
-        # ElevenLabs uses a different endpoint format
-        # For TTS, we need to specify voice_id
-        default_voice_id = "21m00Tcm4TlvDq8ikWAM"  # Default voice (Rachel)
-        endpoint = f"https://api.elevenlabs.io/v1/text-to-speech/{default_voice_id}"
-        
-        # Combine system message and query for TTS
-        text_to_speak = query
-        if system_message:
-            text_to_speak = f"{system_message}\n\n{query}"
-        
         payload = {
-            "text": text_to_speak,
+            "text": query,
             "model_id": model.model_name,
             "voice_settings": {
                 "stability": 0.5,
-                "similarity_boost": 0.5,
-                "style": 0.0,
-                "use_speaker_boost": True
+                "similarity_boost": 0.5
             }
         }
         
         async with aiohttp.ClientSession() as session:
-            async with session.post(endpoint, headers=headers, json=payload) as response:
+            async with session.post(url, headers=headers, json=payload) as response:
                 if response.status == 200:
-                    # ElevenLabs returns audio data as binary
                     audio_data = await response.read()
-                    
-                    # For this implementation, we'll return a success message
-                    # In a real implementation, you'd want to save the audio or return it as base64
                     return {
-                        "response": f"Successfully generated audio for text: '{text_to_speak[:100]}...' using ElevenLabs {model.model_name}",
+                        "response": "Audio generated successfully",
                         "status": "success",
                         "model": model.id,
-                        "audio_length": len(audio_data),
+                        "audio_data": audio_data,
                         "content_type": "audio/mpeg"
                     }
                 else:
-                    try:
-                        error_data = await response.json()
-                        return {"error": error_data.get("detail", {}).get("message", "Unknown ElevenLabs error"), "status": "error"}
-                    except:
-                        return {"error": f"ElevenLabs API error: {response.status}", "status": "error"}
+                    error_data = await response.json()
+                    return {"error": error_data.get("detail", {}).get("message", "Unknown error"), "status": "error"}
     
-    async def _handle_custom(self, model: AIModel, query: str, system_message: str, api_key: str) -> Dict[str, Any]:
-        """Handle custom endpoint requests"""
+    async def _handle_custom(self, model: AIModel, query: str, system_message: str, api_key: str, stream: bool = False) -> Dict[str, Any]:
+        """Handle custom API requests"""
         headers = {
             "Content-Type": "application/json"
         }
         
-        # Add API key if provided
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         
-        # Add custom headers
-        headers.update(model.custom_headers)
+        if model.custom_headers:
+            headers.update(model.custom_headers)
         
         messages = []
         if system_message:
@@ -1219,53 +1161,38 @@ class AIModelManager:
             "messages": messages,
             "max_tokens": model.max_tokens,
             "temperature": model.temperature,
-            "top_p": model.top_p
+            "top_p": model.top_p,
+            "stream": stream
         }
         
         async with aiohttp.ClientSession() as session:
             async with session.post(model.endpoint, headers=headers, json=payload) as response:
                 if response.status == 200:
                     data = await response.json()
-                    # Try to parse OpenAI-compatible response format
-                    if "choices" in data:
-                        return {
-                            "response": data["choices"][0]["message"]["content"],
-                            "status": "success",
-                            "model": model.id,
-                            "usage": data.get("usage", {})
-                        }
-                    else:
-                        return {
-                            "response": str(data),
-                            "status": "success",
-                            "model": model.id,
-                            "usage": {}
-                        }
+                    # Try to extract response in common formats
+                    content = ""
+                    if "choices" in data and len(data["choices"]) > 0:
+                        content = data["choices"][0]["message"]["content"]
+                    elif "response" in data:
+                        content = data["response"]
+                    elif "text" in data:
+                        content = data["text"]
+                    
+                    return {
+                        "response": content,
+                        "status": "success",
+                        "model": model.id,
+                        "usage": data.get("usage", {}),
+                        "streaming": False
+                    }
                 else:
-                    error_data = await response.json()
-                    return {"error": error_data.get("error", {}).get("message", "Unknown error"), "status": "error"}
-    
-    def get_model_stats(self) -> Dict[str, Any]:
-        """Get model statistics"""
-        provider_counts = {}
-        for model in self.models.values():
-            provider = model.provider.value
-            provider_counts[provider] = provider_counts.get(provider, 0) + 1
-        
-        return {
-            "total_models": len(self.models),
-            "active_model": self.active_model_id,
-            "providers": provider_counts,
-            "models": [
-                {
-                    "id": model.id,
-                    "name": model.name,
-                    "provider": model.provider.value,
-                    "model_name": model.model_name,
-                    "cost_per_1k_tokens": model.cost_per_1k_tokens,
-                    "context_window": model.context_window,
-                    "is_active": model.id == self.active_model_id
-                }
-                for model in self.models.values()
-            ]
-        }
+                    try:
+                        error_data = await response.json()
+                        error_message = error_data.get("error", {}).get("message", "Unknown error")
+                    except:
+                        error_message = f"HTTP {response.status}"
+                    return {"error": error_message, "status": "error"}
+
+
+# Global model manager instance
+ai_model_manager = AIModelManager()

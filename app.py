@@ -667,30 +667,61 @@ def get_active_ai_model():
 
 @app.route('/api/ai-models/test/<model_id>', methods=['POST'])
 def test_ai_model(model_id):
-    """Test an AI model"""
+    """Test an AI model with non-streaming (for reliable testing)"""
     try:
         if not ai_model_manager:
             return jsonify({'error': 'AI model manager not initialized'}), 503
         
-        data = request.get_json()
+        data = request.get_json() or {}
         query = data.get('query', 'Hello! Can you confirm you are working correctly?')
+        system_message = data.get('system_message')
         
-        # Test the model
+        start_time = time.time()
+        
+        # Force non-streaming for testing to ensure reliable results
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
         try:
-            result = loop.run_until_complete(ai_model_manager.generate_response(
-                query=query,
-                model_id=model_id
-            ))
-            return jsonify(result)
+            response = loop.run_until_complete(
+                ai_model_manager.generate_response(
+                    model_id=model_id,
+                    query=query,
+                    system_message=system_message,
+                    user_id=session.get('user_id', 'test_user'),
+                    stream=False  # ADDED: Explicit non-streaming for tests
+                )
+            )
         finally:
             loop.close()
         
+        response_time = time.time() - start_time
+        
+        if response.get('status') == 'success':
+            return jsonify({
+                'status': 'success',
+                'response': response.get('response', ''),
+                'response_time': response_time,
+                'model': model_id,
+                'usage': response.get('usage', {}),
+                'cached': response.get('cached', False),
+                'streaming': response.get('streaming', False)
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': response.get('error', 'Unknown error'),
+                'response_time': response_time,
+                'model': model_id
+            }), 400
+            
     except Exception as e:
-        logger.error(f"Error testing AI model: {e}")
-        return jsonify({'status': 'error', 'error': 'Failed to test AI model'}), 500
+        logger.error(f"Error testing model {model_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'model': model_id
+        }), 500
 
 @app.route('/api/ai-models/api-key-status', methods=['GET'])
 def get_api_key_status():
@@ -1964,91 +1995,163 @@ def chat_page():
     """Multi-modal AI chat interface"""
     return render_template('chat.html')
 
-@app.route('/api/chat', methods=['POST'])
-def chat_endpoint():
-    """Chat endpoint for multi-modal AI conversation"""
+@app.route('/api/chat/stream', methods=['POST'])
+def chat_stream():
+    """Real-time streaming chat endpoint using Server-Sent Events"""
     try:
         data = request.get_json()
         if not data or 'message' not in data:
             return jsonify({'error': 'Message is required'}), 400
         
         message = data['message']
-        model_id = data.get('model_id', 'gpt-4o')
+        model_id = data.get('model_id', 'ollama-llama3.1')
         system_message = data.get('system_message')
-        temperature = data.get('temperature', 0.7)
-        max_tokens = data.get('max_tokens', 1000)
-        enable_rag = data.get('enable_rag', False)
-        enable_streaming = data.get('enable_streaming', False)
-        chat_history = data.get('chat_history', [])
         
-        # Get the model
+        def generate():
+            try:
+                yield f"data: {json.dumps({'type': 'start', 'model': model_id})}\n\n"
+                
+                # Get response with streaming
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    response = loop.run_until_complete(
+                        ai_model_manager.generate_response(
+                            query=message,
+                            system_message=system_message,
+                            model_id=model_id,
+                            user_id=session.get('user_id', 'anonymous'),
+                            stream=True  # Force streaming for this endpoint
+                        )
+                    )
+                    
+                    if response.get('status') == 'success':
+                        # For now, send the complete response
+                        # In a real streaming implementation, you'd process chunks in real-time
+                        full_response = response['response']
+                        words = full_response.split()
+                        
+                        for i, word in enumerate(words):
+                            chunk = word + (' ' if i < len(words) - 1 else '')
+                            yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+                            time.sleep(0.05)  # Simulate streaming delay
+                        
+                        yield f"data: {json.dumps({'type': 'end', 'usage': response.get('usage', {})})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'error', 'error': response.get('error', 'Unknown error')})}\n\n"
+                        
+                finally:
+                    loop.close()
+                    
+            except Exception as e:
+                logger.error(f"Streaming error: {e}")
+                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+        
+        return Response(generate(), mimetype='text/event-stream')
+        
+    except Exception as e:
+        logger.error(f"Chat stream error: {e}")
+        return jsonify({'error': str(e)}), 500    
+
+@app.route('/api/ai-models/<model_id>/capabilities', methods=['GET'])
+def get_model_capabilities(model_id):
+    """Get model capabilities including streaming support"""
+    try:
         model = ai_model_manager.get_model(model_id)
         if not model:
             return jsonify({'error': 'Model not found'}), 404
         
-        # Check if API key is available
-        api_key_available = bool(os.environ.get(model.api_key_env)) or getattr(model, 'deployment_type', 'cloud') == 'local'
-        if not api_key_available:
-            return jsonify({'error': 'API key not configured for this model'}), 400
-        
-        # Handle different model types
-        if model.provider.value == 'ollama' or getattr(model, 'deployment_type', 'cloud') == 'local':
-            # Ollama/Local models - use basic parameters
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
-            try:
-                response = loop.run_until_complete(
-                    ai_model_manager.generate_response(
-                        query=message,
-                        system_message=system_message,
-                        model_id=model_id,
-                        user_id=session.get('user_id', 'anonymous')
-                    )
-                )
-            finally:
-                loop.close()
-                
-        else:
-            # Cloud models - temporarily update model settings for this request
-            original_temp = model.temperature
-            original_max_tokens = model.max_tokens
-            
-            # Update model settings temporarily
-            model.temperature = temperature
-            model.max_tokens = max_tokens
-            
-            try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
-                response = loop.run_until_complete(
-                    ai_model_manager.generate_response(
-                        query=message,
-                        system_message=system_message,
-                        model_id=model_id,
-                        user_id=session.get('user_id', 'anonymous')
-                    )
-                )
-            finally:
-                # Restore original settings
-                model.temperature = original_temp
-                model.max_tokens = original_max_tokens
-                loop.close()
+        capabilities = {
+            'id': model.id,
+            'name': model.name,
+            'provider': model.provider.value,
+            'supports_streaming': model.supports_streaming,
+            'supports_system_message': model.supports_system_message,
+            'supports_vision': model.supports_vision,
+            'supports_audio': model.supports_audio,
+            'supports_functions': model.supports_functions,
+            'model_type': model.model_type,
+            'input_modalities': model.input_modalities or [],
+            'output_modalities': model.output_modalities or [],
+            'deployment_type': getattr(model, 'deployment_type', 'cloud'),
+            'context_window': model.context_window,
+            'max_tokens': model.max_tokens,
+            'capabilities': [cap.value for cap in (model.capabilities or [])]
+        }
         
         return jsonify({
-            'response': response.get('response', 'No response generated'),
-            'model_used': model.name,
-            'tokens_used': response.get('usage', {}).get('total_tokens', 0),
-            'processing_time': response.get('processing_time', 0),
-            'cached': response.get('cached', False),
-            'model_type': model.provider.value
+            'status': 'success',
+            'capabilities': capabilities
         })
         
     except Exception as e:
-        logger.error(f"Error in chat endpoint: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting model capabilities: {e}")
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
+# HELPER ENDPOINT: Test streaming specifically
+@app.route('/api/ai-models/test-streaming/<model_id>', methods=['POST'])
+def test_model_streaming(model_id):
+    """Test model with streaming enabled"""
+    try:
+        if not ai_model_manager:
+            return jsonify({'error': 'AI model manager not initialized'}), 503
+        
+        data = request.get_json() or {}
+        query = data.get('query', 'Count from 1 to 10 slowly.')
+        system_message = data.get('system_message')
+        
+        start_time = time.time()
+        
+        # Test with streaming enabled
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            response = loop.run_until_complete(
+                ai_model_manager.generate_response(
+                    model_id=model_id,
+                    query=query,
+                    system_message=system_message,
+                    user_id=session.get('user_id', 'test_user'),
+                    stream=True  # Test streaming mode
+                )
+            )
+        finally:
+            loop.close()
+        
+        response_time = time.time() - start_time
+        
+        if response.get('status') == 'success':
+            return jsonify({
+                'status': 'success',
+                'response': response.get('response', ''),
+                'response_time': response_time,
+                'model': model_id,
+                'usage': response.get('usage', {}),
+                'streaming': response.get('streaming', False),
+                'test_type': 'streaming'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'error': response.get('error', 'Unknown error'),
+                'response_time': response_time,
+                'model': model_id,
+                'test_type': 'streaming'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Error testing model streaming {model_id}: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'model': model_id,
+            'test_type': 'streaming'
+        }), 500
+
+
+    
 @app.route('/api/collaborate/agents', methods=['GET'])
 def get_collaborative_agents():
     """Get collaborative agent configurations"""
