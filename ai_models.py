@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Any, Union
 import aiohttp
@@ -74,15 +74,15 @@ class AIModel:
     cost_per_1k_tokens: float = 0.0
     context_window: int = 4096
     is_active: bool = True
-    custom_headers: Dict[str, str] = None
-    capabilities: List[ModelCapability] = None
+    custom_headers: Dict[str, str] = field(default_factory=dict)
+    capabilities: List[ModelCapability] = field(default_factory=list)
     supports_vision: bool = False
     supports_audio: bool = False
     supports_video: bool = False
     supports_functions: bool = False
     model_type: str = "llm"  # llm, embedding, image, audio, video, multimodal
-    input_modalities: List[str] = None
-    output_modalities: List[str] = None
+    input_modalities: List[str] = field(default_factory=list)
+    output_modalities: List[str] = field(default_factory=list)
     deployment_type: str = "cloud"  # cloud, local, hybrid
 
 class AIModelManager:
