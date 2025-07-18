@@ -173,6 +173,33 @@ peer_teaching_system = None
 personal_ai_router = None
 global_settings = {}
 
+def ensure_email_intelligence():
+    """Initialize the email intelligence system on demand."""
+    global email_intelligence, ai_model_manager, personal_ai_router
+
+    if email_intelligence is not None:
+        return True
+
+    try:
+        if ai_model_manager is None:
+            from ai_models import AIModelManager
+            ai_model_manager = AIModelManager()
+
+        # Use memory store from personal_ai_router if available
+        if personal_ai_router and hasattr(personal_ai_router, "memory_store"):
+            memory_store = personal_ai_router.memory_store
+        else:
+            from personal_ai_router import PersonalMemoryStore
+            memory_store = PersonalMemoryStore()
+
+        email_intelligence = get_email_intelligence(ai_model_manager, memory_store)
+        logger.info("Email intelligence system lazily initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize email intelligence system: {e}")
+        email_intelligence = None
+
+    return email_intelligence is not None
+
 def initialize_router():
     """Initialize the ML router in a background thread"""
     global router, router_config, model_manager, ai_model_manager, auth_manager, cache_manager, rag_system, collaborative_router, shared_memory_manager, external_llm_manager, advanced_ml_classifier, intelligent_routing_engine, real_time_analytics, advanced_query_optimizer, predictive_analytics_engine, active_learning_system, contextual_memory_router, semantic_guardrail_system, multimodal_ai_integration, auto_chain_generator, evaluation_engine, peer_teaching_system, personal_ai_router, global_settings
@@ -3562,7 +3589,7 @@ def get_chain_templates():
 def configure_email_provider():
     """Configure email provider settings"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         data = request.get_json()
@@ -3596,7 +3623,7 @@ def configure_email_provider():
 def fetch_emails():
     """Fetch emails from configured provider"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         data = request.get_json() or {}
@@ -3644,7 +3671,7 @@ def fetch_emails():
 def get_email_messages():
     """Get stored email messages"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         limit = request.args.get('limit', 50, type=int)
@@ -3685,7 +3712,7 @@ def get_email_messages():
 def generate_email_reply():
     """Generate a reply to an email"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         data = request.get_json()
@@ -3730,7 +3757,7 @@ def generate_email_reply():
 def send_email_reply():
     """Send an email reply"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         data = request.get_json()
@@ -3766,7 +3793,7 @@ def send_email_reply():
 def get_email_summary():
     """Get email summary and statistics"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         days_back = request.args.get('days_back', 7, type=int)
@@ -3810,7 +3837,7 @@ def get_email_classifications():
 def writing_style_settings():
     """Get or update writing style training settings"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         user_id = request.args.get('user_id', 'default')
@@ -3869,7 +3896,7 @@ def writing_style_settings():
 def writing_style_training_data():
     """Get or add writing style training data"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         user_id = request.args.get('user_id', 'default')
@@ -3927,7 +3954,7 @@ def writing_style_training_data():
 def approve_training_data(training_id):
     """Approve training data for use"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         user_id = request.args.get('user_id', 'default')
@@ -3949,7 +3976,7 @@ def approve_training_data(training_id):
 def cleanup_training_data():
     """Clean up expired training data"""
     try:
-        if not email_intelligence:
+        if not ensure_email_intelligence():
             return jsonify({"error": "Email intelligence system not available"}), 503
         
         email_intelligence.db.cleanup_expired_training_data()
