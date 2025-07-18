@@ -78,7 +78,7 @@ class ModelManager:
         try:
             from models import MLModelRegistry
             
-            db_models = MLModelRegistry.query.all()
+            db_models = self.db.session.query(MLModelRegistry).all()
             
             for db_model in db_models:
                 model = MLModel(
@@ -113,7 +113,7 @@ class ModelManager:
         try:
             from models import MLModelRegistry
             
-            db_model = MLModelRegistry.query.get(model.id)
+            db_model = self.db.session.query(MLModelRegistry).get(model.id)
             
             if db_model:
                 # Update existing model
@@ -145,11 +145,11 @@ class ModelManager:
                 )
                 self.db.session.add(db_model)
             
-            self.db.session.commit()
+            self.self.db.session.commit()
             
         except SQLAlchemyError as e:
             logger.error(f"Failed to save model to database: {e}")
-            self.db.session.rollback()
+            self.self.db.session.rollback()
 
     def _delete_model_from_db(self, model_id: str):
         """Delete model from database"""
@@ -159,14 +159,14 @@ class ModelManager:
         try:
             from models import MLModelRegistry
             
-            db_model = MLModelRegistry.query.get(model_id)
+            db_model = self.db.session.query(MLModelRegistry).get(model_id)
             if db_model:
                 self.db.session.delete(db_model)
-                self.db.session.commit()
+                self.self.db.session.commit()
                 
         except SQLAlchemyError as e:
             logger.error(f"Failed to delete model from database: {e}")
-            self.db.session.rollback()
+            self.self.db.session.rollback()
 
     def _initialize_default_models(self):
         """Initialize default models"""

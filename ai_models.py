@@ -407,12 +407,16 @@ class AIModelManager:
     def get_model(self, model_id: str) -> Optional[AIModel]:
         """Get a specific model by ID"""
         return self.models.get(model_id)
-    
-    def get_active_model(self) -> Optional[AIModel]:
-        """Get the currently active model"""
-        if self.active_model_id:
-            return self.get_model(self.active_model_id)
-        return None
+    def get_all_models(self) -> List[AIModel]:
+        """Get all available models (alias for get_models)"""
+        return self.get_models()
+
+    def initialize_default_models(self):
+        """Initialize default models and set first one as active"""
+        if not self.active_model_id and self.models:
+            # Set the first model as active by default
+            first_model_id = list(self.models.keys())[0]
+            self.set_active_model(first_model_id)
     
     def set_active_model(self, model_id: str) -> bool:
         """Set the active model"""

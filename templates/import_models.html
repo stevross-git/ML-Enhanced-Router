@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import AI Models</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot me-2"></i>ML Query Router
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/"><i class="fas fa-home me-1"></i>Home</a>
+                <a class="nav-link" href="/dashboard"><i class="fas fa-chart-line me-1"></i>Dashboard</a>
+                <a class="nav-link" href="/agents"><i class="fas fa-users me-1"></i>Agents</a>
+                <a class="nav-link" href="/models"><i class="fas fa-brain me-1"></i>Models</a>
+                <a class="nav-link" href="/ai-models"><i class="fas fa-microchip me-1"></i>AI Models</a>
+                <a class="nav-link active" href="/import-models"><i class="fas fa-upload me-1"></i>Import Models</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container mt-5">
+        <h2>Import AI Models from JSON</h2>
+        <div class="alert alert-info">Upload your <code>ai_model_import_template.json</code> file to bulk import AI models into the database.</div>
+        <form id="import-form" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="jsonFile" class="form-label">Select JSON File</label>
+                <input class="form-control" type="file" id="jsonFile" name="jsonFile" accept="application/json" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-upload me-1"></i>Import Models</button>
+        </form>
+        <div id="import-result" class="mt-4"></div>
+    </div>
+    <script>
+        document.getElementById('import-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('jsonFile');
+            const resultDiv = document.getElementById('import-result');
+            resultDiv.innerHTML = '';
+            if (fileInput.files.length === 0) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">Please select a JSON file.</div>';
+                return;
+            }
+            const formData = new FormData();
+            formData.append('jsonFile', fileInput.files[0]);
+            try {
+                const response = await fetch('/import-models', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="alert alert-danger">' + (data.error || 'Import failed.') + '</div>';
+                }
+            } catch (err) {
+                resultDiv.innerHTML = '<div class="alert alert-danger">Error importing models.</div>';
+            }
+        });
+    </script>
+</body>
+</html>

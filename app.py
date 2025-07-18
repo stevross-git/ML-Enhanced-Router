@@ -1,3 +1,8 @@
+"""
+Fixed app.py initialization section to resolve circular imports and SQLAlchemy issues
+Replace the relevant sections in your app.py with this code
+"""
+
 import os
 import sys
 import logging
@@ -8,7 +13,6 @@ from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, Response
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
@@ -16,9 +20,106 @@ import asyncio
 import json
 from typing import Dict, List, Optional
 import threading
+
+# Import the fixed models
+from models import Base
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# Create SQLAlchemy instance with the fixed Base
+db = SQLAlchemy(model_class=Base)
+
+# Create the app
+app = Flask(__name__)
+app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# Configure the database
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///query_router.db"  # Force SQLite for local development
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 300,
+    "pool_pre_ping": True,
+}
+
+# Initialize extensions
+db.init_app(app)
+
+# Import other modules after db is initialized to avoid circular imports
 from ml_router import MLEnhancedQueryRouter
 from config import EnhancedRouterConfig
 from model_manager import ModelManager, ModelType
+from ai_models import AIModelManager, AIProvider
+from auth_system import AuthManager, UserRole
+from api_keys_storage import load_api_keys, save_api_keys
+from settings_storage import load_settings, save_settings
+from ai_cache import get_cache_manager
+from rag_chat import get_rag_chat
+from swagger_spec import swagger_spec
+from collaborative_router import get_collaborative_router
+
+@app.route('/import-models', methods=['GET', 'POST'])
+def import_models():
+    logger.info("Starting model import process via /import-models")
+    """Import AI models from a JSON file into the database"""
+    from sqlalchemy.exc import SQLAlchemyError
+    from models import MLModelRegistry  # Fix: ensure MLModelRegistry is defined in function scope
+    if request.method == 'GET':
+        return render_template('import_models.html')
+    if 'jsonFile' not in request.files:
+        return jsonify({'status': 'error', 'error': 'No file uploaded'}), 400
+    file = request.files['jsonFile']
+    if not file.filename.endswith('.json'):
+        return jsonify({'status': 'error', 'error': 'File must be a .json file'}), 400
+    try:
+        models_data = json.load(file)
+        imported = 0
+        with app.app_context():
+            for entry in models_data:
+                # Ensure all required fields exist
+                if not all(k in entry for k in ['id','name','model_type','categories','config']):
+                    continue
+                # Try to fetch existing model
+                model = db.session.query(MLModelRegistry).filter_by(id=entry['id']).first()
+                if not model:
+                    model = MLModelRegistry(
+                        id=entry['id'],
+                        name=entry['name'],
+                        description=entry.get('description',''),
+                        model_type=entry['model_type'],
+                        categories=entry['categories'],
+                        config=entry['config'],
+                        status=entry.get('status','inactive'),
+                        accuracy=entry.get('accuracy'),
+                        is_active=entry.get('is_active',False),
+                        version=entry.get('version',1)
+                    )
+                    db.session.add(model)
+                else:
+                    model.name = entry['name']
+                    model.description = entry.get('description','')
+                    model.model_type = entry['model_type']
+                    model.categories = entry['categories']
+                    model.config = entry['config']
+                    model.status = entry.get('status','inactive')
+                    model.accuracy = entry.get('accuracy')
+                    model.is_active = entry.get('is_active',False)
+                    model.version = entry.get('version',1)
+                imported += 1
+            db.session.commit()
+        logger.info(f"Successfully imported {imported} models via /import-models")
+        return jsonify({'status': 'success', 'message': f'Imported {imported} models.'})
+    except (json.JSONDecodeError, SQLAlchemyError, Exception) as e:
+        db.session.rollback()
+        logger.error(f"Error during model import: {e}")
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+from shared_memory import get_shared_memory_manager
+from external_llm_integration import get_external_llm_manager
+from advanced_ml_classifier import AdvancedMLClassifier
+from intelligent_routing_engine import IntelligentRoutingEngine
+from real_time_analytics import RealTimeAnalytics
 from ai_models import AIModelManager, AIProvider
 from auth_system import AuthManager, UserRole
 from api_keys_storage import load_api_keys, save_api_keys
@@ -41,30 +142,6 @@ from peer_teaching_system import get_peer_teaching_system, AgentSpecialization, 
 from personal_ai_router import get_personal_ai_router
 from user_profile_builder import get_user_profile_builder
 from email_intelligence import get_email_intelligence, EmailProvider, EmailTone, EmailClassification, EmailIntent
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
-
-# Create the app
-app = Flask(__name__)
-app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-
-# Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///query_router.db")
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_recycle": 300,
-    "pool_pre_ping": True,
-}
-
-# Initialize extensions
-
 
 # Simple rate limiting dictionary
 rate_limits = {}
@@ -102,65 +179,215 @@ def initialize_router():
     
     try:
         with app.app_context():
-            load_api_keys()
-            global_settings = load_settings()
-
-            router_config = EnhancedRouterConfig.from_env()
-            model_manager = ModelManager(db)
-            ai_model_manager = AIModelManager(db)
-            auth_manager = AuthManager()
-            cache_manager = get_cache_manager(db)
-            rag_system = get_rag_chat()
-            shared_memory_manager = get_shared_memory_manager()
-            external_llm_manager = get_external_llm_manager(db)
-            router = MLEnhancedQueryRouter(router_config, model_manager)
-            collaborative_router = get_collaborative_router(ai_model_manager)
+            # Create all database tables first
+            db.create_all()
+            logger.info("Database tables created")
             
-            # Initialize advanced features
-            advanced_ml_classifier = AdvancedMLClassifier()
-            intelligent_routing_engine = IntelligentRoutingEngine()
-            real_time_analytics = RealTimeAnalytics()
-            advanced_query_optimizer = AdvancedQueryOptimizer()
-            predictive_analytics_engine = PredictiveAnalyticsEngine()
+            # Load configuration
+            try:
+                load_api_keys()
+                global_settings = load_settings()
+                logger.info("Configuration loaded")
+            except Exception as e:
+                logger.warning(f"Configuration loading failed: {e}, using defaults")
+                global_settings = {}
+
+            # Initialize core components
+            router_config = EnhancedRouterConfig.from_env()
+            logger.info("Router config initialized")
+            
+            # Initialize model manager with proper error handling
+            try:
+                model_manager = ModelManager(db)
+                logger.info("Model manager initialized")
+            except Exception as e:
+                logger.error(f"Model manager initialization failed: {e}")
+                model_manager = None
+            
+            # Initialize AI model manager
+            try:
+                ai_model_manager = AIModelManager()  # Remove db parameter for now
+                logger.info("AI model manager initialized")
+            except Exception as e:
+                logger.error(f"AI model manager initialization failed: {e}")
+                ai_model_manager = None
+            
+            # Initialize other components with error handling
+            try:
+                auth_manager = AuthManager()
+                logger.info("Auth manager initialized")
+            except Exception as e:
+                logger.error(f"Auth manager initialization failed: {e}")
+                auth_manager = None
+            
+            try:
+                cache_manager = get_cache_manager(db)
+                logger.info("Cache manager initialized")
+            except Exception as e:
+                logger.error(f"Cache manager initialization failed: {e}")
+                cache_manager = None
+            
+            try:
+                rag_system = get_rag_chat()
+                logger.info("RAG system initialized")
+            except Exception as e:
+                logger.error(f"RAG system initialization failed: {e}")
+                rag_system = None
+            
+            try:
+                shared_memory_manager = get_shared_memory_manager()
+                logger.info("Shared memory manager initialized")
+            except Exception as e:
+                logger.error(f"Shared memory manager initialization failed: {e}")
+                shared_memory_manager = None
+            
+            try:
+                external_llm_manager = get_external_llm_manager(db)
+                logger.info("External LLM manager initialized")
+            except Exception as e:
+                logger.error(f"External LLM manager initialization failed: {e}")
+                external_llm_manager = None
+            
+            # Initialize ML router if model manager is available
+            if model_manager:
+                try:
+                    router = MLEnhancedQueryRouter(router_config, model_manager)
+                    logger.info("ML router initialized")
+                except Exception as e:
+                    logger.error(f"ML router initialization failed: {e}")
+                    router = None
+            
+            # Initialize collaborative router if AI model manager is available
+            if ai_model_manager:
+                try:
+                    collaborative_router = get_collaborative_router(ai_model_manager)
+                    logger.info("Collaborative router initialized")
+                except Exception as e:
+                    logger.error(f"Collaborative router initialization failed: {e}")
+                    collaborative_router = None
+            
+            # Initialize advanced features with error handling
+            try:
+                advanced_ml_classifier = AdvancedMLClassifier()
+                logger.info("Advanced ML classifier initialized")
+            except Exception as e:
+                logger.error(f"Advanced ML classifier initialization failed: {e}")
+                advanced_ml_classifier = None
+            
+            try:
+                intelligent_routing_engine = IntelligentRoutingEngine()
+                logger.info("Intelligent routing engine initialized")
+            except Exception as e:
+                logger.error(f"Intelligent routing engine initialization failed: {e}")
+                intelligent_routing_engine = None
+            
+            try:
+                real_time_analytics = RealTimeAnalytics()
+                logger.info("Real time analytics initialized")
+            except Exception as e:
+                logger.error(f"Real time analytics initialization failed: {e}")
+                real_time_analytics = None
+            
+            try:
+                advanced_query_optimizer = AdvancedQueryOptimizer()
+                logger.info("Advanced query optimizer initialized")
+            except Exception as e:
+                logger.error(f"Advanced query optimizer initialization failed: {e}")
+                advanced_query_optimizer = None
+            
+            try:
+                predictive_analytics_engine = PredictiveAnalyticsEngine()
+                logger.info("Predictive analytics engine initialized")
+            except Exception as e:
+                logger.error(f"Predictive analytics engine initialization failed: {e}")
+                predictive_analytics_engine = None
             
             # Initialize Auto Chain Generator
-            from auto_chain_generator import AutoChainGenerator
-            global auto_chain_generator
-            auto_chain_generator = AutoChainGenerator()
+            try:
+                auto_chain_generator = AutoChainGenerator()
+                logger.info("Auto chain generator initialized")
+            except Exception as e:
+                logger.error(f"Auto chain generator initialization failed: {e}")
+                auto_chain_generator = None
             
             # Initialize Evaluation Engine
-            evaluation_engine = get_evaluation_engine()
+            try:
+                evaluation_engine = get_evaluation_engine()
+                logger.info("Evaluation engine initialized")
+            except Exception as e:
+                logger.error(f"Evaluation engine initialization failed: {e}")
+                evaluation_engine = None
             
             # Initialize Peer Teaching System
-            peer_teaching_system = get_peer_teaching_system()
+            try:
+                peer_teaching_system = get_peer_teaching_system()
+                logger.info("Peer teaching system initialized")
+            except Exception as e:
+                logger.error(f"Peer teaching system initialization failed: {e}")
+                peer_teaching_system = None
             
-            # Initialize next-generation features
-            from active_learning_system import get_active_learning_system
-            from contextual_memory_router import get_contextual_memory_router
-            from semantic_guardrails import get_semantic_guardrail_system
-            from multimodal_ai_integration import get_multimodal_ai_integration
-            
-            active_learning_system = get_active_learning_system()
-            contextual_memory_router = get_contextual_memory_router()
-            semantic_guardrail_system = get_semantic_guardrail_system()
-            multimodal_ai_integration = get_multimodal_ai_integration(ai_model_manager)
-            personal_ai_router = get_personal_ai_router()
+            # Initialize next-generation features with error handling
+            try:
+                from active_learning_system import get_active_learning_system
+                from contextual_memory_router import get_contextual_memory_router
+                from semantic_guardrails import get_semantic_guardrail_system
+                from multimodal_ai_integration import get_multimodal_ai_integration
+                
+                active_learning_system = get_active_learning_system()
+                contextual_memory_router = get_contextual_memory_router()
+                semantic_guardrail_system = get_semantic_guardrail_system()
+                multimodal_ai_integration = get_multimodal_ai_integration(ai_model_manager)
+                personal_ai_router = get_personal_ai_router()
+                
+                logger.info("Next-generation features initialized")
+            except Exception as e:
+                logger.error(f"Next-generation features initialization failed: {e}")
+                active_learning_system = None
+                contextual_memory_router = None
+                semantic_guardrail_system = None
+                multimodal_ai_integration = None
+                personal_ai_router = None
             
             # Initialize Email Intelligence System
-            email_intelligence = get_email_intelligence(ai_model_manager, personal_ai_router.memory_store)
+            try:
+                if ai_model_manager and personal_ai_router:
+                    email_intelligence = get_email_intelligence(ai_model_manager, personal_ai_router.memory_store)
+                    logger.info("Email intelligence system initialized")
+            except Exception as e:
+                logger.error(f"Email intelligence system initialization failed: {e}")
+                email_intelligence = None
             
-            # Initialize ML models
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(router.initialize())
-            loop.run_until_complete(advanced_ml_classifier.initialize())
-            loop.run_until_complete(intelligent_routing_engine.initialize())
-            loop.run_until_complete(real_time_analytics.start())
+            # Initialize ML models asynchronously with error handling
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                if router:
+                    loop.run_until_complete(router.initialize())
+                if advanced_ml_classifier:
+                    loop.run_until_complete(advanced_ml_classifier.initialize())
+                if intelligent_routing_engine:
+                    loop.run_until_complete(intelligent_routing_engine.initialize())
+                if real_time_analytics:
+                    loop.run_until_complete(real_time_analytics.start())
+                
+                logger.info("Async ML models initialized")
+                loop.close()
+            except Exception as e:
+                logger.error(f"Async ML models initialization failed: {e}")
+                if 'loop' in locals():
+                    loop.close()
             
             logger.info("ML Router and Advanced Features initialized successfully")
+            
     except Exception as e:
         logger.error(f"Failed to initialize ML Router: {e}")
+        import traceback
+        traceback.print_exc()
         router = None
+
+
+
 
 @app.route('/')
 def index():
@@ -1308,7 +1535,7 @@ def chat_message():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/chat/stream')
-def chat_stream():
+def chat_stream_get():
     """Stream chat response using Server-Sent Events"""
     query = request.args.get('query', '')
     system_message = request.args.get('system_message')
@@ -1951,14 +2178,16 @@ def generate_image():
     except Exception as e:
         logger.error(f"Error in image generation endpoint: {e}")
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/api/models/detailed')
+@app.route('/api/models/detailed', methods=['GET'])
 def get_models_detailed():
     """Get all available models with their detailed status"""
     try:
         models = ai_model_manager.get_all_models()
+        if models is None:
+            logger.warning("get_all_models() returned None; returning empty model list.")
+            models = []
         model_list = []
-        
+        logger.info(f"Returning {len(models)} models from /api/models/detailed")
         for model in models:
             api_key_available = bool(os.environ.get(model.api_key_env)) or model.deployment_type == 'local'
             
