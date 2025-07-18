@@ -1599,7 +1599,6 @@ def chat_stream_get():
                 for i, word in enumerate(words):
                     chunk = word + (' ' if i < len(words) - 1 else '')
                     yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
-                    time.sleep(0.1)  # Simulate streaming delay
                 
                 yield f"data: {json.dumps({'type': 'end', 'usage': response.get('usage', {})})}\n\n"
                 
@@ -2291,7 +2290,6 @@ def chat_stream():
                         for i, word in enumerate(words):
                             chunk = word + (' ' if i < len(words) - 1 else '')
                             yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
-                            time.sleep(0.05)  # Simulate streaming delay
                         
                         yield f"data: {json.dumps({'type': 'end', 'usage': response.get('usage', {})})}\n\n"
                     else:
