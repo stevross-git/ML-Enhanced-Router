@@ -2208,7 +2208,7 @@ def get_models_detailed():
                 'model_type': getattr(model, 'model_type', 'text'),
                 'input_modalities': getattr(model, 'input_modalities', ['text']),
                 'output_modalities': getattr(model, 'output_modalities', ['text']),
-                'capabilities': [cap.value for cap in getattr(model, 'capabilities', [])]
+                'capabilities': [cap.value for cap in (getattr(model, 'capabilities', []) or [])]
             }
             
             model_list.append(model_dict)
