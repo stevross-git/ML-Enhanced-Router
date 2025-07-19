@@ -98,6 +98,17 @@ class CollaborativeRouter:
         self.collaborative_agents[agent_id].model_id = model_id
         logger.info(f"Updated agent {agent_id} to use model {model_id}")
         return True
+
+    def set_agent_active(self, agent_id: str, is_active: bool) -> bool:
+        """Enable or disable a collaborative agent"""
+        if agent_id not in self.collaborative_agents:
+            return False
+
+        self.collaborative_agents[agent_id].is_active = bool(is_active)
+        logger.info(
+            f"{'Activated' if is_active else 'Deactivated'} agent {agent_id}"
+        )
+        return True
     
     def get_agent_configurations(self) -> Dict[str, Any]:
         """Get current agent configurations"""
