@@ -384,26 +384,33 @@ def initialize_router():
                 logger.error(f"Email intelligence system initialization failed: {e}")
                 email_intelligence = None
             
-            # Initialize ML models asynchronously with error handling
-            try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                
-                if router:
-                    loop.run_until_complete(router.initialize())
-                if advanced_ml_classifier:
-                    loop.run_until_complete(advanced_ml_classifier.initialize())
-                if intelligent_routing_engine:
-                    loop.run_until_complete(intelligent_routing_engine.initialize())
-                if real_time_analytics:
-                    loop.run_until_complete(real_time_analytics.start())
-                
-                logger.info("Async ML models initialized")
-                loop.close()
-            except Exception as e:
-                logger.error(f"Async ML models initialization failed: {e}")
-                if 'loop' in locals():
+            # FIXED: Initialize ML models asynchronously with error handling (NON-BLOCKING)
+            def init_async_components():
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                    if router:
+                        loop.run_until_complete(router.initialize())
+                    if advanced_ml_classifier:
+                        loop.run_until_complete(advanced_ml_classifier.initialize())
+                    if intelligent_routing_engine:
+                        loop.run_until_complete(intelligent_routing_engine.initialize())
+                    if real_time_analytics:
+                        loop.run_until_complete(real_time_analytics.start())
+
+                    logger.info("Async ML models initialized")
                     loop.close()
+                except Exception as e:
+                    logger.error(f"Async ML models initialization failed: {e}")
+                    if 'loop' in locals():
+                        try:
+                            loop.close()
+                        except:
+                            pass
+
+            # FIXED: Run async initialization in background thread (NON-BLOCKING)
+            threading.Thread(target=init_async_components, daemon=True).start()
             
             logger.info("ML Router and Advanced Features initialized successfully")
             
@@ -5213,8 +5220,15 @@ with app.app_context():
     # db.create_all()
     
     
-    # Initialize router after models are imported
-    threading.Thread(target=initialize_router, daemon=True).start()
+    # FIXED: Initialize router after models are imported (NON-BLOCKING)
+    def start_initialization():
+        try:
+            initialize_router()
+            logger.info("Router initialization completed")
+        except Exception as e:
+            logger.error(f"Router initialization failed: {e}")
+
+    threading.Thread(target=start_initialization, daemon=True).start()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
