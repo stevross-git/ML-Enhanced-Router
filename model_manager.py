@@ -78,29 +78,43 @@ class ModelManager:
         try:
             from models import MLModelRegistry
             
+            # Use db.session instead of self.db.session
             db_models = self.db.session.query(MLModelRegistry).all()
             
             for db_model in db_models:
-                model = MLModel(
-                    id=db_model.id,
-                    name=db_model.name,
-                    description=db_model.description or "",
-                    type=ModelType(db_model.model_type),
-                    categories=db_model.categories,
-                    config=db_model.config,
-                    status=ModelStatus(db_model.status),
-                    accuracy=db_model.accuracy,
-                    created_at=db_model.created_at,
-                    updated_at=db_model.updated_at,
-                    version=db_model.version,
-                    is_active=db_model.is_active
-                )
-                
-                self.models[model.id] = model
-                if model.is_active:
-                    self.active_model_id = model.id
+                try:
+                    # Handle potential invalid model types
+                    try:
+                        model_type = ModelType(db_model.model_type)
+                    except ValueError:
+                        logger.warning(f"Invalid model type '{db_model.model_type}' for model {db_model.id}, skipping")
+                        continue
+                    
+                    model = MLModel(
+                        id=db_model.id,
+                        name=db_model.name,
+                        description=db_model.description or "",
+                        type=model_type,
+                        categories=db_model.categories or [],
+                        config=db_model.config or {},
+                        status=ModelStatus(db_model.status),
+                        accuracy=db_model.accuracy,
+                        created_at=db_model.created_at,
+                        updated_at=db_model.updated_at,
+                        version=db_model.version,
+                        is_active=db_model.is_active
+                    )
+                    
+                    self.models[model.id] = model
+                    
+                    if model.is_active:
+                        self.active_model_id = model.id
+                        
+                except Exception as e:
+                    logger.error(f"Error loading model {db_model.id}: {e}")
+                    continue
             
-            logger.info(f"Loaded {len(db_models)} models from database")
+            logger.info(f"Loaded {len(self.models)} models from database")
             
         except Exception as e:
             logger.error(f"Failed to load models from database: {e}")
@@ -113,20 +127,21 @@ class ModelManager:
         try:
             from models import MLModelRegistry
             
-            db_model = self.db.session.query(MLModelRegistry).get(model.id)
+            # Check if model already exists
+            existing_model = self.db.session.query(MLModelRegistry).filter_by(id=model.id).first()
             
-            if db_model:
+            if existing_model:
                 # Update existing model
-                db_model.name = model.name
-                db_model.description = model.description
-                db_model.model_type = model.type.value
-                db_model.categories = model.categories
-                db_model.config = model.config
-                db_model.status = model.status.value
-                db_model.accuracy = model.accuracy
-                db_model.updated_at = model.updated_at
-                db_model.version = model.version
-                db_model.is_active = model.is_active
+                existing_model.name = model.name
+                existing_model.description = model.description
+                existing_model.model_type = model.type.value
+                existing_model.categories = model.categories
+                existing_model.config = model.config
+                existing_model.status = model.status.value
+                existing_model.accuracy = model.accuracy
+                existing_model.is_active = model.is_active
+                existing_model.version = model.version
+                existing_model.updated_at = model.updated_at
             else:
                 # Create new model
                 db_model = MLModelRegistry(
@@ -145,11 +160,12 @@ class ModelManager:
                 )
                 self.db.session.add(db_model)
             
-            self.self.db.session.commit()
+            # Fixed: Remove extra 'self.' - this was the main bug
+            self.db.session.commit()
             
         except SQLAlchemyError as e:
             logger.error(f"Failed to save model to database: {e}")
-            self.self.db.session.rollback()
+            self.db.session.rollback()
 
     def _delete_model_from_db(self, model_id: str):
         """Delete model from database"""
@@ -159,14 +175,15 @@ class ModelManager:
         try:
             from models import MLModelRegistry
             
-            db_model = self.db.session.query(MLModelRegistry).get(model_id)
+            db_model = self.db.session.query(MLModelRegistry).filter_by(id=model_id).first()
             if db_model:
                 self.db.session.delete(db_model)
-                self.self.db.session.commit()
+                # Fixed: Remove extra 'self.' - this was the main bug
+                self.db.session.commit()
                 
         except SQLAlchemyError as e:
             logger.error(f"Failed to delete model from database: {e}")
-            self.self.db.session.rollback()
+            self.db.session.rollback()
 
     def _initialize_default_models(self):
         """Initialize default models"""
@@ -318,6 +335,7 @@ class ModelManager:
             time.sleep(2)  # Simulate training time
             model.status = ModelStatus.INACTIVE
             model.accuracy = 0.85 + (hash(model_id) % 100) / 1000  # Simulate accuracy
+            self._save_model_to_db(model)
             logger.info(f"Completed training model: {model.name} ({model_id})")
         
         thread = threading.Thread(target=complete_training)
