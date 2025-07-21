@@ -5224,17 +5224,18 @@ with app.app_context():
     def init_async_components():
         """Initialize async components in background thread to prevent blocking"""
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            with app.app_context():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
 
-            if router:
-                loop.run_until_complete(router.initialize())
-            if advanced_ml_classifier:
-                loop.run_until_complete(advanced_ml_classifier.initialize())
-            if intelligent_routing_engine:
-                loop.run_until_complete(intelligent_routing_engine.initialize())
-            if real_time_analytics:
-                loop.run_until_complete(real_time_analytics.start())
+                if router:
+                    loop.run_until_complete(router.initialize())
+                if advanced_ml_classifier:
+                    loop.run_until_complete(advanced_ml_classifier.initialize())
+                if intelligent_routing_engine:
+                    loop.run_until_complete(intelligent_routing_engine.initialize())
+                if real_time_analytics:
+                    loop.run_until_complete(real_time_analytics.start())
 
             logger.info("\u2705 Async ML models initialized successfully")
 

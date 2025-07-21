@@ -190,7 +190,7 @@ class MLEnhancedQueryRouter:
         try:
             from models import AgentRegistration
             
-            db_agents = AgentRegistration.query.filter_by(is_active=True).all()
+            db_agents = self.db.session.query(AgentRegistration).filter_by(is_active=True).all()
             
             for db_agent in db_agents:
                 # Convert string categories to QueryCategory enum
@@ -227,7 +227,7 @@ class MLEnhancedQueryRouter:
         try:
             from models import AgentRegistration
             
-            db_agent = AgentRegistration.query.get(agent.id)
+            db_agent = self.db.session.get(AgentRegistration, agent.id)
             
             if db_agent:
                 # Update existing agent
@@ -266,7 +266,7 @@ class MLEnhancedQueryRouter:
         try:
             from models import AgentRegistration
             
-            db_agent = AgentRegistration.query.get(agent_id)
+            db_agent = self.db.session.get(AgentRegistration, agent_id)
             if db_agent:
                 db_agent.is_active = False
                 self.db.session.commit()
