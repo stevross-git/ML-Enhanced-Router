@@ -8,7 +8,7 @@ from datetime import datetime
 from app.models.query import QueryLog
 from app.models.agent import Agent, AgentCapability
 from app.models.auth import User, UserSession
-from app.models.cache import CacheEntry
+from app.models.cache import AICacheEntry
 from app.models.rag import RAGDocument, RAGChunk
 
 
@@ -110,20 +110,23 @@ class TestCacheModel:
     
     def test_cache_entry_creation(self, db_session):
         """Test creating a cache entry"""
-        cache_entry = CacheEntry(
-            key="test:key",
-            value="test_value",
-            expires_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-            is_active=True
+        cache_entry = AICacheEntry(
+            cache_key="test:key",
+            query_hash="abc123",
+            model_id="test-model",
+            provider="test-provider",
+            query_text="test query",
+            response_data={"response": "test"},
+            ttl_seconds=3600,
+            expires_at=datetime.utcnow()
         )
         
         db_session.add(cache_entry)
         db_session.commit()
         
         assert cache_entry.id is not None
-        assert cache_entry.key == "test:key"
-        assert cache_entry.value == "test_value"
+        assert cache_entry.cache_key == "test:key"
+        assert cache_entry.response_data == {"response": "test"}
 
 
 class TestRAGModel:
