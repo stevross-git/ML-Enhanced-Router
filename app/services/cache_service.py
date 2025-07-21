@@ -15,7 +15,7 @@ import redis
 from sqlalchemy import text
 
 from app.extensions import db
-from app.models.cache import CacheEntry, CacheStats
+from app.models.cache import AICacheEntry, AICacheStats
 from app.utils.exceptions import CacheError, ServiceError
 
 
@@ -91,9 +91,9 @@ class CacheService:
                 except Exception as e:
                     current_app.logger.warning(f"Redis get error: {e}")
             
-            cache_entry = CacheEntry.query.filter_by(
-                key=full_key,
-                is_active=True
+            cache_entry = AICacheEntry.query.filter_by(
+                cache_key=full_key,
+                is_valid=True
             ).first()
             
             if cache_entry:
@@ -103,7 +103,7 @@ class CacheService:
                     return default
                 
                 self._record_hit(key, 'database')
-                return self._deserialize(cache_entry.value)
+                return self._deserialize(cache_entry.response_data.get("value", ""))
             
             self._record_miss(key, 'database')
             return default
@@ -140,16 +140,19 @@ class CacheService:
                     current_app.logger.warning(f"Redis set error: {e}")
             
             try:
-                existing = CacheEntry.query.filter_by(key=full_key).first()
+                existing = AICacheEntry.query.filter_by(cache_key=full_key).first()
                 if existing:
                     db.session.delete(existing)
                 
-                cache_entry = CacheEntry(
-                    key=full_key,
-                    value=serialized_value,
-                    expires_at=expires_at,
-                    created_at=datetime.utcnow(),
-                    is_active=True
+                cache_entry = AICacheEntry(
+                    cache_key=full_key,
+                    query_hash=hashlib.sha256("cached_value".encode()).hexdigest(),
+                    model_id="cache_service",
+                    provider="internal",
+                    query_text="cached_value",
+                    response_data={"value": serialized_value},
+                    ttl_seconds=ttl,
+                    expires_at=expires_at
                 )
                 
                 db.session.add(cache_entry)
@@ -188,7 +191,7 @@ class CacheService:
                     current_app.logger.warning(f"Redis delete error: {e}")
             
             try:
-                CacheEntry.query.filter_by(key=full_key).delete()
+                AICacheEntry.query.filter_by(cache_key=full_key).delete()
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
@@ -231,12 +234,12 @@ class CacheService:
             
             try:
                 if pattern:
-                    query = CacheEntry.query.filter(
-                        CacheEntry.key.like(f"{self.cache_prefix}{pattern}")
+                    query = AICacheEntry.query.filter(
+                        AICacheEntry.cache_key.like(f"{self.cache_prefix}{pattern}")
                     )
                 else:
-                    query = CacheEntry.query.filter(
-                        CacheEntry.key.like(f"{self.cache_prefix}%")
+                    query = AICacheEntry.query.filter(
+                        AICacheEntry.cache_key.like(f"{self.cache_prefix}%")
                     )
                 
                 db_cleared = query.delete(synchronize_session=False)
@@ -272,10 +275,10 @@ class CacheService:
             }
             
             try:
-                total_entries = CacheEntry.query.filter_by(is_active=True).count()
-                expired_entries = CacheEntry.query.filter(
-                    CacheEntry.expires_at < datetime.utcnow(),
-                    CacheEntry.is_active == True
+                total_entries = AICacheEntry.query.filter_by(is_valid=True).count()
+                expired_entries = AICacheEntry.query.filter(
+                    AICacheEntry.expires_at < datetime.utcnow(),
+                    AICacheEntry.is_valid == True
                 ).count()
                 
                 stats['total_entries'] = total_entries
@@ -293,10 +296,10 @@ class CacheService:
                     current_app.logger.warning(f"Redis stats error: {e}")
             
             try:
-                cache_stats = CacheStats.query.order_by(CacheStats.created_at.desc()).limit(100).all()
+                cache_stats = AICacheStats.query.order_by(AICacheStats.created_at.desc()).limit(100).all()
                 if cache_stats:
-                    total_requests = sum(s.hits + s.misses for s in cache_stats)
-                    total_hits = sum(s.hits for s in cache_stats)
+                    total_requests = sum(s.total_requests for s in cache_stats)
+                    total_hits = sum(s.cache_hits for s in cache_stats)
                     stats['hit_rate'] = (total_hits / total_requests * 100) if total_requests > 0 else 0
             except Exception as e:
                 current_app.logger.warning(f"Hit rate calculation error: {e}")
@@ -315,10 +318,10 @@ class CacheService:
             Number of entries cleaned up
         """
         try:
-            expired_count = CacheEntry.query.filter(
-                CacheEntry.expires_at < datetime.utcnow(),
-                CacheEntry.is_active == True
-            ).update({'is_active': False})
+            expired_count = AICacheEntry.query.filter(
+                AICacheEntry.expires_at < datetime.utcnow(),
+                AICacheEntry.is_valid == True
+            ).update({'is_valid': False})
             
             db.session.commit()
             
@@ -374,9 +377,11 @@ class CacheService:
         except (TypeError, ValueError):
             return pickle.dumps(value).hex()
     
-    def _deserialize(self, value: str) -> Any:
+    def _deserialize(self, value: Union[str, bytes]) -> Any:
         """Deserialize value from storage"""
         try:
+            if isinstance(value, bytes):
+                value = value.decode('utf-8')
             return json.loads(value)
         except (json.JSONDecodeError, TypeError):
             try:
@@ -387,22 +392,28 @@ class CacheService:
     def _record_hit(self, key: str, cache_type: str):
         """Record cache hit for statistics"""
         try:
-            today = datetime.utcnow().date()
-            stats = CacheStats.query.filter_by(
-                date=today,
-                cache_type=cache_type
+            today = datetime.utcnow()
+            period_start = today.replace(hour=0, minute=0, second=0, microsecond=0)
+            period_end = period_start + timedelta(days=1)
+            
+            stats = AICacheStats.query.filter_by(
+                period_start=period_start,
+                granularity="day"
             ).first()
             
             if not stats:
-                stats = CacheStats(
-                    date=today,
-                    cache_type=cache_type,
-                    hits=0,
-                    misses=0
+                stats = AICacheStats(
+                    period_start=period_start,
+                    period_end=period_end,
+                    granularity="day",
+                    total_requests=0,
+                    cache_hits=0,
+                    cache_misses=0
                 )
                 db.session.add(stats)
             
-            stats.hits += 1
+            stats.cache_hits += 1
+            stats.total_requests += 1
             db.session.commit()
             
         except Exception as e:
@@ -412,32 +423,38 @@ class CacheService:
     def _record_miss(self, key: str, cache_type: str):
         """Record cache miss for statistics"""
         try:
-            today = datetime.utcnow().date()
-            stats = CacheStats.query.filter_by(
-                date=today,
-                cache_type=cache_type
+            today = datetime.utcnow()
+            period_start = today.replace(hour=0, minute=0, second=0, microsecond=0)
+            period_end = period_start + timedelta(days=1)
+            
+            stats = AICacheStats.query.filter_by(
+                period_start=period_start,
+                granularity="day"
             ).first()
             
             if not stats:
-                stats = CacheStats(
-                    date=today,
-                    cache_type=cache_type,
-                    hits=0,
-                    misses=0
+                stats = AICacheStats(
+                    period_start=period_start,
+                    period_end=period_end,
+                    granularity="day",
+                    total_requests=0,
+                    cache_hits=0,
+                    cache_misses=0
                 )
                 db.session.add(stats)
             
-            stats.misses += 1
+            stats.cache_misses += 1
+            stats.total_requests += 1
             db.session.commit()
             
         except Exception as e:
             db.session.rollback()
             current_app.logger.warning(f"Cache miss recording error: {e}")
     
-    def _expire_entry(self, entry: CacheEntry):
+    def _expire_entry(self, entry: AICacheEntry):
         """Mark cache entry as expired"""
         try:
-            entry.is_active = False
+            entry.is_valid = False
             db.session.commit()
         except Exception as e:
             db.session.rollback()
