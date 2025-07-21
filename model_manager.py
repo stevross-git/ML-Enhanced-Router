@@ -76,7 +76,7 @@ class ModelManager:
             return
             
         try:
-            from models import MLModelRegistry
+            from app.models.model import MLModelRegistry
             
             # Use db.session instead of self.db.session
             db_models = self.db.session.query(MLModelRegistry).all()
@@ -125,7 +125,7 @@ class ModelManager:
             return
             
         try:
-            from models import MLModelRegistry
+            from app.models.model import MLModelRegistry
             
             # Check if model already exists
             existing_model = self.db.session.query(MLModelRegistry).filter_by(id=model.id).first()
@@ -173,7 +173,7 @@ class ModelManager:
             return
             
         try:
-            from models import MLModelRegistry
+            from app.models.model import MLModelRegistry
             
             db_model = self.db.session.query(MLModelRegistry).filter_by(id=model_id).first()
             if db_model:

@@ -20,7 +20,7 @@ from flask import current_app
 from sqlalchemy import func
 
 from app.extensions import db
-from app.models.auth import User
+from app.models.user import User
 from app.utils.exceptions import EmailError, ValidationError, ServiceError
 
 

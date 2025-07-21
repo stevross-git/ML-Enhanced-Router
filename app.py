@@ -22,7 +22,7 @@ from typing import Dict, List, Optional
 import threading
 
 # Import the fixed models
-from models import Base
+from app.models.base import Base
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -67,7 +67,7 @@ def import_models():
     logger.info("Starting model import process via /import-models")
     """Import AI models from a JSON file into the database"""
     from sqlalchemy.exc import SQLAlchemyError
-    from models import MLModelRegistry  # Fix: ensure MLModelRegistry is defined in function scope
+    from app.models.model import MLModelRegistry  # Fix: ensure MLModelRegistry is defined in function scope
     if request.method == 'GET':
         return render_template('import_models.html')
     if 'jsonFile' not in request.files:

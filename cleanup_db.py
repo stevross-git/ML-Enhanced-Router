@@ -3,7 +3,7 @@
 Database cleanup script
 """
 from app import app, db
-from models import MLModelRegistry
+from app.models.model import MLModelRegistry
 
 def cleanup_invalid_models():
     """Clean up models with invalid types"""

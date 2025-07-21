@@ -305,22 +305,7 @@ class ExternalAPICall(Base):
     call_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
-# User Management Models
-class User(Base):
-    """User model for authentication and profile management"""
-    __tablename__ = "users"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    username: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    role: Mapped[str] = mapped_column(String(20), default="user")  # 'admin', 'user', 'premium'
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    profile_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+# User Management Models - User class moved to app/models/user.py
 
 
 class APIKey(Base):
