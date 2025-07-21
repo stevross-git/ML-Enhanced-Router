@@ -1492,7 +1492,6 @@ def clear_cache():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Chat API Endpoints
 @app.route('/api/chat/message', methods=['POST'])
 def chat_message():
     """Send message to AI model"""
@@ -1518,78 +1517,95 @@ def chat_message():
         asyncio.set_event_loop(loop)
         
         try:
-            response = loop.run_until_complete(
-                ai_model_manager.generate_response(
-                    query=query,
-                    system_message=system_message,
-                    model_id=model_id,
-                    user_id=session.get('user_id', 'anonymous')
-                )
-            )
+            # Get model and temporarily update settings
+            model = ai_model_manager.get_model(model_id)
+            if not model:
+                return jsonify({'error': f'Model {model_id} not found'}), 404
             
-            return jsonify({
-                'status': 'success',
-                'response': response['response'],
-                'model': response['model'],
-                'usage': response.get('usage', {}),
-                'cached': response.get('cached', False)
-            })
-        finally:
-            loop.close()
+            # Store original settings
+            original_temperature = model.temperature
+            original_max_tokens = model.max_tokens
             
-    except Exception as e:
-        logger.error(f"Chat message error: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/chat/stream')
-def chat_stream_get():
-    """Stream chat response using Server-Sent Events"""
-    query = request.args.get('query', '')
-    system_message = request.args.get('system_message')
-    model_id = request.args.get('model_id')
-    
-    if not query or not model_id:
-        return jsonify({'error': 'Query and model_id are required'}), 400
-    
-    def generate():
-        try:
-            yield f"data: {json.dumps({'type': 'start', 'model': model_id})}\n\n"
-            
-            # For now, simulate streaming by chunking the response
-            # In a real implementation, you'd integrate with streaming APIs
-            
-            # Get regular response first
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            # Temporarily update model settings for this request
+            model.temperature = temperature
+            model.max_tokens = max_tokens
             
             try:
                 response = loop.run_until_complete(
                     ai_model_manager.generate_response(
+                        model_id=model_id,
                         query=query,
                         system_message=system_message,
-                        model_id=model_id,
                         user_id=session.get('user_id', 'anonymous')
                     )
                 )
-                
-                # Simulate streaming by sending chunks
-                full_response = response['response']
-                words = full_response.split()
-                
-                for i, word in enumerate(words):
-                    chunk = word + (' ' if i < len(words) - 1 else '')
-                    yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
-                
-                yield f"data: {json.dumps({'type': 'end', 'usage': response.get('usage', {})})}\n\n"
-                
             finally:
-                loop.close()
+                # Restore original settings
+                model.temperature = original_temperature
+                model.max_tokens = original_max_tokens
+            
+            # Debug: Log the actual response structure
+            logger.debug(f"AI model response structure: {response}")
+            
+            # Handle different response formats
+            if response.get('status') == 'success' and 'response' in response:
+                # Success case with 'response' key
+                return jsonify({
+                    'status': 'success',
+                    'response': response['response'],
+                    'model': response.get('model', model_id),
+                    'usage': response.get('usage', {}),
+                    'cached': response.get('cached', False)
+                })
+            elif response.get('status') == 'error':
+                # Error case
+                error_msg = response.get('error', 'Unknown error occurred')
+                logger.error(f"AI model returned error: {error_msg}")
+                return jsonify({
+                    'status': 'error',
+                    'error': error_msg
+                }), 500
+            elif 'response' in response:
+                # Direct response case (no status field)
+                return jsonify({
+                    'status': 'success',
+                    'response': response['response'],
+                    'model': response.get('model', model_id),
+                    'usage': response.get('usage', {}),
+                    'cached': response.get('cached', False)
+                })
+            elif 'error' in response:
+                # Direct error case
+                error_msg = response['error']
+                logger.error(f"AI model returned error: {error_msg}")
+                return jsonify({
+                    'status': 'error',
+                    'error': error_msg
+                }), 500
+            else:
+                # Unexpected response structure
+                logger.error(f"Unexpected response structure: {response}")
+                return jsonify({
+                    'status': 'error',
+                    'error': f'Unexpected response format from AI model: {response}'
+                }), 500
                 
-        except Exception as e:
-            logger.error(f"Streaming error: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
-    
-    return Response(generate(), mimetype='text/event-stream')
+        finally:
+            loop.close()
+            
+    except KeyError as e:
+        logger.error(f"Missing key in response: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': f'Invalid response format from AI model. Missing key: {e}'
+        }), 500
+    except Exception as e:
+        logger.error(f"Chat message error: {e}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
 
 @app.route('/api/chat/sessions', methods=['GET'])
 def get_chat_sessions():

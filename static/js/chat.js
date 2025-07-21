@@ -1,4 +1,4 @@
-// Multi-Modal AI Chat JavaScript
+// Multi-Modal AI Chat JavaScript - Updated to use stream and message endpoints
 let selectedModel = null;
 let chatHistory = [];
 let uploadedFiles = [];
@@ -105,6 +105,7 @@ function handleKeyPress(event) {
     }
 }
 
+// Updated sendMessage function to use existing endpoints
 async function sendMessage() {
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value.trim();
@@ -123,41 +124,190 @@ async function sendMessage() {
     // Show typing indicator
     showTypingIndicator();
     
+    const enableStreaming = document.getElementById('enableStreaming').checked;
+    
     try {
-        const response = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: message,
-                model_id: selectedModel.id,
-                temperature: parseFloat(document.getElementById('temperatureSlider').value),
-                max_tokens: parseInt(document.getElementById('maxTokensInput').value),
-                enable_rag: document.getElementById('enableRAG').checked,
-                enable_streaming: document.getElementById('enableStreaming').checked,
-                chat_history: chatHistory
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to send message');
+        if (enableStreaming) {
+            // Use streaming endpoint
+            await handleStreamingResponse(message);
+        } else {
+            // Use regular message endpoint
+            await handleRegularResponse(message);
         }
-        
-        const data = await response.json();
-        
-        // Add assistant response
-        addMessage('assistant', data.response);
-        
-        // Update token count
-        tokenCount += data.tokens_used || 0;
-        updateStats();
         
     } catch (error) {
         console.error('Error sending message:', error);
-        addMessage('system', 'Error: Failed to send message. Please try again.');
+        addMessage('system', `Error: ${error.message}. Please try again.`);
     } finally {
         hideTypingIndicator();
+    }
+}
+
+// Replace the handleRegularResponse function in chat.js with this final fixed version
+
+async function handleRegularResponse(message) {
+    const response = await fetch('/api/chat/message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            query: message,
+            model_id: selectedModel.id,
+            temperature: parseFloat(document.getElementById('temperatureSlider').value),
+            max_tokens: parseInt(document.getElementById('maxTokensInput').value),
+            system_message: null
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Response data:', data); // Debug log
+    
+    // Handle the response structure
+    if (data.status === 'success') {
+        let messageContent = '';
+        
+        // Handle nested response structure (cached responses)
+        if (data.response && typeof data.response === 'object' && data.response.response) {
+            messageContent = data.response.response;
+        } 
+        // Handle direct response structure
+        else if (data.response && typeof data.response === 'string') {
+            messageContent = data.response;
+        }
+        else {
+            throw new Error('No valid response content found');
+        }
+        
+        // Add assistant response
+        addMessage('assistant', messageContent);
+        
+        // Update token count - handle different usage formats
+        let tokensUsed = 0;
+        
+        if (data.usage) {
+            tokensUsed = data.usage.total_tokens || 
+                        (data.usage.input_tokens + data.usage.output_tokens) || 
+                        (data.usage.prompt_tokens + data.usage.completion_tokens) || 0;
+        }
+        
+        // For cached responses, get metadata if available
+        if (data.cached && data.response && data.response.metadata) {
+            // Use estimated tokens for cached responses if no usage data
+            tokensUsed = tokensUsed || 50; // Rough estimate for short responses
+        }
+        
+        tokenCount += tokensUsed;
+        updateStats();
+        
+        // Show cache indicator if response was cached
+        if (data.cached) {
+            console.log('✅ Response served from cache');
+        }
+        
+    } else if (data.status === 'error') {
+        throw new Error(data.error || 'Unknown error occurred');
+    } else {
+        // Handle legacy response format (if any)
+        if (data.response) {
+            const messageContent = typeof data.response === 'object' ? 
+                                 data.response.response || JSON.stringify(data.response) : 
+                                 data.response;
+            addMessage('assistant', messageContent);
+            const tokensUsed = data.tokens_used || 0;
+            tokenCount += tokensUsed;
+            updateStats();
+        } else {
+            throw new Error('Invalid response format from server');
+        }
+    }
+}
+
+async function handleStreamingResponse(message) {
+    // Use POST version of streaming endpoint
+    const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            message: message,
+            model_id: selectedModel.id,
+            system_message: null
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    // Handle Server-Sent Events
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let assistantMessageDiv = null;
+    let fullResponse = '';
+    
+    // Create a message div for streaming response
+    const chatMessages = document.getElementById('chatMessages');
+    assistantMessageDiv = document.createElement('div');
+    assistantMessageDiv.className = 'message assistant';
+    assistantMessageDiv.innerHTML = '<i class="fas fa-robot me-2"></i><span class="message-content"></span>';
+    chatMessages.appendChild(assistantMessageDiv);
+    
+    const messageContent = assistantMessageDiv.querySelector('.message-content');
+    
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop(); // Keep incomplete line in buffer
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        
+                        if (data.type === 'start') {
+                            console.log('Streaming started for model:', data.model);
+                        } else if (data.type === 'token') {
+                            fullResponse += data.content;
+                            messageContent.textContent = fullResponse;
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } else if (data.type === 'end') {
+                            console.log('Streaming completed');
+                            if (data.usage) {
+                                const tokensUsed = data.usage.total_tokens || 
+                                                 (data.usage.input_tokens + data.usage.output_tokens) || 0;
+                                tokenCount += tokensUsed;
+                                updateStats();
+                            }
+                        } else if (data.type === 'error') {
+                            throw new Error(data.error);
+                        }
+                    } catch (parseError) {
+                        console.error('Error parsing SSE data:', parseError);
+                    }
+                }
+            }
+        }
+    } finally {
+        reader.releaseLock();
+    }
+    
+    // Update chat history
+    if (fullResponse) {
+        chatHistory.push({ role: 'assistant', content: fullResponse });
+        messageCount++;
+        updateStats();
     }
 }
 
@@ -245,6 +395,16 @@ function setupDragAndDrop() {
     });
 }
 
+function handleFileUpload(files, uploadAreaId) {
+    if (uploadAreaId.includes('image')) {
+        displayUploadedFiles(files, 'uploadedImages', 'image');
+    } else if (uploadAreaId.includes('audio')) {
+        displayUploadedFiles(files, 'uploadedAudio', 'audio');
+    } else if (uploadAreaId.includes('document')) {
+        displayUploadedFiles(files, 'uploadedDocuments', 'document');
+    }
+}
+
 function handleImageUpload(event) {
     const files = event.target.files;
     displayUploadedFiles(files, 'uploadedImages', 'image');
@@ -322,13 +482,15 @@ async function analyzeImage() {
         
         if (data.image_analysis && data.image_analysis.result) {
             addMessage('assistant', data.image_analysis.result.analysis);
+        } else if (data.error) {
+            addMessage('system', `Image analysis failed: ${data.error}`);
         } else {
             addMessage('system', 'Image analysis failed');
         }
         
     } catch (error) {
         console.error('Error analyzing image:', error);
-        addMessage('system', 'Error analyzing image');
+        addMessage('system', `Error analyzing image: ${error.message}`);
     } finally {
         hideTypingIndicator();
     }
@@ -359,13 +521,15 @@ async function processAudio() {
         
         if (data.audio_analysis && data.audio_analysis.result) {
             addMessage('assistant', data.audio_analysis.result.analysis);
+        } else if (data.error) {
+            addMessage('system', `Audio processing failed: ${data.error}`);
         } else {
             addMessage('system', 'Audio processing failed');
         }
         
     } catch (error) {
         console.error('Error processing audio:', error);
-        addMessage('system', 'Error processing audio');
+        addMessage('system', `Error processing audio: ${error.message}`);
     } finally {
         hideTypingIndicator();
     }
@@ -396,13 +560,15 @@ async function analyzeDocument() {
         
         if (data.document_analysis && data.document_analysis.result) {
             addMessage('assistant', data.document_analysis.result.analysis);
+        } else if (data.error) {
+            addMessage('system', `Document analysis failed: ${data.error}`);
         } else {
             addMessage('system', 'Document analysis failed');
         }
         
     } catch (error) {
         console.error('Error analyzing document:', error);
-        addMessage('system', 'Error analyzing document');
+        addMessage('system', `Error analyzing document: ${error.message}`);
     } finally {
         hideTypingIndicator();
     }
@@ -435,10 +601,16 @@ async function generateContent() {
             requestData.text = prompt;
             requestData.voice = quality;
         } else {
-            // For text generation, use regular chat
-            endpoint = '/api/chat';
-            requestData.message = prompt;
-            requestData.model_id = selectedModel.id;
+            // For text generation, use regular chat endpoint
+            const enableStreaming = document.getElementById('enableStreaming').checked;
+            
+            if (enableStreaming) {
+                await handleStreamingResponse(prompt);
+                return;
+            } else {
+                await handleRegularResponse(prompt);
+                return;
+            }
         }
         
         const response = await fetch(endpoint, {
@@ -455,15 +627,15 @@ async function generateContent() {
             addMessage('assistant', `Image generated successfully: ${data.image_generation.result.status}`);
         } else if (generationType === 'audio' && data.speech_generation) {
             addMessage('assistant', `Speech generated successfully: ${data.speech_generation.result.status}`);
-        } else if (generationType === 'text' && data.response) {
-            addMessage('assistant', data.response);
+        } else if (data.error) {
+            addMessage('system', `Content generation failed: ${data.error}`);
         } else {
             addMessage('system', 'Content generation failed');
         }
         
     } catch (error) {
         console.error('Error generating content:', error);
-        addMessage('system', 'Error generating content');
+        addMessage('system', `Error generating content: ${error.message}`);
     } finally {
         hideTypingIndicator();
     }
@@ -485,6 +657,13 @@ function setupVoiceRecognition() {
         recognition.onerror = function(event) {
             console.error('Speech recognition error:', event.error);
             showNotification('Speech recognition error', 'error');
+        };
+        
+        recognition.onend = function() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.remove('active');
+            }
         };
         
         window.speechRecognition = recognition;
@@ -551,6 +730,74 @@ function showNotification(message, type = 'info') {
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.remove();
+        if (document.body.contains(notification)) {
+            notification.remove();
+        }
     }, 5000);
+}
+
+// Alternative streaming method using EventSource (if POST streaming doesn't work)
+async function handleStreamingResponseAlternative(message) {
+    const params = new URLSearchParams({
+        query: message,
+        model_id: selectedModel.id,
+        system_message: ''
+    });
+    
+    const eventSource = new EventSource(`/api/chat/stream?${params}`);
+    let fullResponse = '';
+    let assistantMessageDiv = null;
+    
+    // Create a message div for streaming response
+    const chatMessages = document.getElementById('chatMessages');
+    assistantMessageDiv = document.createElement('div');
+    assistantMessageDiv.className = 'message assistant';
+    assistantMessageDiv.innerHTML = '<i class="fas fa-robot me-2"></i><span class="message-content"></span>';
+    chatMessages.appendChild(assistantMessageDiv);
+    
+    const messageContent = assistantMessageDiv.querySelector('.message-content');
+    
+    return new Promise((resolve, reject) => {
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'start') {
+                    console.log('Streaming started for model:', data.model);
+                } else if (data.type === 'token') {
+                    fullResponse += data.content;
+                    messageContent.textContent = fullResponse;
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                } else if (data.type === 'end') {
+                    console.log('Streaming completed');
+                    if (data.usage) {
+                        const tokensUsed = data.usage.total_tokens || 0;
+                        tokenCount += tokensUsed;
+                        updateStats();
+                    }
+                    
+                    // Update chat history
+                    if (fullResponse) {
+                        chatHistory.push({ role: 'assistant', content: fullResponse });
+                        messageCount++;
+                        updateStats();
+                    }
+                    
+                    eventSource.close();
+                    resolve();
+                } else if (data.type === 'error') {
+                    eventSource.close();
+                    reject(new Error(data.error));
+                }
+            } catch (parseError) {
+                console.error('Error parsing SSE data:', parseError);
+            }
+        };
+        
+        eventSource.onerror = function(error) {
+            console.error('EventSource error:', error);
+            eventSource.close();
+            reject(new Error('Streaming connection failed'));
+        };
+    });
 }
