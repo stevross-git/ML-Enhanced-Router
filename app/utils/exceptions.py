@@ -73,6 +73,10 @@ class DatabaseError(BaseMLRouterException):
     """Raised when database operations fail"""
     pass
 
+class EmailError(BaseMLRouterException):
+    """Raised when email operations fail"""
+    pass
+
 # Error handler registration function
 def register_error_handlers(app):
     """Register error handlers with Flask app"""
