@@ -385,7 +385,7 @@ class CacheService:
             return json.loads(value)
         except (json.JSONDecodeError, TypeError):
             try:
-                return pickle.loads(bytes.fromhex(value))
+                return pickle.loads(bytes.fromhex(str(value)))
             except Exception:
                 return value
     
