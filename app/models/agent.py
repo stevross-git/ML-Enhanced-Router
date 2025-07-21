@@ -47,7 +47,7 @@ class AgentRegistration(Base, TimestampMixin):
     avg_response_time: Mapped[float] = mapped_column(Float, default=0.0)
     
     # Additional metadata
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    agent_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
     
     def __repr__(self):
@@ -103,7 +103,7 @@ class AgentRegistration(Base, TimestampMixin):
             'avg_response_time': self.avg_response_time,
             'last_seen': self.last_seen.isoformat() if self.last_seen else None,
             'created_at': self.created_at.isoformat(),
-            'metadata': self.metadata,
+            'metadata': self.agent_metadata,
             'tags': self.tags
         }
 

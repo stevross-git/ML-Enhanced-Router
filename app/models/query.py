@@ -38,8 +38,8 @@ class QueryLog(Base, TimestampMixin):
     tokens_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cost: Mapped[float | None] = mapped_column(Float, nullable=True)
     
-    # Additional metadata
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Additional metadata - FIXED: renamed to avoid SQLAlchemy conflict
+    query_query_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     # Cache information
@@ -63,7 +63,7 @@ class QueryLog(Base, TimestampMixin):
             'cost': self.cost,
             'cache_hit': self.cache_hit,
             'created_at': self.created_at.isoformat(),
-            'metadata': self.metadata
+            'metadata': self.query_metadata  # Return as 'metadata' for API compatibility
         }
 
 class QueryMetrics(Base):

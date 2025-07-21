@@ -49,9 +49,9 @@ class AICacheEntry(Base, TimestampMixin):
     is_valid: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     invalidation_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
     
-    # Additional metadata
+    # Additional metadata - FIXED: renamed to avoid SQLAlchemy conflict
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    cache_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     def __repr__(self):
         return f"<AICacheEntry {self.cache_key[:20]}... - {self.hit_count} hits>"
@@ -113,49 +113,54 @@ class AICacheEntry(Base, TimestampMixin):
             'is_valid': self.is_valid,
             'tokens_saved': self.tokens_saved,
             'cost_saved': self.cost_saved,
+            'tags': self.tags,
             'created_at': self.created_at.isoformat(),
-            'tags': self.tags
+            'metadata': self.cache_metadata  # Return as 'metadata' for API compatibility
         }
 
 class AICacheStats(Base):
-    """Aggregated cache statistics"""
+    """Cache performance statistics"""
     
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_id)
     
     # Time period
     period_start: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     period_end: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
     granularity: Mapped[str] = mapped_column(String(16), nullable=False)  # hour, day, week
     
-    # Cache metrics
+    # Cache performance metrics
     total_requests: Mapped[int] = mapped_column(Integer, default=0)
     cache_hits: Mapped[int] = mapped_column(Integer, default=0)
     cache_misses: Mapped[int] = mapped_column(Integer, default=0)
     
-    # Performance metrics
-    hit_rate: Mapped[float] = mapped_column(Float, default=0.0)
-    avg_response_time_cached: Mapped[float | None] = mapped_column(Float, nullable=True)
-    avg_response_time_uncached: Mapped[float | None] = mapped_column(Float, nullable=True)
-    time_saved: Mapped[float] = mapped_column(Float, default=0.0)
-    
-    # Resource savings
+    # Performance improvements
+    time_saved: Mapped[float] = mapped_column(Float, default=0.0)  # seconds
     tokens_saved: Mapped[int] = mapped_column(Integer, default=0)
     cost_saved: Mapped[float] = mapped_column(Float, default=0.0)
     
-    # Cache size metrics
+    # Cache health metrics
     total_entries: Mapped[int] = mapped_column(Integer, default=0)
     valid_entries: Mapped[int] = mapped_column(Integer, default=0)
     expired_entries: Mapped[int] = mapped_column(Integer, default=0)
     
-    # Model breakdown
+    # Breakdown by categories
     model_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     provider_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
-    # Cache efficiency
-    avg_hits_per_entry: Mapped[float] = mapped_column(Float, default=0.0)
-    entries_created: Mapped[int] = mapped_column(Integer, default=0)
-    entries_invalidated: Mapped[int] = mapped_column(Integer, default=0)
-    entries_expired: Mapped[int] = mapped_column(Integer, default=0)
+    # Calculated fields
+    @property
+    def hit_rate(self) -> float:
+        """Calculate cache hit rate percentage"""
+        if self.total_requests == 0:
+            return 0.0
+        return (self.cache_hits / self.total_requests) * 100.0
+    
+    @property
+    def avg_hits_per_entry(self) -> float:
+        """Calculate average hits per cache entry"""
+        if self.total_entries == 0:
+            return 0.0
+        return self.cache_hits / self.total_entries
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     

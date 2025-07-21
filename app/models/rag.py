@@ -47,9 +47,9 @@ class Document(Base, TimestampMixin):
     query_count: Mapped[int] = mapped_column(Integer, default=0)
     last_queried: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     
-    # Additional metadata
+    # Additional metadata - FIXED: renamed to avoid SQLAlchemy conflict
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    document_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     # Relationships
     chunks: Mapped[list["DocumentChunk"]] = relationship(
@@ -94,7 +94,7 @@ class Document(Base, TimestampMixin):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat(),
             'tags': self.tags,
-            'metadata': self.metadata
+            'metadata': self.document_metadata  # Return as 'metadata' for API compatibility
         }
 
 class DocumentChunk(Base, TimestampMixin):
@@ -131,8 +131,8 @@ class DocumentChunk(Base, TimestampMixin):
     last_retrieved: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     relevance_scores: Mapped[list | None] = mapped_column(JSON, nullable=True)  # Historical relevance scores
     
-    # Additional metadata
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Additional metadata - FIXED: renamed to avoid SQLAlchemy conflict
+    chunk_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     def __repr__(self):
         return f"<DocumentChunk {self.document_id}:{self.chunk_index} - {self.retrieval_count} retrievals>"
@@ -183,45 +183,42 @@ class DocumentChunk(Base, TimestampMixin):
             'last_retrieved': self.last_retrieved.isoformat() if self.last_retrieved else None,
             'average_relevance_score': self.average_relevance_score,
             'created_at': self.created_at.isoformat(),
-            'metadata': self.metadata
+            'metadata': self.chunk_metadata  # Return as 'metadata' for API compatibility
         }
 
 class RAGQuery(Base, TimestampMixin):
-    """RAG query logs and results"""
+    """RAG query tracking and results"""
     
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_id)
     
-    # Query information
+    # Query identification
     query_text: Mapped[str] = mapped_column(Text, nullable=False)
     query_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     
-    # User context
+    # User information
     user_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     session_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     
     # Search parameters
-    search_type: Mapped[str] = mapped_column(String(20), default='semantic')  # semantic, keyword, hybrid
+    search_type: Mapped[str] = mapped_column(String(20), default='similarity')  # similarity, keyword, hybrid
     max_results: Mapped[int] = mapped_column(Integer, default=5)
     similarity_threshold: Mapped[float] = mapped_column(Float, default=0.7)
     
-    # Results
+    # Search results
     results_found: Mapped[int] = mapped_column(Integer, default=0)
     results_used: Mapped[int] = mapped_column(Integer, default=0)
     best_match_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    retrieved_chunks: Mapped[list | None] = mapped_column(JSON, nullable=True)
     
     # Performance metrics
-    search_time: Mapped[float | None] = mapped_column(Float, nullable=True)
-    total_documents_searched: Mapped[int] = mapped_column(Integer, default=0)
+    search_time: Mapped[float | None] = mapped_column(Float, nullable=True)  # seconds
     
-    # Retrieved chunks
-    retrieved_chunks: Mapped[list | None] = mapped_column(JSON, nullable=True)  # List of chunk IDs and scores
-    
-    # Context enhancement
-    context_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Context generation
+    context_used: Mapped[str | None] = mapped_column(Text, nullable=True)
     context_length: Mapped[int] = mapped_column(Integer, default=0)
     
-    # Additional metadata
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Additional metadata - FIXED: renamed to avoid SQLAlchemy conflict
+    rag_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     def __repr__(self):
         return f"<RAGQuery {self.query_text[:50]}... - {self.results_found} results>"
@@ -258,7 +255,7 @@ class RAGQuery(Base, TimestampMixin):
             'context_length': self.context_length,
             'created_at': self.created_at.isoformat(),
             'retrieved_chunks': self.retrieved_chunks,
-            'metadata': self.metadata
+            'metadata': self.rag_metadata  # Return as 'metadata' for API compatibility
         }
 
 # Create indexes for performance

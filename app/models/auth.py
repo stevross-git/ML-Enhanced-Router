@@ -41,7 +41,7 @@ class User(Base, TimestampMixin):
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     
     # Additional metadata
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    user_key_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     # Relationships
     api_keys: Mapped[list["APIKey"]] = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
@@ -120,7 +120,7 @@ class User(Base, TimestampMixin):
             'last_login': self.last_login.isoformat() if self.last_login else None,
             'login_count': self.login_count,
             'created_at': self.created_at.isoformat(),
-            'metadata': self.metadata
+            'metadata': self.user_metadata
         }
 
 class APIKey(Base, TimestampMixin):
@@ -150,7 +150,7 @@ class APIKey(Base, TimestampMixin):
     rate_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)  # requests per minute
     
     # Additional metadata
-    metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    user_key_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     def __repr__(self):
         return f"<APIKey {self.name} ({self.key_prefix}...)>"
@@ -193,7 +193,7 @@ class APIKey(Base, TimestampMixin):
             'permissions': self.permissions,
             'rate_limit': self.rate_limit,
             'created_at': self.created_at.isoformat(),
-            'metadata': self.metadata
+            'metadata': self.user_metadata
         }
 
 class UserSession(Base, TimestampMixin):
