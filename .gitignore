@@ -41,3 +41,4 @@ venv.bak/
 instance/query_router.db
 rag_data/chroma.sqlite3
 cognitive_decisions.db
+uv.lock
