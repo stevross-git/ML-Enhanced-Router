@@ -15,7 +15,7 @@ except ImportError as e:
     QUERY_MODELS_AVAILABLE = False
 
 try:
-    from .agent import AgentRegistration, AgentMetrics
+    from .agent import AgentRegistration, AgentMetrics, Agent, AgentCapability, AgentSession
     AGENT_MODELS_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: Agent models not available: {e}")
@@ -129,7 +129,7 @@ __all__ = ['db', 'init_db', 'Base', 'TimestampMixin', 'SoftDeleteMixin', 'UUIDMi
 if QUERY_MODELS_AVAILABLE:
     __all__.extend(['QueryLog', 'QueryMetrics'])
 if AGENT_MODELS_AVAILABLE:
-    __all__.extend(['AgentRegistration', 'AgentMetrics'])
+    __all__.extend(['AgentRegistration', 'AgentMetrics', 'Agent', 'AgentCapability', 'AgentSession'])
 if AUTH_MODELS_AVAILABLE:
     __all__.extend(['User', 'APIKey', 'UserSession'])
 if AI_MODEL_MODELS_AVAILABLE:

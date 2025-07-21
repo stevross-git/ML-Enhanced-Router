@@ -5,9 +5,9 @@ Models for agent registration and management
 
 from datetime import datetime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Float, DateTime, Boolean, Text, JSON
+from sqlalchemy import Integer, String, Float, DateTime, Boolean, Text, JSON, ForeignKey
 
-from .base import Base, TimestampMixin
+from .base import Base, TimestampMixin, generate_id
 
 class AgentRegistration(Base, TimestampMixin):
     """Registry of all available agents"""
@@ -107,48 +107,132 @@ class AgentRegistration(Base, TimestampMixin):
             'tags': self.tags
         }
 
-class AgentMetrics(Base):
-    """Detailed metrics for agent performance"""
+class Agent(Base, TimestampMixin):
+    """Agent model for service layer operations"""
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_id)
+    
+    # Basic agent information
+    name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    endpoint: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    version: Mapped[str] = mapped_column(String(32), default='1.0.0')
+    
+    # Status and configuration
+    status: Mapped[str] = mapped_column(String(32), default='active', index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    max_concurrent_sessions: Mapped[int] = mapped_column(Integer, default=10)
+    
+    last_used: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    active_sessions: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Additional metadata
+    agent_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    
+    # Relationships
+    capabilities: Mapped[list["AgentCapability"]] = relationship("AgentCapability", back_populates="agent", cascade="all, delete-orphan")
+    sessions: Mapped[list["AgentSession"]] = relationship("AgentSession", back_populates="agent", cascade="all, delete-orphan")
+    metrics: Mapped[list["AgentMetrics"]] = relationship("AgentMetrics", back_populates="agent", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<Agent {self.id}: {self.name}>"
+    
+    def to_dict(self):
+        """Convert to dictionary representation"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'type': self.type,
+            'endpoint': self.endpoint,
+            'description': self.description,
+            'version': self.version,
+            'status': self.status,
+            'is_active': self.is_active,
+            'max_concurrent_sessions': self.max_concurrent_sessions,
+            'last_used': self.last_used.isoformat() if self.last_used else None,
+            'last_seen': self.last_seen.isoformat(),
+            'active_sessions': self.active_sessions,
+            'created_at': self.created_at.isoformat(),
+            'agent_metadata': self.agent_metadata
+        }
+
+class AgentCapability(Base, TimestampMixin):
+    """Agent capability model for tracking agent abilities"""
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     
     # Agent reference
-    agent_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    agent_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    agent_id: Mapped[str] = mapped_column(String(36), ForeignKey('agent.id'), nullable=False, index=True)
+    agent: Mapped["Agent"] = relationship("Agent", back_populates="capabilities")
     
-    # Time period
-    period_start: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    period_end: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    granularity: Mapped[str] = mapped_column(String(16), nullable=False)  # hour, day, week
+    capability: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    confidence_score: Mapped[float] = mapped_column(Float, default=1.0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    
+    def __repr__(self):
+        return f"<AgentCapability {self.agent_id}: {self.capability}>"
+    
+    def to_dict(self):
+        """Convert to dictionary representation"""
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'capability': self.capability,
+            'confidence_score': self.confidence_score,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat()
+        }
+
+class AgentSession(Base, TimestampMixin):
+    """Agent session model for tracking active sessions"""
+    
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_id)
+    
+    # Agent reference
+    agent_id: Mapped[str] = mapped_column(String(36), ForeignKey('agent.id'), nullable=False, index=True)
+    agent: Mapped["Agent"] = relationship("Agent", back_populates="sessions")
+    
+    # Session details
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    context: Mapped[dict] = mapped_column(JSON, default=dict)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    
+    def __repr__(self):
+        return f"<AgentSession {self.id} for {self.agent_id}>"
+    
+    def to_dict(self):
+        """Convert to dictionary representation"""
+        return {
+            'id': self.id,
+            'agent_id': self.agent_id,
+            'query': self.query,
+            'context': self.context,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat()
+        }
+
+class AgentMetrics(Base, TimestampMixin):
+    """Agent metrics model for performance tracking"""
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    
+    # Agent reference
+    agent_id: Mapped[str] = mapped_column(String(36), ForeignKey('agent.id'), nullable=False, index=True)
+    agent: Mapped["Agent"] = relationship("Agent", back_populates="metrics")
     
     # Request metrics
     total_requests: Mapped[int] = mapped_column(Integer, default=0)
     successful_requests: Mapped[int] = mapped_column(Integer, default=0)
     failed_requests: Mapped[int] = mapped_column(Integer, default=0)
-    timeout_requests: Mapped[int] = mapped_column(Integer, default=0)
     
     # Performance metrics
-    avg_response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
-    min_response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
-    max_response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
-    p95_response_time: Mapped[float | None] = mapped_column(Float, nullable=True)
-    
-    # Resource usage
-    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
-    total_cost: Mapped[float] = mapped_column(Float, default=0.0)
-    
-    # Category performance
-    category_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    error_breakdown: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    
-    # Health metrics
-    uptime_percentage: Mapped[float] = mapped_column(Float, default=100.0)
-    health_check_failures: Mapped[int] = mapped_column(Integer, default=0)
-    
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    average_response_time: Mapped[float] = mapped_column(Float, default=0.0)
+    last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     def __repr__(self):
-        return f"<AgentMetrics {self.agent_id}: {self.period_start} - {self.total_requests} requests>"
+        return f"<AgentMetrics {self.agent_id}: {self.total_requests} requests>"
     
     @property
     def success_rate(self):
@@ -162,24 +246,23 @@ class AgentMetrics(Base):
         return {
             'id': self.id,
             'agent_id': self.agent_id,
-            'agent_name': self.agent_name,
-            'period_start': self.period_start.isoformat(),
-            'period_end': self.period_end.isoformat(),
-            'granularity': self.granularity,
             'total_requests': self.total_requests,
             'successful_requests': self.successful_requests,
             'failed_requests': self.failed_requests,
             'success_rate': self.success_rate,
-            'avg_response_time': self.avg_response_time,
-            'total_tokens': self.total_tokens,
-            'total_cost': self.total_cost,
-            'uptime_percentage': self.uptime_percentage,
-            'category_breakdown': self.category_breakdown,
-            'error_breakdown': self.error_breakdown
+            'average_response_time': self.average_response_time,
+            'last_updated': self.last_updated.isoformat(),
+            'created_at': self.created_at.isoformat()
         }
 
 # Create indexes for performance
 from sqlalchemy import Index
 
-Index('idx_agent_metrics_agent_period', AgentMetrics.agent_id, AgentMetrics.period_start)
+Index('idx_agent_active_status', Agent.is_active, Agent.status)
+Index('idx_agent_type_active', Agent.type, Agent.is_active)
+Index('idx_agent_last_used', Agent.last_used)
+Index('idx_agent_capability_agent_active', AgentCapability.agent_id, AgentCapability.is_active)
+Index('idx_agent_capability_capability', AgentCapability.capability)
+Index('idx_agent_session_agent_active', AgentSession.agent_id, AgentSession.is_active)
+Index('idx_agent_metrics_agent', AgentMetrics.agent_id)
 Index('idx_agent_registration_active_healthy', AgentRegistration.is_active, AgentRegistration.is_healthy)
