@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package ai_communication;
+
+// Core message structure for AI-to-AI communication
+message AIMessage {
+    uint32 msg_id = 1;
+    MessageType type = 2;
+    bytes payload = 3;
+    uint32 checksum = 4;
+    uint64 context_ref = 5;
+    int64 timestamp = 6;
+    string sender_id = 7;
+    string recipient_id = 8;
+    Priority priority = 9;
+    repeated string tags = 10;
+}
+
+// Message types enum
+enum MessageType {
+    UNKNOWN = 0;
+    QUERY = 1;
+    RESPONSE = 2;
+    CONTEXT_SHARE = 3;
+    SYSTEM_STATUS = 4;
+    ERROR = 5;
+    HEARTBEAT = 6;
+    BULK_TRANSFER = 7;
+    EMERGENCY = 8;
+}
+
+// Priority levels
+enum Priority {
+    LOW = 0;
+    NORMAL = 1;
+    HIGH = 2;
+    CRITICAL = 3;
+    EMERGENCY = 4;
+}
+
+// Context reference message
+message ContextReference {
+    uint64 context_id = 1;
+    string context_key = 2;
+    int64 created_at = 3;
+    int64 expires_at = 4;
+    uint32 access_count = 5;
+    repeated string associated_agents = 6;
+}
+
+// System status message
+message SystemStatus {
+    string agent_id = 1;
+    bool is_healthy = 2;
+    float cpu_usage = 3;
+    float memory_usage = 4;
+    uint32 active_connections = 5;
+    uint32 pending_messages = 6;
+    string status_message = 7;
+    int64 last_heartbeat = 8;
+}
+
+// Error message structure
+message ErrorMessage {
+    string error_code = 1;
+    string error_message = 2;
+    string stack_trace = 3;
+    uint32 original_msg_id = 4;
+    ErrorSeverity severity = 5;
+    bool is_recoverable = 6;
+}
+
+// Error severity levels
+enum ErrorSeverity {
+    INFO = 0;
+    WARNING = 1;
+    ERROR = 2;
+    CRITICAL = 3;
+    FATAL = 4;
+}
+
+// Bulk transfer metadata
+message BulkTransferMetadata {
+    uint32 total_chunks = 1;
+    uint32 current_chunk = 2;
+    uint64 total_size = 3;
+    string transfer_id = 4;
+    string content_type = 5;
+    string compression_type = 6;
+}
+
+// Authentication token structure
+message AuthToken {
+    string token = 1;
+    string agent_id = 2;
+    int64 issued_at = 3;
+    int64 expires_at = 4;
+    repeated string permissions = 5;
+    string issuer = 6;
+}
