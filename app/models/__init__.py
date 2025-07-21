@@ -64,31 +64,105 @@ def _create_initial_data():
                     'categories': ['general', 'reasoning', 'coding']
                 },
                 {
-                    'name': 'Anthropic Claude',
-                    'provider': 'anthropic', 
-                    'model_id': 'claude-3-sonnet',
+                    'name': 'OpenAI GPT-3.5 Turbo',
+                    'provider': 'openai',
+                    'model_id': 'gpt-3.5-turbo',
+                    'model_type': 'completion',
+                    'is_active': True,
+                    'categories': ['general', 'chat']
+                },
+                {
+                    'name': 'Claude 3 Sonnet',
+                    'provider': 'anthropic',
+                    'model_id': 'claude-3-sonnet-20240229',
                     'model_type': 'completion',
                     'is_active': False,
-                    'categories': ['general', 'analysis', 'writing']
+                    'categories': ['general', 'reasoning', 'analysis']
+                },
+                {
+                    'name': 'Gemini Pro',
+                    'provider': 'google',
+                    'model_id': 'gemini-pro',
+                    'model_type': 'completion',
+                    'is_active': False,
+                    'categories': ['general', 'multimodal']
                 }
             ]
             
             for model_data in default_models:
-                model = MLModelRegistry(**model_data)
+                model = MLModelRegistry(
+                    id=model_data['model_id'],
+                    name=model_data['name'],
+                    model_type=model_data['model_type'],
+                    categories=model_data['categories'],
+                    config={
+                        'provider': model_data['provider'],
+                        'model_id': model_data['model_id'],
+                        'max_tokens': 4000,
+                        'temperature': 0.7
+                    },
+                    is_active=model_data['is_active']
+                )
                 db.session.add(model)
         
+        # Create default agent registrations
+        if not AgentRegistration.query.first():
+            default_agents = [
+                {
+                    'id': 'general_assistant',
+                    'name': 'General Assistant',
+                    'description': 'General purpose AI assistant for various tasks',
+                    'endpoint': 'internal://general',
+                    'categories': ['general', 'chat', 'help', 'questions']
+                },
+                {
+                    'id': 'coding_assistant',
+                    'name': 'Coding Assistant', 
+                    'description': 'Specialized assistant for programming and code-related tasks',
+                    'endpoint': 'internal://coding',
+                    'categories': ['coding', 'programming', 'debug', 'development']
+                },
+                {
+                    'id': 'analysis_assistant',
+                    'name': 'Analysis Assistant',
+                    'description': 'Data analysis and research specialist',
+                    'endpoint': 'internal://analysis',
+                    'categories': ['analysis', 'research', 'data', 'statistics']
+                },
+                {
+                    'id': 'writing_assistant',
+                    'name': 'Writing Assistant',
+                    'description': 'Creative and technical writing specialist',
+                    'endpoint': 'internal://writing',
+                    'categories': ['writing', 'creative', 'content', 'documentation']
+                }
+            ]
+            
+            for agent_data in default_agents:
+                agent = AgentRegistration(
+                    id=agent_data['id'],
+                    name=agent_data['name'],
+                    description=agent_data['description'],
+                    endpoint=agent_data['endpoint'],
+                    categories=agent_data['categories'],
+                    capabilities={
+                        'max_tokens': 4000,
+                        'temperature': 0.7,
+                        'supports_streaming': True
+                    },
+                    is_active=True
+                )
+                db.session.add(agent)
+        
+        # Commit all initial data
         db.session.commit()
         
     except Exception as e:
         db.session.rollback()
         raise e
 
-# Export all models and database instance
+# Export all models and utilities
 __all__ = [
-    # Database
-    'db',
-    'init_db',
-    
     # Base classes
     'Base',
     'TimestampMixin',
@@ -96,19 +170,32 @@ __all__ = [
     'UUIDMixin',
     'generate_id',
     
-    # Model classes
+    # Query models
     'QueryLog',
     'QueryMetrics',
+    
+    # Agent models
     'AgentRegistration',
     'AgentMetrics',
+    
+    # Auth models
     'User',
     'APIKey',
     'UserSession',
+    
+    # AI model registry
     'MLModelRegistry',
     'ModelConfiguration',
+    
+    # Cache models
     'AICacheEntry',
     'AICacheStats',
+    
+    # RAG models
     'Document',
-    'DocumentChunk',
-    'RAGQuery'
+    'DocumentChunk', 
+    'RAGQuery',
+    
+    # Database initialization
+    'init_db'
 ]
