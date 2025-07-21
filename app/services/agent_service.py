@@ -86,7 +86,7 @@ class AgentService:
                 description=agent_data.get('description', ''),
                 version=agent_data.get('version', '1.0.0'),
                 status=AgentStatus.ACTIVE.value,
-                metadata=agent_data.get('metadata', {}),
+                agent_metadata=agent_data.get('metadata', {}),
                 max_concurrent_sessions=agent_data.get('max_concurrent_sessions', self.max_concurrent_sessions),
                 created_at=datetime.utcnow(),
                 last_seen=datetime.utcnow(),
@@ -112,6 +112,10 @@ class AgentService:
             
             metrics = AgentMetrics(
                 agent_id=agent_id,
+                agent_name=agent_data['name'],  # Added missing field
+                period_start=datetime.utcnow(),  # Added missing field
+                period_end=datetime.utcnow(),    # Added missing field
+                granularity='day',              # Added missing field
                 total_requests=0,
                 successful_requests=0,
                 failed_requests=0,
@@ -278,7 +282,9 @@ class AgentService:
             agent.last_seen = datetime.utcnow()
             
             if metadata:
-                agent.metadata.update(metadata)
+                if agent.agent_metadata is None:  # FIXED: Proper indentation and field name
+                    agent.agent_metadata = {}
+                agent.agent_metadata.update(metadata)
             
             db.session.commit()
             
@@ -411,7 +417,8 @@ class AgentService:
             session = AgentSession(
                 id=session_id,
                 agent_id=agent_id,
-                query=query,
+                session_type='query',  # Added missing field
+                user_id=context.get('user_id') if context else None,  # Added missing field
                 context=context or {},
                 created_at=datetime.utcnow(),
                 is_active=True

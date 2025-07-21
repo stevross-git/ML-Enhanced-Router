@@ -57,6 +57,10 @@ class AgentError(BaseMLRouterException):
     """Raised when agent operations fail"""
     pass
 
+class EmailError(BaseMLRouterException):
+    """Raised when email operations fail"""
+    pass
+
 class ConfigurationError(BaseMLRouterException):
     """Raised when configuration is invalid"""
     pass
@@ -123,6 +127,12 @@ def register_error_handlers(app):
     def handle_agent_error(error):
         """Handle agent errors"""
         app.logger.error(f"Agent error: {error.message}")
+        return jsonify(error.to_dict()), 500
+    
+    @app.errorhandler(EmailError)
+    def handle_email_error(error):
+        """Handle email errors"""
+        app.logger.error(f"Email error: {error.message}")
         return jsonify(error.to_dict()), 500
     
     @app.errorhandler(ConfigurationError)
