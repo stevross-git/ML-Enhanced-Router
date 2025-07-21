@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Intelligence - ML Router</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .email-item {
+            border-left: 4px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        .email-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .classification-badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+        }
+        .urgent { border-left-color: #dc3545; }
+        .work { border-left-color: #007bff; }
+        .personal { border-left-color: #28a745; }
+        .newsletter { border-left-color: #6c757d; }
+        .social { border-left-color: #fd7e14; }
+        .calendar { border-left-color: #6f42c1; }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .config-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .reply-preview {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .email-body {
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .provider-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+        .status-active { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+        .tab-content {
+            min-height: 400px;
+        }
+        .filter-pills {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .filter-pill.active {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <div class="sidebar-section">
+                    <h5 class="mb-3">
+                        <i class="fas fa-envelope me-2"></i>
+                        Email Intelligence
+                    </h5>
+                    
+                    <!-- Navigation -->
+                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link active" id="v-pills-inbox-tab" data-bs-toggle="pill" data-bs-target="#v-pills-inbox" type="button" role="tab">
+                            <i class="fas fa-inbox me-2"></i>
+                            Inbox
+                        </button>
+                        <button class="nav-link" id="v-pills-config-tab" data-bs-toggle="pill" data-bs-target="#v-pills-config" type="button" role="tab">
+                            <i class="fas fa-cog me-2"></i>
+                            Configuration
+                        </button>
+                        <button class="nav-link" id="v-pills-analytics-tab" data-bs-toggle="pill" data-bs-target="#v-pills-analytics" type="button" role="tab">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Analytics
+                        </button>
+                        <button class="nav-link" id="v-pills-training-tab" data-bs-toggle="pill" data-bs-target="#v-pills-training" type="button" role="tab">
+                            <i class="fas fa-brain me-2"></i>
+                            Writing Style Training
+                        </button>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="mt-4">
+                        <h6>Quick Actions</h6>
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary btn-sm" onclick="fetchEmails()">
+                                <i class="fas fa-sync me-1"></i>
+                                Fetch Emails
+                            </button>
+                            <button class="btn btn-info btn-sm" onclick="generateSummary()">
+                                <i class="fas fa-file-alt me-1"></i>
+                                Generate Summary
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="testConfiguration()">
+                                <i class="fas fa-check me-1"></i>
+                                Test Config
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Provider Status -->
+                    <div class="mt-4">
+                        <h6>Provider Status</h6>
+                        <div class="provider-status">
+                            <span class="status-indicator" id="providerStatus"></span>
+                            <span id="providerName">Not Configured</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics -->
+                    <div class="mt-4">
+                        <h6>Statistics</h6>
+                        <div class="small">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Total Messages:</span>
+                                <span id="totalMessages">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Classified:</span>
+                                <span id="classifiedMessages">0</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Replies Generated:</span>
+                                <span id="repliesGenerated">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-9">
+                <div class="tab-content" id="v-pills-tabContent">
+                    <!-- Inbox Tab -->
+                    <div class="tab-pane fade show active" id="v-pills-inbox" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Email Inbox</h4>
+                            <button class="btn btn-primary" onclick="fetchEmails()">
+                                <i class="fas fa-sync me-1"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        
+                        <!-- Filter Pills -->
+                        <div class="filter-pills">
+                            <span class="filter-pill active" onclick="filterEmails('all')">All</span>
+                            <span class="filter-pill" onclick="filterEmails('urgent')">Urgent</span>
+                            <span class="filter-pill" onclick="filterEmails('work')">Work</span>
+                            <span class="filter-pill" onclick="filterEmails('personal')">Personal</span>
+                            <span class="filter-pill" onclick="filterEmails('unread')">Unread</span>
+                        </div>
+                        
+                        <!-- Email List -->
+                        <div id="emailList" class="email-list">
+                            <div class="loading-spinner" id="loadingSpinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading emails...</p>
+                            </div>
+                            <div class="text-center text-muted" id="emptyState" style="display: none;">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <p>No emails found. Configure your email provider and fetch emails to get started.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Configuration Tab -->
+                    <div class="tab-pane fade" id="v-pills-config" role="tabpanel">
+                        <h4>Email Configuration</h4>
+                        <div class="config-section">
+                            <h6>Email Provider</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="emailProvider" class="form-label">Provider Type</label>
+                                    <select class="form-select" id="emailProvider">
+                                        <option value="imap_smtp">IMAP/SMTP</option>
+                                        <option value="gmail_api">Gmail API</option>
+                                        <option value="outlook_graph">Outlook Graph</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="emailHost" class="form-label">Email Server</label>
+                                    <input type="text" class="form-control" id="emailHost" placeholder="imap.gmail.com">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-3">
+                                    <label for="emailPort" class="form-label">Port</label>
+                                    <input type="number" class="form-control" id="emailPort" value="993">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="emailUsername" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="emailUsername" placeholder="your-email@gmail.com">
+                                </div>
+                                <div class="col-md-5">
+                                    <label for="emailPassword" class="form-label">Password/App Password</label>
+                                    <input type="password" class="form-control" id="emailPassword" placeholder="Your app password">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="useTLS" checked>
+                                        <label class="form-check-label" for="useTLS">Use TLS</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="useSSL">
+                                        <label class="form-check-label" for="useSSL">Use SSL</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-success" onclick="saveConfiguration()">
+                                    <i class="fas fa-save me-1"></i>
+                                    Save Configuration
+                                </button>
+                                <button class="btn btn-info ms-2" onclick="testConfiguration()">
+                                    <i class="fas fa-test-tube me-1"></i>
+                                    Test Connection
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- AI Configuration -->
+                        <div class="config-section">
+                            <h6>AI Configuration</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="defaultTone" class="form-label">Default Reply Tone</label>
+                                    <select class="form-select" id="defaultTone">
+                                        <option value="professional">Professional</option>
+                                        <option value="friendly">Friendly</option>
+                                        <option value="formal">Formal</option>
+                                        <option value="casual">Casual</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="autoClassify" class="form-label">Auto-Classification</label>
+                                    <select class="form-select" id="autoClassify">
+                                        <option value="enabled">Enabled</option>
+                                        <option value="disabled">Disabled</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics Tab -->
+                    <div class="tab-pane fade" id="v-pills-analytics" role="tabpanel">
+                        <h4>Email Analytics</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="stats-card">
+                                    <h6>Email Volume</h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="h3" id="totalEmailsCount">0</div>
+                                            <small>Total Emails</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="h3" id="todayEmailsCount">0</div>
+                                            <small>Today</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stats-card">
+                                    <h6>Classification Accuracy</h6>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <div class="h3" id="classificationAccuracy">0%</div>
+                                            <small>Accuracy</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="h3" id="replyAccuracy">0%</div>
+                                            <small>Reply Quality</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Classification Breakdown -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Classification Breakdown</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="classificationChart">
+                                    <canvas id="classificationChartCanvas" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top Senders -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Top Senders</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="topSenders">
+                                    <!-- Top senders will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Writing Style Training Tab -->
+                    <div class="tab-pane fade" id="v-pills-training" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4>Writing Style Training</h4>
+                            <button class="btn btn-primary" onclick="loadWritingStyleSettings()">
+                                <i class="fas fa-sync me-1"></i>
+                                Refresh
+                            </button>
+                        </div>
+                        
+                        <!-- Training Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="trainingConsent" class="form-label">Training Consent</label>
+                                            <select class="form-select" id="trainingConsent">
+                                                <option value="disabled">Disabled</option>
+                                                <option value="enabled">Enabled</option>
+                                                <option value="ask_each_time">Ask Each Time</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="retentionDays" class="form-label">Data Retention (Days)</label>
+                                            <input type="number" class="form-control" id="retentionDays" min="1" max="365" value="30">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="autoLearnFromSent">
+                                            <label class="form-check-label" for="autoLearnFromSent">
+                                                Auto-learn from sent emails
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="learnFromEdits">
+                                            <label class="form-check-label" for="learnFromEdits">
+                                                Learn from manual edits
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="preservePrivacy" checked>
+                                            <label class="form-check-label" for="preservePrivacy">
+                                                Preserve privacy (remove sensitive data)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="userApprovalRequired" checked>
+                                            <label class="form-check-label" for="userApprovalRequired">
+                                                User approval required for training
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <label for="confidenceThreshold" class="form-label">Minimum Confidence Threshold</label>
+                                    <input type="range" class="form-range" id="confidenceThreshold" min="0" max="1" step="0.1" value="0.8">
+                                    <div class="d-flex justify-content-between">
+                                        <small>0.0 (Low)</small>
+                                        <small>1.0 (High)</small>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary" onclick="saveWritingStyleSettings()">
+                                        <i class="fas fa-save me-1"></i>
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Training Data -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Training Data</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-8">
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-primary" onclick="loadTrainingData()">
+                                                <i class="fas fa-refresh me-1"></i>
+                                                Refresh Data
+                                            </button>
+                                            <button class="btn btn-outline-secondary" onclick="cleanupTrainingData()">
+                                                <i class="fas fa-trash me-1"></i>
+                                                Cleanup Expired
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-end">
+                                            <small class="text-muted">Total entries: <span id="trainingDataCount">0</span></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="trainingDataList">
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-brain text-muted fa-2x mb-2"></i>
+                                        <p class="text-muted">No training data available</p>
+                                        <p class="text-muted small">Training data will appear here as you interact with the email system</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Modal -->
+    <div class="modal fade" id="emailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="emailModalTitle">Email Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>From:</strong> <span id="emailFrom"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>To:</strong> <span id="emailTo"></span>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <strong>Classification:</strong> <span id="emailClassification"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Intent:</strong> <span id="emailIntent"></span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Subject:</strong> <span id="emailSubject"></span>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Body:</strong>
+                        <div id="emailBody" class="mt-2" style="max-height: 300px; overflow-y: auto;"></div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Action Items:</strong>
+                        <div id="emailActionItems" class="mt-2"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="generateReply()">Generate Reply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reply Modal -->
+    <div class="modal fade" id="replyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Generate Reply</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="replyTone" class="form-label">Reply Tone</label>
+                            <select class="form-select" id="replyTone">
+                                <option value="professional">Professional</option>
+                                <option value="friendly">Friendly</option>
+                                <option value="formal">Formal</option>
+                                <option value="casual">Casual</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="replyPersona" class="form-label">Persona (Optional)</label>
+                            <input type="text" class="form-control" id="replyPersona" placeholder="e.g., Support Representative">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="replySubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="replySubject" readonly>
+                    </div>
+                    <div class="mt-3">
+                        <label for="replyBody" class="form-label">Reply Body</label>
+                        <textarea class="form-control" id="replyBody" rows="10" placeholder="AI-generated reply will appear here..."></textarea>
+                    </div>
+                    <div class="mt-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="requiresReview" checked>
+                            <label class="form-check-label" for="requiresReview">
+                                Requires human review before sending
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="generateAIReply()">Generate AI Reply</button>
+                    <button type="button" class="btn btn-success" onclick="sendReply()">Send Reply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentEmails = [];
+        let currentFilter = 'all';
+        let selectedEmailId = null;
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEmails();
+            loadAnalytics();
+            loadProviderStatus();
+        });
+
+        // Load emails from API
+        async function loadEmails() {
+            try {
+                showLoading(true);
+                const response = await fetch('/api/email/messages');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    currentEmails = data.messages;
+                    displayEmails(currentEmails);
+                    updateStatistics();
+                } else {
+                    showError('Failed to load emails: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error loading emails: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display emails in the list
+        function displayEmails(emails) {
+            const emailList = document.getElementById('emailList');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (emails.length === 0) {
+                emailList.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            const emailHTML = emails.map(email => `
+                <div class="card email-item mb-3 ${email.classification || 'work'}" onclick="openEmailModal('${email.id}')">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${email.subject}</h6>
+                                <small class="text-muted">From: ${email.sender}</small>
+                                <div class="email-body mt-2">
+                                    ${email.body}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">${new Date(email.timestamp).toLocaleDateString()}</small>
+                                <br>
+                                <span class="badge classification-badge bg-${getClassificationColor(email.classification)}">
+                                    ${email.classification || 'unclassified'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); openReplyModal('${email.id}')">
+                                <i class="fas fa-reply"></i> Reply
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); classifyEmail('${email.id}')">
+                                <i class="fas fa-tag"></i> Classify
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            emailList.innerHTML = emailHTML;
+        }
+
+        // Get classification color
+        function getClassificationColor(classification) {
+            const colors = {
+                'urgent': 'danger',
+                'work': 'primary',
+                'personal': 'success',
+                'newsletter': 'secondary',
+                'social': 'warning',
+                'calendar': 'info'
+            };
+            return colors[classification] || 'secondary';
+        }
+
+        // Filter emails
+        function filterEmails(filter) {
+            currentFilter = filter;
+            
+            // Update filter pills
+            document.querySelectorAll('.filter-pill').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter emails
+            let filteredEmails = currentEmails;
+            if (filter !== 'all') {
+                filteredEmails = currentEmails.filter(email => {
+                    if (filter === 'unread') return !email.read;
+                    return email.classification === filter;
+                });
+            }
+            
+            displayEmails(filteredEmails);
+        }
+
+        // Fetch emails from provider
+        async function fetchEmails() {
+            try {
+                showLoading(true);
+                const response = await fetch('/api/email/fetch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: 'imap_smtp' })
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    currentEmails = data.messages;
+                    displayEmails(currentEmails);
+                    updateStatistics();
+                    showSuccess('Emails fetched successfully');
+                } else {
+                    showError('Failed to fetch emails: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error fetching emails: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Open email modal
+        function openEmailModal(emailId) {
+            selectedEmailId = emailId;
+            const email = currentEmails.find(e => e.id === emailId);
+            if (!email) return;
+            
+            document.getElementById('emailModalTitle').textContent = email.subject;
+            document.getElementById('emailFrom').textContent = email.sender;
+            document.getElementById('emailTo').textContent = email.recipient;
+            document.getElementById('emailSubject').textContent = email.subject;
+            document.getElementById('emailBody').innerHTML = email.body.replace(/\n/g, '<br>');
+            document.getElementById('emailClassification').textContent = email.classification || 'unclassified';
+            document.getElementById('emailIntent').textContent = email.intent || 'unknown';
+            
+            // Display action items
+            const actionItems = email.action_items || [];
+            const actionItemsHTML = actionItems.length > 0 
+                ? actionItems.map(item => `<li>${item}</li>`).join('')
+                : '<li>No action items identified</li>';
+            document.getElementById('emailActionItems').innerHTML = `<ul>${actionItemsHTML}</ul>`;
+            
+            new bootstrap.Modal(document.getElementById('emailModal')).show();
+        }
+
+        // Open reply modal
+        function openReplyModal(emailId) {
+            selectedEmailId = emailId;
+            const email = currentEmails.find(e => e.id === emailId);
+            if (!email) return;
+            
+            document.getElementById('replySubject').value = 'Re: ' + email.subject;
+            document.getElementById('replyBody').value = '';
+            
+            new bootstrap.Modal(document.getElementById('replyModal')).show();
+        }
+
+        // Generate AI reply
+        async function generateAIReply() {
+            if (!selectedEmailId) return;
+            
+            try {
+                const tone = document.getElementById('replyTone').value;
+                const persona = document.getElementById('replyPersona').value;
+                
+                // This would call the AI reply generation API
+                showSuccess('AI reply generation would be implemented here');
+                
+                // Mock reply for demonstration
+                document.getElementById('replyBody').value = 'Thank you for your email. I will review this and get back to you shortly.\n\nBest regards,\nAI Assistant';
+            } catch (error) {
+                showError('Error generating reply: ' + error.message);
+            }
+        }
+
+        // Save configuration
+        async function saveConfiguration() {
+            try {
+                const config = {
+                    provider: document.getElementById('emailProvider').value,
+                    settings: {
+                        host: document.getElementById('emailHost').value,
+                        port: parseInt(document.getElementById('emailPort').value),
+                        username: document.getElementById('emailUsername').value,
+                        password: document.getElementById('emailPassword').value,
+                        use_tls: document.getElementById('useTLS').checked,
+                        use_ssl: document.getElementById('useSSL').checked
+                    }
+                };
+                
+                const response = await fetch('/api/email/configure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showSuccess('Configuration saved successfully');
+                    loadProviderStatus();
+                } else {
+                    showError('Failed to save configuration: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error saving configuration: ' + error.message);
+            }
+        }
+
+        // Test configuration
+        async function testConfiguration() {
+            showSuccess('Configuration test would be implemented here');
+        }
+
+        // Load analytics
+        async function loadAnalytics() {
+            try {
+                const response = await fetch('/api/email/summary');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    updateAnalytics(data.summary);
+                }
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        }
+
+        // Update analytics display
+        function updateAnalytics(summary) {
+            document.getElementById('totalEmailsCount').textContent = summary.total_messages || 0;
+            document.getElementById('todayEmailsCount').textContent = summary.today_messages || 0;
+            document.getElementById('classificationAccuracy').textContent = (summary.classification_accuracy * 100).toFixed(1) + '%';
+            document.getElementById('replyAccuracy').textContent = (summary.reply_accuracy * 100).toFixed(1) + '%';
+            
+            // Update top senders
+            const topSendersHTML = (summary.most_active_senders || []).map(sender => `
+                <div class="d-flex justify-content-between">
+                    <span>${sender.email}</span>
+                    <span class="badge bg-primary">${sender.count}</span>
+                </div>
+            `).join('');
+            document.getElementById('topSenders').innerHTML = topSendersHTML;
+        }
+
+        // Load provider status
+        function loadProviderStatus() {
+            // Mock provider status
+            const statusIndicator = document.getElementById('providerStatus');
+            const providerName = document.getElementById('providerName');
+            
+            statusIndicator.className = 'status-indicator status-warning';
+            providerName.textContent = 'IMAP/SMTP (Not Configured)';
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            document.getElementById('totalMessages').textContent = currentEmails.length;
+            document.getElementById('classifiedMessages').textContent = currentEmails.filter(e => e.classification).length;
+            document.getElementById('repliesGenerated').textContent = 0; // Mock value
+        }
+
+        // Utility functions
+        function showLoading(show) {
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) {
+                spinner.style.display = show ? 'block' : 'none';
+            }
+        }
+
+        function showSuccess(message) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+            toast.setAttribute('role', 'alert');
+            toast.style.zIndex = '1055';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+
+        function showError(message) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-danger border-0 position-fixed top-0 end-0 m-3';
+            toast.setAttribute('role', 'alert');
+            toast.style.zIndex = '1055';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+
+        // Generate summary
+        function generateSummary() {
+            showSuccess('Email summary generation would be implemented here');
+        }
+
+        // Send reply
+        function sendReply() {
+            showSuccess('Email sending would be implemented here');
+        }
+
+        // Classify email
+        function classifyEmail(emailId) {
+            showSuccess('Email classification would be implemented here');
+        }
+
+        // Writing Style Training Functions
+        async function loadWritingStyleSettings() {
+            try {
+                const response = await fetch('/api/email/writing-style/settings');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const settings = data.settings;
+                    document.getElementById('trainingConsent').value = settings.consent || 'disabled';
+                    document.getElementById('retentionDays').value = settings.training_data_retention_days || 30;
+                    document.getElementById('autoLearnFromSent').checked = settings.auto_learn_from_sent || false;
+                    document.getElementById('learnFromEdits').checked = settings.learn_from_manual_edits || false;
+                    document.getElementById('preservePrivacy').checked = settings.preserve_privacy !== false;
+                    document.getElementById('userApprovalRequired').checked = settings.user_approval_required !== false;
+                    document.getElementById('confidenceThreshold').value = settings.min_confidence_threshold || 0.8;
+                    showSuccess('Writing style settings loaded successfully');
+                } else {
+                    showError('Failed to load writing style settings: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error loading writing style settings: ' + error.message);
+            }
+        }
+
+        async function saveWritingStyleSettings() {
+            try {
+                const settings = {
+                    consent: document.getElementById('trainingConsent').value,
+                    training_data_retention_days: parseInt(document.getElementById('retentionDays').value),
+                    auto_learn_from_sent: document.getElementById('autoLearnFromSent').checked,
+                    learn_from_manual_edits: document.getElementById('learnFromEdits').checked,
+                    preserve_privacy: document.getElementById('preservePrivacy').checked,
+                    user_approval_required: document.getElementById('userApprovalRequired').checked,
+                    min_confidence_threshold: parseFloat(document.getElementById('confidenceThreshold').value)
+                };
+                
+                const response = await fetch('/api/email/writing-style/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showSuccess('Writing style settings saved successfully');
+                } else {
+                    showError('Failed to save writing style settings: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error saving writing style settings: ' + error.message);
+            }
+        }
+
+        async function loadTrainingData() {
+            try {
+                const response = await fetch('/api/email/writing-style/training-data');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const trainingData = data.training_data || [];
+                    document.getElementById('trainingDataCount').textContent = trainingData.length;
+                    
+                    if (trainingData.length === 0) {
+                        document.getElementById('trainingDataList').innerHTML = `
+                            <div class="text-center py-4">
+                                <i class="fas fa-brain text-muted fa-2x mb-2"></i>
+                                <p class="text-muted">No training data available</p>
+                                <p class="text-muted small">Training data will appear here as you interact with the email system</p>
+                            </div>
+                        `;
+                    } else {
+                        const trainingHTML = trainingData.map(entry => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <h6 class="card-title">Training Entry</h6>
+                                            <p class="card-text text-muted small">${entry.text.substring(0, 100)}${entry.text.length > 100 ? '...' : ''}</p>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <span class="badge bg-secondary">${entry.tone}</span>
+                                            <br>
+                                            <small class="text-muted">${new Date(entry.created_at).toLocaleDateString()}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                        document.getElementById('trainingDataList').innerHTML = trainingHTML;
+                    }
+                } else {
+                    showError('Failed to load training data: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error loading training data: ' + error.message);
+            }
+        }
+
+        async function cleanupTrainingData() {
+            try {
+                const response = await fetch('/api/email/writing-style/cleanup', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.status === 'success') {
+                    showSuccess('Training data cleanup completed successfully');
+                    loadTrainingData(); // Refresh the training data list
+                } else {
+                    showError('Failed to cleanup training data: ' + data.error);
+                }
+            } catch (error) {
+                showError('Error cleaning up training data: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

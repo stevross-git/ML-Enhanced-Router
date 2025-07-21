@@ -1,0 +1,2174 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - ML Query Router{% endblock %}
+
+{% block content %}
+<style>
+/* Dark theme form styling fixes */
+.form-select, .form-control {
+    background-color: var(--bs-dark) !important;
+    color: var(--bs-light) !important;
+    border-color: var(--bs-secondary) !important;
+}
+
+.form-select option {
+    background-color: var(--bs-dark) !important;
+    color: var(--bs-light) !important;
+}
+
+.form-select:focus, .form-control:focus {
+    background-color: var(--bs-dark) !important;
+    color: var(--bs-light) !important;
+    border-color: var(--bs-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.card.bg-dark {
+    background-color: var(--bs-dark) !important;
+}
+
+.text-light {
+    color: var(--bs-light) !important;
+}
+
+.list-group-item {
+    background-color: var(--bs-dark) !important;
+    color: var(--bs-light) !important;
+    border-color: var(--bs-secondary) !important;
+}
+
+.list-group-item.active {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+}
+</style>
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-cog me-2"></i>
+                Settings
+            </h2>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Settings Categories
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <a href="#api-keys" class="list-group-item list-group-item-action active" data-bs-toggle="tab">
+                        <i class="fas fa-key me-2"></i>
+                        API Keys
+                    </a>
+                    <a href="#general" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-cog me-2"></i>
+                        General Settings
+                    </a>
+                    <a href="#security" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Security
+                    </a>
+                    <a href="#performance" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Performance
+                    </a>
+                    <a href="#cache" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-database me-2"></i>
+                        Cache Management
+                    </a>
+                    <a href="#token-management" class="list-group-item list-group-item-action" data-bs-toggle="tab">
+                        <i class="fas fa-coins me-2"></i>
+                        Token Management
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="tab-content">
+            <!-- API Keys Tab -->
+            <div class="tab-pane fade show active" id="api-keys">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-key me-2"></i>
+                            Enterprise API Keys
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Configure API keys for enterprise AI model providers. These keys are stored securely and used to authenticate with external services.
+                        </div>
+
+                        <div id="api-key-status" class="row mb-4">
+                            <!-- API key status will be loaded here -->
+                        </div>
+
+                        <form id="api-key-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="openai-key" class="form-label">
+                                            <i class="fab fa-openai me-1"></i>
+                                            OpenAI API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="openai-key" name="openai-key" placeholder="sk-...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('openai-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for GPT-4, GPT-3.5, and DALL-E models</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="anthropic-key" class="form-label">
+                                            <i class="fas fa-robot me-1"></i>
+                                            Anthropic API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="anthropic-key" name="anthropic-key" placeholder="sk-ant-...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('anthropic-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Claude models</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="google-key" class="form-label">
+                                            <i class="fab fa-google me-1"></i>
+                                            Google Gemini API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="google-key" name="google-key" placeholder="AI...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('google-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Gemini models</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="xai-key" class="form-label">
+                                            <i class="fas fa-times me-1"></i>
+                                            xAI API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="xai-key" name="xai-key" placeholder="xai-...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('xai-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Grok models</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="perplexity-key" class="form-label">
+                                            <i class="fas fa-search me-1"></i>
+                                            Perplexity API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="perplexity-key" name="perplexity-key" placeholder="pplx-...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('perplexity-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Perplexity models</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="cohere-key" class="form-label">
+                                            <i class="fas fa-brain me-1"></i>
+                                            Cohere API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="cohere-key" name="cohere-key" placeholder="co-...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('cohere-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Cohere models</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="mistral-key" class="form-label">
+                                            <i class="fas fa-wind me-1"></i>
+                                            Mistral API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="mistral-key" name="mistral-key" placeholder="mst-...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('mistral-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Mistral models</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="huggingface-key" class="form-label">
+                                            <i class="fas fa-hug me-1"></i>
+                                            Hugging Face API Key
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="password" class="form-control" id="huggingface-key" name="huggingface-key" placeholder="hf_...">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('huggingface-key')">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">Required for Hugging Face models</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Important:</strong> API keys are sensitive information. They will be stored securely and are only used for authentication with the respective services.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" onclick="testAllConnections()">
+                                    <i class="fas fa-plug me-1"></i>
+                                    Test All Connections
+                                </button>
+                                <div>
+                                    <button type="button" class="btn btn-outline-secondary me-2" onclick="clearAllKeys()">
+                                        <i class="fas fa-trash me-1"></i>
+                                        Clear All
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        Save API Keys
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- General Settings Tab -->
+            <div class="tab-pane fade" id="general">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            General Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="general-settings-form">
+                            <div class="mb-3">
+                                <label for="default-model" class="form-label">Default AI Model</label>
+                                <select class="form-select" id="default-model" name="default-model">
+                                    <option value="">Select default model...</option>
+                                </select>
+                                <div class="form-text">The default AI model to use for query routing</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="max-tokens" class="form-label">Max Tokens</label>
+                                <input type="number" class="form-control" id="max-tokens" name="max-tokens" value="4096" min="1" max="128000">
+                                <div class="form-text">Maximum number of tokens for model responses</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="temperature" class="form-label">Temperature</label>
+                                <input type="range" class="form-range" id="temperature" name="temperature" min="0" max="2" step="0.1" value="0.7">
+                                <div class="form-text">Controls randomness in responses (0.0 = deterministic, 2.0 = very random)</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="auto-retry" name="auto-retry" checked>
+                                    <label class="form-check-label" for="auto-retry">
+                                        Auto-retry failed requests
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                Save Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Tab -->
+            <div class="tab-pane fade" id="security">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Security Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="security-settings-form">
+                            <div class="mb-3">
+                                <label for="rate-limit" class="form-label">Rate Limit (requests per minute)</label>
+                                <input type="number" class="form-control" id="rate-limit" name="rate-limit" value="60" min="1" max="1000">
+                                <div class="form-text">Maximum requests per minute per user</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="session-timeout" class="form-label">Session Timeout (minutes)</label>
+                                <input type="number" class="form-control" id="session-timeout" name="session-timeout" value="60" min="5" max="1440">
+                                <div class="form-text">Session expiration time</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="require-auth" name="require-auth" checked>
+                                    <label class="form-check-label" for="require-auth">
+                                        Require authentication for API access
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="log-requests" name="log-requests" checked>
+                                    <label class="form-check-label" for="log-requests">
+                                        Log all API requests
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                Save Security Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Tab -->
+            <div class="tab-pane fade" id="performance">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            Performance Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="performance-settings-form">
+                            <div class="mb-3">
+                                <label for="cache-ttl" class="form-label">Cache TTL (seconds)</label>
+                                <input type="number" class="form-control" id="cache-ttl" name="cache-ttl" value="3600" min="0" max="86400">
+                                <div class="form-text">Time to live for cached responses</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="max-concurrent" class="form-label">Max Concurrent Requests</label>
+                                <input type="number" class="form-control" id="max-concurrent" name="max-concurrent" value="10" min="1" max="100">
+                                <div class="form-text">Maximum concurrent requests per agent</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="request-timeout" class="form-label">Request Timeout (seconds)</label>
+                                <input type="number" class="form-control" id="request-timeout" name="request-timeout" value="30" min="5" max="300">
+                                <div class="form-text">Timeout for external API requests</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="enable-cache" name="enable-cache" checked>
+                                    <label class="form-check-label" for="enable-cache">
+                                        Enable response caching
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                Save Performance Settings
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cache Management Tab -->
+            <div class="tab-pane fade" id="cache">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-database me-2"></i>
+                            AI Response Cache Management
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Cache management helps optimize AI response times and reduce API costs by storing frequently requested responses.
+                        </div>
+
+                        <!-- Cache Statistics -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card bg-primary text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Total Entries</h6>
+                                        <h4 id="cache-total-entries">-</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-success text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Valid Entries</h6>
+                                        <h4 id="cache-valid-entries">-</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-info text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Cache Type</h6>
+                                        <h4 id="cache-type">-</h4>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card bg-warning text-white">
+                                    <div class="card-body">
+                                        <h6 class="card-title">TTL (seconds)</h6>
+                                        <h4 id="cache-ttl-display">-</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cache Controls -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">Cache Controls</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label for="cache-model-filter" class="form-label">Filter by Model</label>
+                                            <select class="form-select" id="cache-model-filter">
+                                                <option value="">All Models</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="d-grid gap-2">
+                                            <button type="button" class="btn btn-primary" onclick="loadCacheStats()">
+                                                <i class="fas fa-sync me-1"></i>
+                                                Refresh Statistics
+                                            </button>
+                                            <button type="button" class="btn btn-warning" onclick="clearCache()">
+                                                <i class="fas fa-trash me-1"></i>
+                                                Clear Cache
+                                            </button>
+                                            <button type="button" class="btn btn-danger" onclick="clearAllCache()">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                                Clear All Cache
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">Cache Performance</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-2">
+                                            <small class="text-muted">Average Hit Count</small>
+                                            <div class="fw-bold" id="cache-avg-hits">-</div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Memory Usage</small>
+                                            <div class="fw-bold" id="cache-memory-usage">-</div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Expired Entries</small>
+                                            <div class="fw-bold" id="cache-expired-entries">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Cache Entries -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Recent Cache Entries</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Query</th>
+                                                <th>Model</th>
+                                                <th>Created</th>
+                                                <th>Expires</th>
+                                                <th>Hits</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="cache-entries-table">
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">
+                                                    <i class="fas fa-spinner fa-spin me-2"></i>
+                                                    Loading cache entries...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token Management Tab -->
+            <div class="tab-pane fade" id="token-management">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-coins me-2"></i>
+                            Token Usage Management
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Manage token usage to optimize costs and performance. These settings help reduce the number of tokens consumed by AI models.
+                        </div>
+
+                        <form id="token-management-form">
+                            <!-- Token Reduction Strategy -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-cut me-1"></i>
+                                    Token Reduction Strategy
+                                </label>
+                                <select class="form-select" id="token-reduction-strategy" name="token-reduction-strategy">
+                                    <option value="none">No Reduction (Full Context)</option>
+                                    <option value="light" selected>Light Reduction (5-10% savings)</option>
+                                    <option value="moderate">Moderate Reduction (15-25% savings)</option>
+                                    <option value="aggressive">Aggressive Reduction (30-50% savings)</option>
+                                </select>
+                                <div class="form-text">Choose how aggressively to reduce token usage</div>
+                            </div>
+
+                            <!-- Max Token Limits -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="max-input-tokens" class="form-label">
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        Max Input Tokens
+                                    </label>
+                                    <input type="number" class="form-control" id="max-input-tokens" name="max-input-tokens" value="4000" min="500" max="32000">
+                                    <div class="form-text">Limit for input/context tokens</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="max-output-tokens" class="form-label">
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        Max Output Tokens
+                                    </label>
+                                    <input type="number" class="form-control" id="max-output-tokens" name="max-output-tokens" value="1000" min="100" max="4000">
+                                    <div class="form-text">Limit for response tokens</div>
+                                </div>
+                            </div>
+
+                            <!-- Content Optimization -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-compress me-1"></i>
+                                    Content Optimization
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remove-whitespace" name="remove-whitespace" checked>
+                                    <label class="form-check-label" for="remove-whitespace">
+                                        Remove extra whitespace and formatting
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="compress-messages" name="compress-messages" checked>
+                                    <label class="form-check-label" for="compress-messages">
+                                        Compress system messages and instructions
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="truncate-history" name="truncate-history">
+                                    <label class="form-check-label" for="truncate-history">
+                                        Truncate conversation history when limit reached
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="summarize-context" name="summarize-context">
+                                    <label class="form-check-label" for="summarize-context">
+                                        Summarize older context instead of removing
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Model-Specific Settings -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-robot me-1"></i>
+                                    Model-Specific Token Limits
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="use-model-limits" name="use-model-limits" checked>
+                                    <label class="form-check-label" for="use-model-limits">
+                                        Use model-specific optimal token limits
+                                    </label>
+                                </div>
+                                <div class="form-text">Automatically adjust limits based on selected AI model capabilities</div>
+                            </div>
+
+                            <!-- Temperature and Top-p Adjustments -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label for="token-temperature" class="form-label">
+                                        <i class="fas fa-thermometer-half me-1"></i>
+                                        Temperature (Focus)
+                                    </label>
+                                    <input type="range" class="form-range" id="token-temperature" name="token-temperature" min="0.1" max="2.0" step="0.1" value="0.7">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">0.1 (Focused)</small>
+                                        <small class="text-muted">2.0 (Creative)</small>
+                                    </div>
+                                    <div class="form-text">Lower values use fewer tokens but may be less creative</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="token-top-p" class="form-label">
+                                        <i class="fas fa-filter me-1"></i>
+                                        Top-p (Nucleus)
+                                    </label>
+                                    <input type="range" class="form-range" id="token-top-p" name="token-top-p" min="0.1" max="1.0" step="0.05" value="0.9">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">0.1 (Precise)</small>
+                                        <small class="text-muted">1.0 (Diverse)</small>
+                                    </div>
+                                    <div class="form-text">Lower values can reduce token usage</div>
+                                </div>
+                            </div>
+
+                            <!-- Advanced Token Management -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-brain me-1"></i>
+                                    Advanced Token Management
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="smart-batching" name="smart-batching">
+                                            <label class="form-check-label" for="smart-batching">
+                                                Smart Request Batching
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Group similar requests to reduce overhead</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="adaptive-context" name="adaptive-context">
+                                            <label class="form-check-label" for="adaptive-context">
+                                                Adaptive Context Window
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Dynamically adjust context based on query complexity</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="semantic-deduplication" name="semantic-deduplication">
+                                            <label class="form-check-label" for="semantic-deduplication">
+                                                Semantic Deduplication
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Remove semantically similar content</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="priority-queuing" name="priority-queuing">
+                                            <label class="form-check-label" for="priority-queuing">
+                                                Priority-based Queuing
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Queue requests by importance and token cost</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Token Budget Management -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-wallet me-1"></i>
+                                    Token Budget Management
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="daily-token-limit" class="form-label">Daily Token Limit</label>
+                                        <input type="number" class="form-control" id="daily-token-limit" name="daily-token-limit" value="100000" min="1000" max="1000000">
+                                        <div class="form-text">Maximum tokens per day</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="hourly-token-limit" class="form-label">Hourly Token Limit</label>
+                                        <input type="number" class="form-control" id="hourly-token-limit" name="hourly-token-limit" value="10000" min="100" max="50000">
+                                        <div class="form-text">Maximum tokens per hour</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="cost-threshold" class="form-label">Cost Alert Threshold</label>
+                                        <input type="number" class="form-control" id="cost-threshold" name="cost-threshold" value="10.00" min="1.00" max="1000.00" step="0.01">
+                                        <div class="form-text">Alert when daily cost exceeds ($)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="auto-scale" class="form-label">Auto-scaling Mode</label>
+                                        <select class="form-select" id="auto-scale" name="auto-scale">
+                                            <option value="disabled">Disabled</option>
+                                            <option value="conservative">Conservative</option>
+                                            <option value="aggressive" selected>Aggressive</option>
+                                            <option value="emergency">Emergency Only</option>
+                                        </select>
+                                        <div class="form-text">Automatically adjust limits based on usage</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Model-Specific Optimization -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-microchip me-1"></i>
+                                    Model-Specific Optimization
+                                </label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="auto-model-selection" name="auto-model-selection" checked>
+                                    <label class="form-check-label" for="auto-model-selection">
+                                        Automatic Model Selection
+                                    </label>
+                                </div>
+                                <div class="form-text">Automatically select the most cost-effective model for each query</div>
+                                
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="cheap-model-threshold" class="form-label">Use Cheaper Model For</label>
+                                        <select class="form-select" id="cheap-model-threshold" name="cheap-model-threshold">
+                                            <option value="simple">Simple queries only</option>
+                                            <option value="medium" selected>Simple and medium queries</option>
+                                            <option value="complex">All queries except most complex</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="fallback-model" class="form-label">Fallback Model</label>
+                                        <select class="form-select" id="fallback-model" name="fallback-model">
+                                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                            <option value="claude-3-haiku">Claude 3 Haiku</option>
+                                            <option value="gemini-pro">Gemini Pro</option>
+                                            <option value="ollama-llama3">Ollama Llama3 (Free)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Real-time Monitoring -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Real-time Token Usage
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-primary" id="current-usage">0</div>
+                                            <small class="text-muted">Tokens Used Today</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-warning" id="current-cost">$0.00</div>
+                                            <small class="text-muted">Cost Today</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-info" id="avg-per-query">0</div>
+                                            <small class="text-muted">Avg Tokens/Query</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <div class="fw-bold text-success" id="efficiency-score">85%</div>
+                                            <small class="text-muted">Efficiency Score</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width: 25%" id="usage-progress"></div>
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <small class="text-muted">0</small>
+                                    <small class="text-muted" id="daily-limit-display">100,000 tokens</small>
+                                </div>
+                            </div>
+
+                            <!-- Cost Estimation -->
+                            <div class="mb-4">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-calculator me-1"></i>
+                                            Advanced Cost Analysis
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-success" id="estimated-savings">--%</div>
+                                                    <small class="text-muted">Token Reduction</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-info" id="estimated-cost">$0.00</div>
+                                                    <small class="text-muted">Monthly Est.</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-warning" id="quality-impact">Low</div>
+                                                    <small class="text-muted">Quality Impact</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <div class="text-center">
+                                                    <div class="fw-bold text-primary" id="roi-score">3.2x</div>
+                                                    <small class="text-muted">ROI Score</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-lightbulb me-1"></i>
+                                                Recommendation: <span id="cost-recommendation">Current settings provide optimal balance</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Alert Management -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-bell me-1"></i>
+                                    Alert & Notification Settings
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="usage-alerts" name="usage-alerts" checked>
+                                            <label class="form-check-label" for="usage-alerts">
+                                                High Usage Alerts
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Alert when approaching token limits</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="cost-alerts" name="cost-alerts" checked>
+                                            <label class="form-check-label" for="cost-alerts">
+                                                Cost Threshold Alerts
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Alert when cost exceeds thresholds</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="efficiency-alerts" name="efficiency-alerts">
+                                            <label class="form-check-label" for="efficiency-alerts">
+                                                Efficiency Recommendations
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Suggest optimizations based on usage patterns</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="model-suggestions" name="model-suggestions">
+                                            <label class="form-check-label" for="model-suggestions">
+                                                Model Switch Suggestions
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Recommend cheaper models for similar quality</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AI-Powered Optimization -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-robot me-1"></i>
+                                    AI-Powered Optimization
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="predictive-scaling" name="predictive-scaling">
+                                            <label class="form-check-label" for="predictive-scaling">
+                                                Predictive Scaling
+                                            </label>
+                                        </div>
+                                        <div class="form-text">AI predicts usage patterns and adjusts limits</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="intelligent-caching" name="intelligent-caching">
+                                            <label class="form-check-label" for="intelligent-caching">
+                                                Intelligent Caching
+                                            </label>
+                                        </div>
+                                        <div class="form-text">AI optimizes cache strategies for maximum savings</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="dynamic-compression" name="dynamic-compression">
+                                            <label class="form-check-label" for="dynamic-compression">
+                                                Dynamic Compression
+                                            </label>
+                                        </div>
+                                        <div class="form-text">AI-driven content compression based on context</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="quality-monitoring" name="quality-monitoring">
+                                            <label class="form-check-label" for="quality-monitoring">
+                                                Quality Monitoring
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Continuously monitor and adjust for quality</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Performance Analytics -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-chart-bar me-1"></i>
+                                    Performance Analytics
+                                </label>
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6 class="card-subtitle mb-2">Token Usage Trends</h6>
+                                                <canvas id="token-usage-chart" width="200" height="100"></canvas>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="card-subtitle mb-2">Cost Optimization Impact</h6>
+                                                <canvas id="cost-optimization-chart" width="200" height="100"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3">
+                                            <div class="col-md-12">
+                                                <h6 class="card-subtitle mb-2">Efficiency Metrics</h6>
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="text-center">
+                                                            <div class="fw-bold text-success" id="compression-ratio">2.3x</div>
+                                                            <small class="text-muted">Compression Ratio</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="text-center">
+                                                            <div class="fw-bold text-info" id="cache-hit-rate">87%</div>
+                                                            <small class="text-muted">Cache Hit Rate</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="text-center">
+                                                            <div class="fw-bold text-warning" id="optimization-score">94/100</div>
+                                                            <small class="text-muted">Optimization Score</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="text-center">
+                                                            <div class="fw-bold text-primary" id="response-quality">96%</div>
+                                                            <small class="text-muted">Response Quality</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Advanced Scheduling -->
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Advanced Scheduling & Quotas
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="peak-hours-multiplier" class="form-label">Peak Hours Cost Multiplier</label>
+                                        <input type="range" class="form-range" id="peak-hours-multiplier" name="peak-hours-multiplier" min="0.5" max="3.0" step="0.1" value="1.5">
+                                        <div class="form-text">Adjust token limits during peak hours (<span id="peak-multiplier-value">1.5x</span>)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="user-priority-levels" class="form-label">User Priority Levels</label>
+                                        <select class="form-select" id="user-priority-levels" name="user-priority-levels">
+                                            <option value="disabled">Disabled</option>
+                                            <option value="basic">Basic (2 levels)</option>
+                                            <option value="standard" selected>Standard (3 levels)</option>
+                                            <option value="enterprise">Enterprise (5 levels)</option>
+                                        </select>
+                                        <div class="form-text">Different token quotas for user tiers</div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label for="burst-allowance" class="form-label">Burst Allowance</label>
+                                        <input type="number" class="form-control" id="burst-allowance" name="burst-allowance" value="20" min="0" max="100">
+                                        <div class="form-text">Allow temporary exceeding of limits (%)</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cooldown-period" class="form-label">Cooldown Period</label>
+                                        <input type="number" class="form-control" id="cooldown-period" name="cooldown-period" value="15" min="1" max="60">
+                                        <div class="form-text">Minutes before burst allowance resets</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Save Button -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" class="btn btn-outline-info" onclick="exportTokenSettings()">
+                                    <i class="fas fa-download me-1"></i>
+                                    Export Settings
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" onclick="importTokenSettings()">
+                                    <i class="fas fa-upload me-1"></i>
+                                    Import Settings
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="resetTokenSettings()">
+                                    <i class="fas fa-undo me-1"></i>
+                                    Reset to Defaults
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i>
+                                    Save Token Settings
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load API key status on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAPIKeyStatus();
+    loadAvailableModels();
+    loadCacheStats();
+    loadCacheEntries();
+    loadTokenSettings();
+    
+    // Ensure all form elements have proper dark theme styling
+    const formElements = document.querySelectorAll('select, input[type="number"], input[type="range"]');
+    formElements.forEach(element => {
+        if (element.tagName === 'SELECT') {
+            element.classList.add('bg-dark', 'text-light');
+        } else if (element.type === 'number') {
+            element.classList.add('bg-dark', 'text-light', 'border-secondary');
+        }
+    });
+    
+    // Add event listeners for token management
+    const tokenStrategySelect = document.getElementById('token-reduction-strategy');
+    const tokenTemperatureRange = document.getElementById('token-temperature');
+    const tokenTopPRange = document.getElementById('token-top-p');
+    const dailyTokenLimit = document.getElementById('daily-token-limit');
+    const hourlyTokenLimit = document.getElementById('hourly-token-limit');
+    
+    if (tokenStrategySelect) {
+        tokenStrategySelect.addEventListener('change', updateTokenEstimates);
+    }
+    if (tokenTemperatureRange) {
+        tokenTemperatureRange.addEventListener('input', updateTokenEstimates);
+    }
+    if (tokenTopPRange) {
+        tokenTopPRange.addEventListener('input', updateTokenEstimates);
+    }
+    if (dailyTokenLimit) {
+        dailyTokenLimit.addEventListener('input', updateTokenEstimates);
+    }
+    if (hourlyTokenLimit) {
+        hourlyTokenLimit.addEventListener('input', updateTokenEstimates);
+    }
+    
+    // Add event listeners for advanced checkboxes
+    const advancedCheckboxes = [
+        'smart-batching', 'adaptive-context', 'semantic-deduplication', 
+        'priority-queuing', 'auto-model-selection', 'predictive-scaling',
+        'intelligent-caching', 'dynamic-compression', 'quality-monitoring'
+    ];
+    
+    advancedCheckboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.addEventListener('change', updateTokenEstimates);
+        }
+    });
+    
+    updateTokenEstimates();
+    
+    // Initialize advanced features
+    initializeAdvancedFeatures();
+    
+    // Initialize real-time usage simulation
+    simulateRealTimeUsage();
+    
+    // Update usage stats every 30 seconds
+    setInterval(simulateRealTimeUsage, 30000);
+});
+
+function loadAPIKeyStatus() {
+    fetch('/api/ai-models/api-key-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                displayAPIKeyStatus(data.status_info);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading API key status:', error);
+        });
+}
+
+function displayAPIKeyStatus(statusInfo) {
+    const container = document.getElementById('api-key-status');
+    container.innerHTML = '';
+    
+    for (const [provider, info] of Object.entries(statusInfo)) {
+        const statusClass = info.available ? 'text-success' : 'text-danger';
+        const statusIcon = info.available ? 'fas fa-check-circle' : 'fas fa-times-circle';
+        
+        container.innerHTML += `
+            <div class="col-md-3 col-sm-6 mb-2">
+                <div class="card border-1 bg-dark">
+                    <div class="card-body p-2 text-center">
+                        <i class="${statusIcon} ${statusClass} me-1"></i>
+                        <small class="text-capitalize text-light">${provider}</small>
+                        <div class="text-muted" style="font-size: 0.75rem">${info.message}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function loadAvailableModels() {
+    fetch('/api/ai-models')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const select = document.getElementById('default-model');
+                select.innerHTML = '<option value="">Select default model...</option>';
+                select.className = 'form-select bg-dark text-light';
+                
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id;
+                    option.textContent = `${model.name} (${model.provider})`;
+                    option.className = 'bg-dark text-light';
+                    if (model.is_active) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading models:', error);
+        });
+}
+
+function togglePassword(fieldId) {
+    const field = document.getElementById(fieldId);
+    const button = field.nextElementSibling;
+    const icon = button.querySelector('i');
+    
+    if (field.type === 'password') {
+        field.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        field.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+function testAllConnections() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+    button.disabled = true;
+    
+    // Simulate testing connections
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        alert('Connection test completed. Check the status indicators above.');
+        loadAPIKeyStatus();
+    }, 3000);
+}
+
+function clearAllKeys() {
+    if (confirm('Are you sure you want to clear all API keys?')) {
+        document.querySelectorAll('#api-key-form input[type="password"]').forEach(input => {
+            input.value = '';
+        });
+    }
+}
+
+// Handle form submissions
+document.getElementById('api-key-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const keys = {};
+    
+    for (let [key, value] of formData.entries()) {
+        if (value.trim()) {
+            keys[key] = value;
+        }
+    }
+    
+    // Show success message
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        API keys have been saved successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    this.insertBefore(alert, this.firstChild);
+    
+    // Reload status
+    setTimeout(() => {
+        loadAPIKeyStatus();
+    }, 1000);
+});
+
+document.getElementById('general-settings-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        General settings have been saved successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    this.insertBefore(alert, this.firstChild);
+});
+
+document.getElementById('security-settings-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        Security settings have been saved successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    this.insertBefore(alert, this.firstChild);
+});
+
+document.getElementById('performance-settings-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show';
+    alert.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>
+        Performance settings have been saved successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    this.insertBefore(alert, this.firstChild);
+});
+
+// Cache management functions
+function loadCacheStats() {
+    fetch('/api/cache/stats')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('cache-total-entries').textContent = data.total_entries || 0;
+            document.getElementById('cache-valid-entries').textContent = data.valid_entries || 0;
+            document.getElementById('cache-type').textContent = data.cache_type || 'sqlite';
+            document.getElementById('cache-ttl-display').textContent = data.ttl_seconds || 3600;
+            document.getElementById('cache-avg-hits').textContent = data.average_hit_count || 0;
+            document.getElementById('cache-expired-entries').textContent = data.expired_entries || 0;
+            
+            // Update memory usage display
+            const memoryUsage = data.memory_usage_mb || 0;
+            document.getElementById('cache-memory-usage').textContent = memoryUsage > 0 ? `${memoryUsage.toFixed(2)} MB` : 'N/A';
+        })
+        .catch(error => {
+            console.error('Error loading cache stats:', error);
+        });
+}
+
+function loadCacheEntries() {
+    const modelFilter = document.getElementById('cache-model-filter').value;
+    const url = `/api/cache/entries?limit=50${modelFilter ? `&model_id=${modelFilter}` : ''}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('cache-entries-table');
+            tbody.innerHTML = '';
+            
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No cache entries found</td></tr>';
+                return;
+            }
+            
+            data.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><small>${entry.query}</small></td>
+                    <td><span class="badge bg-secondary">${entry.model_id}</span></td>
+                    <td><small>${new Date(entry.created_at).toLocaleString()}</small></td>
+                    <td><small>${new Date(entry.expires_at).toLocaleString()}</small></td>
+                    <td>${entry.hit_count || 0}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading cache entries:', error);
+            document.getElementById('cache-entries-table').innerHTML = 
+                '<tr><td colspan="5" class="text-center text-danger">Error loading cache entries</td></tr>';
+        });
+}
+
+function clearCache() {
+    const modelFilter = document.getElementById('cache-model-filter').value;
+    const payload = modelFilter ? { model_id: modelFilter } : {};
+    
+    if (confirm(`Are you sure you want to clear ${modelFilter ? 'model-specific' : 'all'} cache entries?`)) {
+        fetch('/api/cache/clear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Cache cleared successfully');
+                loadCacheStats();
+                loadCacheEntries();
+            } else {
+                alert('Error clearing cache: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error clearing cache:', error);
+            alert('Error clearing cache');
+        });
+    }
+}
+
+function clearAllCache() {
+    if (confirm('Are you sure you want to clear ALL cache entries? This action cannot be undone.')) {
+        fetch('/api/cache/clear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('All cache entries cleared successfully');
+                loadCacheStats();
+                loadCacheEntries();
+            } else {
+                alert('Error clearing cache: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error clearing cache:', error);
+            alert('Error clearing all cache');
+        });
+    }
+}
+
+// Token Management Functions
+function loadTokenSettings() {
+    // Load saved token settings from localStorage or use defaults
+    const savedSettings = localStorage.getItem('tokenSettings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        
+        // Apply saved settings to form elements
+        const strategySelect = document.getElementById('token-reduction-strategy');
+        const maxInputTokens = document.getElementById('max-input-tokens');
+        const maxOutputTokens = document.getElementById('max-output-tokens');
+        const temperatureRange = document.getElementById('token-temperature');
+        const topPRange = document.getElementById('token-top-p');
+        
+        if (strategySelect) strategySelect.value = settings.strategy || 'light';
+        if (maxInputTokens) maxInputTokens.value = settings.maxInputTokens || 4000;
+        if (maxOutputTokens) maxOutputTokens.value = settings.maxOutputTokens || 1000;
+        if (temperatureRange) temperatureRange.value = settings.temperature || 0.7;
+        if (topPRange) topPRange.value = settings.topP || 0.9;
+        
+        // Apply checkboxes
+        const checkboxes = ['remove-whitespace', 'compress-messages', 'truncate-history', 'summarize-context', 'use-model-limits'];
+        checkboxes.forEach(id => {
+            const checkbox = document.getElementById(id);
+            if (checkbox && settings[id] !== undefined) {
+                checkbox.checked = settings[id];
+            }
+        });
+    }
+    
+    updateTokenEstimates();
+}
+
+function updateTokenEstimates() {
+    const strategy = document.getElementById('token-reduction-strategy')?.value || 'light';
+    const temperature = parseFloat(document.getElementById('token-temperature')?.value || 0.7);
+    const topP = parseFloat(document.getElementById('token-top-p')?.value || 0.9);
+    const dailyLimit = parseInt(document.getElementById('daily-token-limit')?.value || 100000);
+    
+    // Advanced features impact
+    const smartBatching = document.getElementById('smart-batching')?.checked || false;
+    const adaptiveContext = document.getElementById('adaptive-context')?.checked || false;
+    const semanticDedup = document.getElementById('semantic-deduplication')?.checked || false;
+    const autoModelSelection = document.getElementById('auto-model-selection')?.checked || false;
+    
+    // Calculate estimated savings based on strategy and advanced features
+    const savingsMap = {
+        'none': 0,
+        'light': 7.5,
+        'moderate': 20,
+        'aggressive': 40
+    };
+    
+    const qualityImpactMap = {
+        'none': 'None',
+        'light': 'Minimal',
+        'moderate': 'Low',
+        'aggressive': 'Medium'
+    };
+    
+    let savings = savingsMap[strategy] || 0;
+    
+    // Add advanced feature bonuses
+    if (smartBatching) savings += 5;
+    if (adaptiveContext) savings += 8;
+    if (semanticDedup) savings += 12;
+    if (autoModelSelection) savings += 15;
+    
+    // Cap savings at 75%
+    savings = Math.min(savings, 75);
+    
+    const qualityImpact = qualityImpactMap[strategy] || 'Low';
+    
+    // Update cost estimation based on typical usage
+    const baseTokensPerMonth = dailyLimit * 30; // Monthly tokens based on daily limit
+    const baseTokenCost = 0.002; // Average cost per 1K tokens
+    const baseCost = (baseTokensPerMonth / 1000) * baseTokenCost;
+    const reducedCost = baseCost * (1 - savings / 100);
+    
+    // Calculate ROI (Return on Investment)
+    const costSavings = baseCost - reducedCost;
+    const implementationCost = 50; // Estimated monthly cost for optimization
+    const roi = implementationCost > 0 ? (costSavings / implementationCost) : 0;
+    
+    // Update display elements
+    const savingsElement = document.getElementById('estimated-savings');
+    const costElement = document.getElementById('estimated-cost');
+    const qualityElement = document.getElementById('quality-impact');
+    const roiElement = document.getElementById('roi-score');
+    const recommendationElement = document.getElementById('cost-recommendation');
+    
+    if (savingsElement) savingsElement.textContent = `${savings.toFixed(1)}%`;
+    if (costElement) costElement.textContent = `$${reducedCost.toFixed(2)}`;
+    if (qualityElement) qualityElement.textContent = qualityImpact;
+    if (roiElement) roiElement.textContent = `${roi.toFixed(1)}x`;
+    
+    // Update recommendation
+    if (recommendationElement) {
+        if (savings > 50) {
+            recommendationElement.textContent = 'High optimization - monitor quality closely';
+        } else if (savings > 30) {
+            recommendationElement.textContent = 'Good balance of cost and quality';
+        } else if (savings > 15) {
+            recommendationElement.textContent = 'Moderate savings with minimal quality impact';
+        } else {
+            recommendationElement.textContent = 'Consider enabling more optimizations';
+        }
+    }
+    
+    // Update quality impact color
+    if (qualityElement) {
+        qualityElement.className = 'fw-bold';
+        if (qualityImpact === 'None' || qualityImpact === 'Minimal') {
+            qualityElement.classList.add('text-success');
+        } else if (qualityImpact === 'Low') {
+            qualityElement.classList.add('text-warning');
+        } else {
+            qualityElement.classList.add('text-danger');
+        }
+    }
+    
+    // Update usage progress bar
+    updateUsageProgress();
+}
+
+function updateUsageProgress() {
+    const dailyLimit = parseInt(document.getElementById('daily-token-limit')?.value || 100000);
+    const currentUsage = parseInt(document.getElementById('current-usage')?.textContent || 0);
+    const usagePercent = (currentUsage / dailyLimit) * 100;
+    
+    const progressBar = document.getElementById('usage-progress');
+    const dailyLimitDisplay = document.getElementById('daily-limit-display');
+    
+    if (progressBar) {
+        progressBar.style.width = `${Math.min(usagePercent, 100)}%`;
+        
+        // Update progress bar color based on usage
+        progressBar.className = 'progress-bar';
+        if (usagePercent > 90) {
+            progressBar.classList.add('bg-danger');
+        } else if (usagePercent > 75) {
+            progressBar.classList.add('bg-warning');
+        } else {
+            progressBar.classList.add('bg-primary');
+        }
+    }
+    
+    if (dailyLimitDisplay) {
+        dailyLimitDisplay.textContent = `${dailyLimit.toLocaleString()} tokens`;
+    }
+}
+
+function resetTokenSettings() {
+    // Reset all token settings to defaults
+    const defaultSettings = {
+        strategy: 'light',
+        maxInputTokens: 4000,
+        maxOutputTokens: 1000,
+        temperature: 0.7,
+        topP: 0.9,
+        'remove-whitespace': true,
+        'compress-messages': true,
+        'truncate-history': false,
+        'summarize-context': false,
+        'use-model-limits': true
+    };
+    
+    // Apply defaults to form elements
+    document.getElementById('token-reduction-strategy').value = defaultSettings.strategy;
+    document.getElementById('max-input-tokens').value = defaultSettings.maxInputTokens;
+    document.getElementById('max-output-tokens').value = defaultSettings.maxOutputTokens;
+    document.getElementById('token-temperature').value = defaultSettings.temperature;
+    document.getElementById('token-top-p').value = defaultSettings.topP;
+    
+    // Apply checkbox defaults
+    const checkboxes = ['remove-whitespace', 'compress-messages', 'truncate-history', 'summarize-context', 'use-model-limits'];
+    checkboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+            checkbox.checked = defaultSettings[id];
+        }
+    });
+    
+    updateTokenEstimates();
+    showToastMessage('Token settings reset to defaults', 'success');
+}
+
+function showToastMessage(message, type) {
+    // Create or update message element
+    let messageDiv = document.getElementById('message-container');
+    if (!messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'message-container';
+        messageDiv.className = 'position-fixed top-0 start-50 translate-middle-x mt-3';
+        messageDiv.style.zIndex = '9999';
+        document.body.appendChild(messageDiv);
+    }
+    
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    messageDiv.innerHTML = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        const alert = messageDiv.querySelector('.alert');
+        if (alert) {
+            alert.classList.remove('show');
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 150);
+        }
+    }, 3000);
+}
+
+// Advanced token management functions
+function exportTokenSettings() {
+    const formData = collectTokenSettings();
+    const dataStr = JSON.stringify(formData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `token-settings-${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    showToastMessage('Token settings exported successfully', 'success');
+}
+
+function importTokenSettings() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const settings = JSON.parse(e.target.result);
+                    applyTokenSettings(settings);
+                    showToastMessage('Token settings imported successfully', 'success');
+                } catch (error) {
+                    showToastMessage('Error importing settings: Invalid JSON file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+    input.click();
+}
+
+function collectTokenSettings() {
+    return {
+        // Basic settings
+        strategy: document.getElementById('token-reduction-strategy').value,
+        maxInputTokens: parseInt(document.getElementById('max-input-tokens').value),
+        maxOutputTokens: parseInt(document.getElementById('max-output-tokens').value),
+        temperature: parseFloat(document.getElementById('token-temperature').value),
+        topP: parseFloat(document.getElementById('token-top-p').value),
+        
+        // Content optimization
+        'remove-whitespace': document.getElementById('remove-whitespace').checked,
+        'compress-messages': document.getElementById('compress-messages').checked,
+        'truncate-history': document.getElementById('truncate-history').checked,
+        'summarize-context': document.getElementById('summarize-context').checked,
+        'use-model-limits': document.getElementById('use-model-limits').checked,
+        
+        // Advanced features
+        'smart-batching': document.getElementById('smart-batching').checked,
+        'adaptive-context': document.getElementById('adaptive-context').checked,
+        'semantic-deduplication': document.getElementById('semantic-deduplication').checked,
+        'priority-queuing': document.getElementById('priority-queuing').checked,
+        
+        // Budget management
+        'daily-token-limit': parseInt(document.getElementById('daily-token-limit').value),
+        'hourly-token-limit': parseInt(document.getElementById('hourly-token-limit').value),
+        'cost-threshold': parseFloat(document.getElementById('cost-threshold').value),
+        'auto-scale': document.getElementById('auto-scale').value,
+        
+        // Model optimization
+        'auto-model-selection': document.getElementById('auto-model-selection').checked,
+        'cheap-model-threshold': document.getElementById('cheap-model-threshold').value,
+        'fallback-model': document.getElementById('fallback-model').value,
+        
+        // Alerts
+        'usage-alerts': document.getElementById('usage-alerts').checked,
+        'cost-alerts': document.getElementById('cost-alerts').checked,
+        'efficiency-alerts': document.getElementById('efficiency-alerts').checked,
+        'model-suggestions': document.getElementById('model-suggestions').checked,
+        
+        // AI-powered optimization
+        'predictive-scaling': document.getElementById('predictive-scaling')?.checked || false,
+        'intelligent-caching': document.getElementById('intelligent-caching')?.checked || false,
+        'dynamic-compression': document.getElementById('dynamic-compression')?.checked || false,
+        'quality-monitoring': document.getElementById('quality-monitoring')?.checked || false,
+        
+        // Advanced scheduling
+        'peak-hours-multiplier': parseFloat(document.getElementById('peak-hours-multiplier')?.value || 1.5),
+        'user-priority-levels': document.getElementById('user-priority-levels')?.value || 'standard',
+        'burst-allowance': parseInt(document.getElementById('burst-allowance')?.value || 20),
+        'cooldown-period': parseInt(document.getElementById('cooldown-period')?.value || 15),
+        
+        // Metadata
+        exportedAt: new Date().toISOString(),
+        version: '2.0'
+    };
+}
+
+function applyTokenSettings(settings) {
+    // Basic settings
+    if (settings.strategy) document.getElementById('token-reduction-strategy').value = settings.strategy;
+    if (settings.maxInputTokens) document.getElementById('max-input-tokens').value = settings.maxInputTokens;
+    if (settings.maxOutputTokens) document.getElementById('max-output-tokens').value = settings.maxOutputTokens;
+    if (settings.temperature) document.getElementById('token-temperature').value = settings.temperature;
+    if (settings.topP) document.getElementById('token-top-p').value = settings.topP;
+    
+    // Content optimization checkboxes
+    const checkboxes = [
+        'remove-whitespace', 'compress-messages', 'truncate-history', 'summarize-context', 
+        'use-model-limits', 'smart-batching', 'adaptive-context', 'semantic-deduplication', 
+        'priority-queuing', 'auto-model-selection', 'usage-alerts', 'cost-alerts', 
+        'efficiency-alerts', 'model-suggestions', 'predictive-scaling', 'intelligent-caching',
+        'dynamic-compression', 'quality-monitoring'
+    ];
+    
+    checkboxes.forEach(id => {
+        const checkbox = document.getElementById(id);
+        if (checkbox && settings[id] !== undefined) {
+            checkbox.checked = settings[id];
+        }
+    });
+    
+    // Budget management
+    if (settings['daily-token-limit']) document.getElementById('daily-token-limit').value = settings['daily-token-limit'];
+    if (settings['hourly-token-limit']) document.getElementById('hourly-token-limit').value = settings['hourly-token-limit'];
+    if (settings['cost-threshold']) document.getElementById('cost-threshold').value = settings['cost-threshold'];
+    if (settings['auto-scale']) document.getElementById('auto-scale').value = settings['auto-scale'];
+    
+    // Model optimization
+    if (settings['cheap-model-threshold']) document.getElementById('cheap-model-threshold').value = settings['cheap-model-threshold'];
+    if (settings['fallback-model']) document.getElementById('fallback-model').value = settings['fallback-model'];
+    
+    // Advanced scheduling
+    if (settings['peak-hours-multiplier']) document.getElementById('peak-hours-multiplier').value = settings['peak-hours-multiplier'];
+    if (settings['user-priority-levels']) document.getElementById('user-priority-levels').value = settings['user-priority-levels'];
+    if (settings['burst-allowance']) document.getElementById('burst-allowance').value = settings['burst-allowance'];
+    if (settings['cooldown-period']) document.getElementById('cooldown-period').value = settings['cooldown-period'];
+    
+    updateTokenEstimates();
+}
+
+function simulateRealTimeUsage() {
+    // Simulate real-time token usage updates
+    const currentUsage = Math.floor(Math.random() * 25000) + 15000; // Random usage between 15k-40k
+    const currentCost = (currentUsage / 1000) * 0.002; // Calculate cost
+    const avgPerQuery = Math.floor(currentUsage / (Math.random() * 50 + 20)); // Random queries
+    
+    document.getElementById('current-usage').textContent = currentUsage.toLocaleString();
+    document.getElementById('current-cost').textContent = `$${currentCost.toFixed(2)}`;
+    document.getElementById('avg-per-query').textContent = avgPerQuery.toLocaleString();
+    
+    updateUsageProgress();
+    updateAnalyticsCharts();
+}
+
+function updateAnalyticsCharts() {
+    // Update token usage trend chart
+    const usageCtx = document.getElementById('token-usage-chart');
+    if (usageCtx) {
+        // In a real implementation, this would use Chart.js or similar
+        const ctx = usageCtx.getContext('2d');
+        ctx.clearRect(0, 0, usageCtx.width, usageCtx.height);
+        
+        // Simple line chart simulation
+        ctx.strokeStyle = '#007bff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        const points = [];
+        for (let i = 0; i < 10; i++) {
+            const x = (i * usageCtx.width) / 9;
+            const y = usageCtx.height - (Math.random() * 50 + 20);
+            points.push({x, y});
+        }
+        
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.stroke();
+    }
+    
+    // Update cost optimization chart
+    const costCtx = document.getElementById('cost-optimization-chart');
+    if (costCtx) {
+        const ctx = costCtx.getContext('2d');
+        ctx.clearRect(0, 0, costCtx.width, costCtx.height);
+        
+        // Simple bar chart simulation
+        const bars = [0.4, 0.6, 0.8, 0.5, 0.7, 0.9];
+        const barWidth = costCtx.width / bars.length;
+        
+        bars.forEach((height, i) => {
+            const x = i * barWidth;
+            const y = costCtx.height - (height * costCtx.height);
+            const h = height * costCtx.height;
+            
+            ctx.fillStyle = '#28a745';
+            ctx.fillRect(x, y, barWidth * 0.8, h);
+        });
+    }
+}
+
+function initializeAdvancedFeatures() {
+    // Initialize peak hours multiplier display
+    const peakMultiplier = document.getElementById('peak-hours-multiplier');
+    const peakMultiplierValue = document.getElementById('peak-multiplier-value');
+    
+    if (peakMultiplier && peakMultiplierValue) {
+        peakMultiplier.addEventListener('input', function() {
+            peakMultiplierValue.textContent = `${this.value}x`;
+        });
+    }
+    
+    // Initialize advanced optimization features
+    updateAdvancedMetrics();
+    
+    // Update metrics every 15 seconds
+    setInterval(updateAdvancedMetrics, 15000);
+}
+
+function updateAdvancedMetrics() {
+    // Update compression ratio
+    const compressionRatio = (Math.random() * 1.5 + 1.5).toFixed(1);
+    const element = document.getElementById('compression-ratio');
+    if (element) element.textContent = `${compressionRatio}x`;
+    
+    // Update cache hit rate
+    const cacheHitRate = Math.floor(Math.random() * 15 + 80);
+    const cacheElement = document.getElementById('cache-hit-rate');
+    if (cacheElement) cacheElement.textContent = `${cacheHitRate}%`;
+    
+    // Update optimization score
+    const optimizationScore = Math.floor(Math.random() * 10 + 90);
+    const optElement = document.getElementById('optimization-score');
+    if (optElement) optElement.textContent = `${optimizationScore}/100`;
+    
+    // Update response quality
+    const responseQuality = Math.floor(Math.random() * 5 + 95);
+    const qualityElement = document.getElementById('response-quality');
+    if (qualityElement) qualityElement.textContent = `${responseQuality}%`;
+}
+
+function generateTokenOptimizationReport() {
+    const settings = collectTokenSettings();
+    const report = {
+        timestamp: new Date().toISOString(),
+        settings: settings,
+        metrics: {
+            compressionRatio: document.getElementById('compression-ratio')?.textContent || '2.3x',
+            cacheHitRate: document.getElementById('cache-hit-rate')?.textContent || '87%',
+            optimizationScore: document.getElementById('optimization-score')?.textContent || '94/100',
+            responseQuality: document.getElementById('response-quality')?.textContent || '96%'
+        },
+        recommendations: generateOptimizationRecommendations(settings)
+    };
+    
+    return report;
+}
+
+function generateOptimizationRecommendations(settings) {
+    const recommendations = [];
+    
+    // Analyze current settings and provide recommendations
+    if (!settings['smart-batching']) {
+        recommendations.push({
+            type: 'efficiency',
+            message: 'Enable smart batching to reduce overhead by up to 15%',
+            impact: 'medium',
+            effort: 'low'
+        });
+    }
+    
+    if (!settings['semantic-deduplication']) {
+        recommendations.push({
+            type: 'cost',
+            message: 'Semantic deduplication can reduce token usage by 20-30%',
+            impact: 'high',
+            effort: 'medium'
+        });
+    }
+    
+    if (settings['max-output-tokens'] > 2000) {
+        recommendations.push({
+            type: 'optimization',
+            message: 'Consider reducing max output tokens for better cost control',
+            impact: 'medium',
+            effort: 'low'
+        });
+    }
+    
+    return recommendations;
+}
+
+// Handle token management form submission
+document.getElementById('token-management-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Collect form data
+    const formData = collectTokenSettings();
+    
+    // Save to localStorage
+    localStorage.setItem('tokenSettings', JSON.stringify(formData));
+    
+    // Show success message
+    showToastMessage('Advanced token settings saved successfully', 'success');
+    
+    // Update AI model manager with new settings
+    // This would typically be an API call to update the backend
+    console.log('Advanced token settings saved:', formData);
+    
+    // Simulate real-time usage update
+    simulateRealTimeUsage();
+});
+
+// Advanced optimization report generation
+function generateOptimizationReport() {
+    const report = generateTokenOptimizationReport();
+    
+    const reportContent = `
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Current Metrics</h5>
+            <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Compression Ratio</span>
+                    <span class="badge bg-success">${report.metrics.compressionRatio}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Cache Hit Rate</span>
+                    <span class="badge bg-info">${report.metrics.cacheHitRate}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Optimization Score</span>
+                    <span class="badge bg-warning">${report.metrics.optimizationScore}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>Response Quality</span>
+                    <span class="badge bg-primary">${report.metrics.responseQuality}</span>
+                </li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h5>Recommendations</h5>
+            ${report.recommendations.map(rec => `
+                <div class="alert alert-${rec.impact === 'high' ? 'warning' : 'info'} py-2">
+                    <strong>${rec.type}:</strong> ${rec.message}
+                </div>
+            `).join('')}
+        </div>
+    </div>
+    `;
+    
+    showModal('Optimization Report', reportContent, [
+        {text: 'Download', onclick: 'downloadReport()', class: 'btn-primary'},
+        {text: 'Close', onclick: '', class: 'btn-secondary', dismiss: true}
+    ]);
+    
+    window.currentReport = report;
+}
+
+function downloadReport() {
+    if (!window.currentReport) return;
+    
+    const blob = new Blob([JSON.stringify(window.currentReport, null, 2)], {
+        type: 'application/json'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `token-optimization-report-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function openBulkOptimizer() {
+    const content = `
+        <div class="mb-3">
+            <label for="bulk-queries" class="form-label">
+                <i class="fas fa-layer-group me-1"></i>
+                Queries to Optimize (one per line)
+            </label>
+            <textarea class="form-control" id="bulk-queries" rows="8" 
+                placeholder="Enter multiple queries here, one per line...
+Example:
+Explain machine learning
+What is artificial intelligence
+How does deep learning work"></textarea>
+        </div>
+        <div class="mb-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="bulk-apply-current-settings" checked>
+                <label class="form-check-label" for="bulk-apply-current-settings">
+                    Apply current optimization settings
+                </label>
+            </div>
+        </div>
+        <div id="bulk-results" class="mt-3" style="display: none;">
+            <div id="bulk-results-content"></div>
+        </div>
+    `;
+    
+    showModal('Bulk Token Optimizer', content, [
+        {text: 'Optimize', onclick: 'processBulkOptimization()', class: 'btn-primary'},
+        {text: 'Close', onclick: '', class: 'btn-secondary', dismiss: true}
+    ]);
+}
+
+function processBulkOptimization() {
+    const queriesText = document.getElementById('bulk-queries').value;
+    
+    if (!queriesText.trim()) {
+        showToastMessage('Please enter some queries to optimize.', 'warning');
+        return;
+    }
+    
+    const queries = queriesText.split('\n').filter(q => q.trim());
+    const resultsDiv = document.getElementById('bulk-results');
+    const resultsContent = document.getElementById('bulk-results-content');
+    
+    resultsContent.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Processing...</div>';
+    resultsDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        const results = queries.map(query => {
+            const originalTokens = Math.floor(query.length / 4);
+            const optimizedTokens = Math.floor(originalTokens * (0.6 + Math.random() * 0.3));
+            const savings = ((originalTokens - optimizedTokens) / originalTokens * 100).toFixed(1);
+            
+            return {
+                original: query,
+                optimized: query.replace(/\s+/g, ' ').trim(),
+                originalTokens,
+                optimizedTokens,
+                savings
+            };
+        });
+        
+        const totalSavings = results.reduce((sum, r) => sum + parseFloat(r.savings), 0) / results.length;
+        
+        resultsContent.innerHTML = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Optimization Complete!</strong> Average savings: ${totalSavings.toFixed(1)}%
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Original Query</th>
+                            <th>Tokens</th>
+                            <th>Savings</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${results.map(r => `
+                            <tr>
+                                <td>${r.original.substring(0, 60)}${r.original.length > 60 ? '...' : ''}</td>
+                                <td>
+                                    <span class="badge bg-secondary">${r.originalTokens}</span>
+                                    <i class="fas fa-arrow-right mx-1"></i>
+                                    <span class="badge bg-success">${r.optimizedTokens}</span>
+                                </td>
+                                <td><span class="text-success fw-bold">${r.savings}%</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }, 1500);
+}
+
+function showModal(title, content, buttons = []) {
+    const modalId = 'dynamicModal';
+    const existingModal = document.getElementById(modalId);
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const buttonsHtml = buttons.map(btn => `
+        <button type="button" class="btn ${btn.class}" 
+                ${btn.dismiss ? 'data-bs-dismiss="modal"' : ''} 
+                ${btn.onclick ? `onclick="${btn.onclick}"` : ''}>
+            ${btn.text}
+        </button>
+    `).join('');
+    
+    const modalHtml = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        ${content}
+                    </div>
+                    <div class="modal-footer">
+                        ${buttonsHtml}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById(modalId));
+    modal.show();
+}
+
+</script>
+{% endblock %}

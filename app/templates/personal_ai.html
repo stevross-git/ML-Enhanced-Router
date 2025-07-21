@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal AI - Hybrid Edge-Cloud Router</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 70vh;
+            overflow-y: auto;
+            border: 1px solid var(--bs-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            background: var(--bs-dark);
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            max-width: 85%;
+        }
+        
+        .message.user {
+            background: var(--bs-primary);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.assistant {
+            background: var(--bs-secondary);
+            margin-right: auto;
+        }
+        
+        .message.system {
+            background: var(--bs-info);
+            color: white;
+            margin: 0 auto;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .routing-badge {
+            font-size: 0.75em;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+        
+        .routing-local { background: var(--bs-success); }
+        .routing-cloud { background: var(--bs-warning); }
+        .routing-hybrid { background: var(--bs-info); }
+        .routing-cached { background: var(--bs-secondary); }
+        .routing-p2p-network { background: var(--bs-purple); }
+        .routing-distributed-mesh { background: var(--bs-indigo); }
+        
+        .mood-indicator {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-right: 5px;
+            display: inline-block;
+        }
+        
+        .mood-happy { background: var(--bs-success); color: white; }
+        .mood-sad { background: var(--bs-warning); color: white; }
+        .mood-frustrated { background: var(--bs-danger); color: white; }
+        .mood-excited { background: var(--bs-primary); color: white; }
+        .mood-tired { background: var(--bs-secondary); color: white; }
+        .mood-stressed { background: var(--bs-dark); color: white; }
+        .mood-confused { background: var(--bs-info); color: white; }
+        .mood-confident { background: var(--bs-success); color: white; }
+        .mood-neutral { background: var(--bs-light); color: black; }
+        
+        .persona-indicator {
+            font-size: 0.8em;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--bs-primary);
+            color: white;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .message-meta {
+            font-size: 0.8em;
+            color: var(--bs-text-muted);
+            margin-top: 8px;
+        }
+        
+        .input-group {
+            margin-top: 15px;
+        }
+        
+        .stats-panel {
+            background: var(--bs-dark);
+            border: 1px solid var(--bs-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .memory-panel {
+            background: var(--bs-dark);
+            border: 1px solid var(--bs-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .memory-item {
+            background: var(--bs-secondary);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .preference-item {
+            background: var(--bs-info);
+            color: white;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .complexity-indicator {
+            width: 100%;
+            height: 6px;
+            background: var(--bs-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .complexity-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        .complexity-trivial { background: var(--bs-success); }
+        .complexity-simple { background: var(--bs-info); }
+        .complexity-moderate { background: var(--bs-warning); }
+        .complexity-complex { background: var(--bs-danger); }
+        .complexity-expert { background: var(--bs-purple); }
+        
+        .privacy-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .privacy-meter {
+            flex: 1;
+            height: 4px;
+            background: var(--bs-secondary);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .privacy-fill {
+            height: 100%;
+            background: var(--bs-success);
+            transition: width 0.3s ease;
+        }
+        
+        .ollama-status {
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .ollama-connected {
+            background: var(--bs-success);
+            color: white;
+        }
+        
+        .ollama-disconnected {
+            background: var(--bs-danger);
+            color: white;
+        }
+        
+        .model-selector {
+            margin-bottom: 15px;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px;
+            text-align: center;
+            color: var(--bs-text-muted);
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+        
+        .context-actions {
+            margin-top: 10px;
+        }
+        
+        .context-actions button {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .feedback-actions {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--bs-secondary);
+        }
+        
+        .feedback-actions button {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="fas fa-brain me-2"></i>
+                    Personal AI Assistant
+                    <small class="text-muted d-block fs-6">Hybrid Edge-Cloud Intelligence</small>
+                </h1>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Left Panel: Chat Interface -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fas fa-comments me-2"></i>
+                                Chat Interface
+                            </h5>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="ollama-status" class="ollama-status ollama-disconnected">
+                                <i class="fas fa-circle me-1"></i>
+                                Ollama Disconnected
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearChat()">
+                                <i class="fas fa-trash me-1"></i>
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Chat Messages -->
+                        <div id="chat-container" class="chat-container">
+                            <div class="message system">
+                                <i class="fas fa-robot me-2"></i>
+                                Personal AI Assistant ready. I can help you with questions, tasks, and remember your preferences.
+                            </div>
+                        </div>
+                        
+                        <!-- Typing Indicator -->
+                        <div id="typing-indicator" class="typing-indicator">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                <span class="visually-hidden">Processing...</span>
+                            </div>
+                            Processing your request...
+                        </div>
+                        
+                        <!-- Input Area -->
+                        <div class="input-group mt-3">
+                            <input type="text" id="message-input" class="form-control" 
+                                   placeholder="Ask me anything..." 
+                                   onkeypress="handleKeyPress(event)">
+                            <button class="btn btn-outline-secondary" onclick="toggleVoiceSettings()" id="voice-settings-btn">
+                                <i class="fas fa-microphone-alt me-1"></i>
+                                Voice
+                            </button>
+                            <button class="btn btn-outline-info" onclick="toggleVoiceChat()" id="voice-toggle-btn">
+                                <i class="fas fa-volume-mute me-1"></i>
+                                TTS Off
+                            </button>
+                            <button class="btn btn-primary" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane me-1"></i>
+                                Send
+                            </button>
+                        </div>
+                        
+                        <!-- Context Actions -->
+                        <div class="context-actions">
+                            <button class="btn btn-sm btn-outline-info" onclick="addMemory()">
+                                <i class="fas fa-brain me-1"></i>
+                                Add Memory
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="setPreference()">
+                                <i class="fas fa-cog me-1"></i>
+                                Set Preference
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="viewPersonalContext()">
+                                <i class="fas fa-user me-1"></i>
+                                Personal Context
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Panel: Status and Controls -->
+            <div class="col-md-4">
+                <!-- System Status -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            System Status
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="stats-panel">
+                            <div class="stat-item">
+                                <span>Local Models:</span>
+                                <span id="local-models-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Cache Hit Rate:</span>
+                                <span id="cache-hit-rate">0%</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Stored Memories:</span>
+                                <span id="memories-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Active Preferences:</span>
+                                <span id="preferences-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>P2P Network:</span>
+                                <span id="p2p-status">Disabled</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>Network Peers:</span>
+                                <span id="p2p-peers">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Query Analysis -->
+                        <div class="mb-3">
+                            <label class="form-label">Query Complexity:</label>
+                            <div class="complexity-indicator">
+                                <div id="complexity-fill" class="complexity-fill complexity-simple" style="width: 20%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="privacy-indicator">
+                            <span>Privacy Score:</span>
+                            <div class="privacy-meter">
+                                <div id="privacy-fill" class="privacy-fill" style="width: 50%"></div>
+                            </div>
+                            <span id="privacy-score">0.5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Profile Builder -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user-circle me-2"></i>
+                            User Profile
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="profile-status">
+                            <div class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <small class="text-muted ms-2">Checking profile...</small>
+                            </div>
+                        </div>
+                        
+                        <div id="profile-complete" style="display: none;">
+                            <div class="mb-2">
+                                <strong id="profile-name">Welcome!</strong>
+                                <div class="progress mb-2">
+                                    <div id="profile-completion" class="progress-bar bg-success" role="progressbar"></div>
+                                </div>
+                                <small class="text-muted">Profile <span id="profile-percentage">0%</span> complete</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="updateProfile()">
+                                <i class="fas fa-edit me-1"></i>
+                                Update Profile
+                            </button>
+                        </div>
+                        
+                        <div id="profile-builder" style="display: none;">
+                            <div class="mb-3">
+                                <div class="progress mb-2">
+                                    <div id="profile-progress" class="progress-bar bg-primary" role="progressbar"></div>
+                                </div>
+                                <small id="profile-progress-text" class="text-muted">Question 1 of 5</small>
+                            </div>
+                            
+                            <div id="profile-question" class="mb-3">
+                                <div id="profile-message" class="alert alert-info mb-2" style="display: none;"></div>
+                                <p id="profile-question-text" class="fw-bold"></p>
+                                <div id="profile-question-context" class="text-muted small mb-2" style="display: none;"></div>
+                                
+                                <div id="profile-question-choices" class="mb-2" style="display: none;">
+                                    <div class="d-grid gap-2">
+                                        <!-- Choice buttons will be inserted here -->
+                                    </div>
+                                </div>
+                                
+                                <div id="profile-question-input">
+                                    <textarea id="profile-answer" class="form-control" rows="3" placeholder="Tell me about yourself..."></textarea>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button id="profile-submit" class="btn btn-primary">
+                                    <i class="fas fa-arrow-right me-1"></i>
+                                    Continue
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="profile-welcome" style="display: none;">
+                            <div class="alert alert-primary">
+                                <i class="fas fa-robot me-2"></i>
+                                <strong>Welcome to Personal AI!</strong>
+                                <p class="mb-2">I'd love to get to know you better to provide more personalized assistance.</p>
+                                <button class="btn btn-sm btn-primary" onclick="startProfileBuilding()">
+                                    <i class="fas fa-play me-1"></i>
+                                    Start Profile Setup
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Routing Strategy -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-route me-2"></i>
+                            Routing Strategy
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="model-selector">
+                            <label class="form-label">Preferred Strategy:</label>
+                            <select id="routing-strategy" class="form-select">
+                                <option value="auto">Auto (Hybrid)</option>
+                                <option value="local">Local Only</option>
+                                <option value="cloud">Cloud Only</option>
+                                <option value="privacy">Privacy First</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Local Model:</label>
+                            <select id="local-model" class="form-select">
+                                <option value="llama3.2:3b">Llama 3.2 3B (Fast)</option>
+                                <option value="llama3.1:8b">Llama 3.1 8B (Balanced)</option>
+                                <option value="llama3.1:70b">Llama 3.1 70B (Quality)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="testOllama()">
+                                <i class="fas fa-vial me-1"></i>
+                                Test Ollama
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="refreshStats()">
+                                <i class="fas fa-sync me-1"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Personal Memory -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-memory me-2"></i>
+                            Personal Memory
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="memory-panel" id="memory-panel">
+                            <div class="text-center text-muted">
+                                <i class="fas fa-brain fa-2x mb-2"></i>
+                                <p>No memories stored yet</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6>Active Preferences:</h6>
+                            <div id="preferences-panel">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-cog fa-2x mb-2"></i>
+                                    <p>No preferences set</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Memory Modal -->
+    <div class="modal fade" id="memoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-brain me-2"></i>
+                        Add Memory
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Category:</label>
+                        <input type="text" id="memory-category" class="form-control" placeholder="e.g., personal, work, preferences">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Key:</label>
+                        <input type="text" id="memory-key" class="form-control" placeholder="e.g., birthday, favorite color">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Value:</label>
+                        <textarea id="memory-value" class="form-control" rows="3" placeholder="Enter the memory content"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Context (optional):</label>
+                        <textarea id="memory-context" class="form-control" rows="2" placeholder="Additional context"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveMemory()">Save Memory</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preference Modal -->
+    <div class="modal fade" id="preferenceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog me-2"></i>
+                        Set Preference
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Category:</label>
+                        <select id="preference-category" class="form-select">
+                            <option value="communication">Communication Style</option>
+                            <option value="response">Response Format</option>
+                            <option value="content">Content Preferences</option>
+                            <option value="privacy">Privacy Settings</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preference:</label>
+                        <input type="text" id="preference-key" class="form-control" placeholder="e.g., tone, length, detail level">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Value:</label>
+                        <input type="text" id="preference-value" class="form-control" placeholder="e.g., casual, detailed, brief">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Strength:</label>
+                        <input type="range" id="preference-strength" class="form-range" min="0" max="1" step="0.1" value="0.8">
+                        <small class="text-muted">How important is this preference?</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="savePreference()">Save Preference</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Settings Modal -->
+    <div class="modal fade" id="voiceSettingsModal" tabindex="-1" aria-labelledby="voiceSettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="voiceSettingsModalLabel">
+                        <i class="fas fa-microphone-alt me-2"></i>
+                        Voice Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="elevenLabsApiKey" class="form-label">
+                            <i class="fas fa-key me-1"></i>
+                            ElevenLabs API Key
+                        </label>
+                        <input type="password" class="form-control" id="elevenLabsApiKey" placeholder="Enter your ElevenLabs API key">
+                        <div class="form-text">
+                            Get your API key from <a href="https://elevenlabs.io/api" target="_blank">ElevenLabs</a>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceModel" class="form-label">
+                            <i class="fas fa-robot me-1"></i>
+                            Voice Model
+                        </label>
+                        <select class="form-select" id="voiceModel">
+                            <option value="elevenlabs-tts-multilingual">ElevenLabs TTS Multilingual</option>
+                            <option value="elevenlabs-tts-turbo">ElevenLabs TTS Turbo</option>
+                            <option value="elevenlabs-tts-english">ElevenLabs TTS English</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="voiceSelection" class="form-label">
+                            <i class="fas fa-user me-1"></i>
+                            Voice Selection
+                        </label>
+                        <select class="form-select" id="voiceSelection">
+                            <option value="default">Default</option>
+                            <option value="alloy">Alloy</option>
+                            <option value="echo">Echo</option>
+                            <option value="fable">Fable</option>
+                            <option value="onyx">Onyx</option>
+                            <option value="nova">Nova</option>
+                            <option value="shimmer">Shimmer</option>
+                            <option value="Adam">Adam</option>
+                            <option value="Antoni">Antoni</option>
+                            <option value="Arnold">Arnold</option>
+                            <option value="Bella">Bella</option>
+                            <option value="Domi">Domi</option>
+                            <option value="Elli">Elli</option>
+                            <option value="Josh">Josh</option>
+                            <option value="Rachel">Rachel</option>
+                            <option value="Sam">Sam</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="voiceEnabled" checked>
+                        <label class="form-check-label" for="voiceEnabled">
+                            Enable voice responses
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveVoiceSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let chatHistory = [];
+        let isProcessing = false;
+        let voiceEnabled = false;
+        let voiceSettings = {
+            model: 'elevenlabs-tts-multilingual',
+            voice: 'default',
+            enabled: false,
+            api_key: ''
+        };
+        
+        // Profile Builder Variables
+        let currentQuestionId = null;
+        let currentQuestion = null;
+        let profileBuilderActive = false;
+        
+        // Initialize on page load
+        function initPersonalAI() {
+            checkOllamaStatus();
+            refreshStats();
+            loadPersonalMemory();
+            checkProfileStatus();
+            loadVoiceSettings();
+
+            // Auto-refresh stats every 30 seconds
+            setInterval(refreshStats, 30000);
+
+            // Profile submit button handler
+            document.getElementById('profile-submit').addEventListener('click', submitProfileAnswer);
+
+            // Allow Enter key to submit profile answer
+            document.getElementById('profile-answer').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitProfileAnswer();
+                }
+            });
+        }
+
+        if (document.readyState !== 'loading') {
+            initPersonalAI();
+        } else {
+            document.addEventListener('DOMContentLoaded', initPersonalAI);
+        }
+        
+        // Profile Builder Functions
+        function checkProfileStatus() {
+            fetch('/api/profile/status?user_id=default_user')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.has_profile && data.completion > 0.6) {
+                        // Show completed profile
+                        document.getElementById('profile-status').style.display = 'none';
+                        document.getElementById('profile-complete').style.display = 'block';
+                        document.getElementById('profile-name').textContent = `Welcome back, ${data.name}!`;
+                        document.getElementById('profile-completion').style.width = `${data.completion * 100}%`;
+                        document.getElementById('profile-percentage').textContent = `${Math.round(data.completion * 100)}%`;
+                    } else {
+                        // Show welcome message to start profile building
+                        document.getElementById('profile-status').style.display = 'none';
+                        document.getElementById('profile-welcome').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking profile status:', error);
+                    document.getElementById('profile-status').style.display = 'none';
+                    document.getElementById('profile-welcome').style.display = 'block';
+                });
+        }
+        
+        function startProfileBuilding() {
+            profileBuilderActive = true;
+            document.getElementById('profile-welcome').style.display = 'none';
+            document.getElementById('profile-builder').style.display = 'block';
+            
+            fetch('/api/profile/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: 'default_user'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'started') {
+                    showProfileMessage(data.message);
+                    displayProfileQuestion(data.question, data.progress);
+                } else if (data.status === 'existing_profile') {
+                    showProfileMessage(data.message);
+                    checkProfileStatus();
+                } else {
+                    showProfileMessage('Sorry, I encountered an error starting the profile building process.');
+                }
+            })
+            .catch(error => {
+                console.error('Error starting profile building:', error);
+                showProfileMessage('Sorry, I encountered an error. Please try again.');
+            });
+        }
+        
+        function displayProfileQuestion(question, progress) {
+            currentQuestionId = question.id;
+            currentQuestion = question;
+            
+            // Update progress
+            const progressPercent = (progress.current / progress.total) * 100;
+            document.getElementById('profile-progress').style.width = `${progressPercent}%`;
+            document.getElementById('profile-progress-text').textContent = `Question ${progress.current} of ${progress.total}`;
+            
+            // Display question
+            document.getElementById('profile-question-text').textContent = question.text;
+            
+            // Show context if available
+            if (question.context) {
+                document.getElementById('profile-question-context').textContent = question.context;
+                document.getElementById('profile-question-context').style.display = 'block';
+            } else {
+                document.getElementById('profile-question-context').style.display = 'none';
+            }
+            
+            // Handle different question types
+            if (question.type === 'multiple_choice' && question.choices) {
+                // Show choices
+                const choicesDiv = document.getElementById('profile-question-choices');
+                const choicesContainer = choicesDiv.querySelector('.d-grid');
+                choicesContainer.innerHTML = '';
+                
+                question.choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'btn btn-outline-primary';
+                    button.textContent = choice;
+                    button.onclick = () => selectChoice(choice);
+                    choicesContainer.appendChild(button);
+                });
+                
+                choicesDiv.style.display = 'block';
+                document.getElementById('profile-question-input').style.display = 'none';
+            } else {
+                // Show text input
+                document.getElementById('profile-question-choices').style.display = 'none';
+                document.getElementById('profile-question-input').style.display = 'block';
+                document.getElementById('profile-answer').value = '';
+                document.getElementById('profile-answer').focus();
+            }
+        }
+        
+        function selectChoice(choice) {
+            document.getElementById('profile-answer').value = choice;
+            submitProfileAnswer();
+        }
+        
+        function submitProfileAnswer() {
+            const answer = document.getElementById('profile-answer').value.trim();
+            
+            if (!answer) {
+                showProfileMessage('Please provide an answer before continuing.');
+                return;
+            }
+            
+            if (!currentQuestionId) {
+                showProfileMessage('Error: No current question. Please refresh the page.');
+                return;
+            }
+            
+            // Disable submit button
+            const submitBtn = document.getElementById('profile-submit');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing...';
+            
+            fetch('/api/profile/respond', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: 'default_user',
+                    question_id: currentQuestionId,
+                    response: answer
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'next_question' || data.status === 'follow_up') {
+                    showProfileMessage(data.message);
+                    displayProfileQuestion(data.question, data.progress);
+                } else if (data.status === 'completed') {
+                    showProfileMessage(data.message);
+                    setTimeout(() => {
+                        profileBuilderActive = false;
+                        document.getElementById('profile-builder').style.display = 'none';
+                        checkProfileStatus();
+                    }, 3000);
+                } else {
+                    showProfileMessage('Sorry, I encountered an error processing your response.');
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting profile answer:', error);
+                showProfileMessage('Sorry, I encountered an error. Please try again.');
+            })
+            .finally(() => {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-arrow-right me-1"></i>Continue';
+            });
+        }
+        
+        function showProfileMessage(message) {
+            const messageDiv = document.getElementById('profile-message');
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            // Auto-hide message after 5 seconds unless it's the completion message
+            if (!message.includes('Thank you for sharing')) {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        function updateProfile() {
+            // Allow user to update existing profile
+            document.getElementById('profile-complete').style.display = 'none';
+            document.getElementById('profile-welcome').style.display = 'block';
+        }
+        
+        async function checkOllamaStatus() {
+            try {
+                const response = await fetch('/api/personal-ai/status');
+                const data = await response.json();
+                
+                const statusElement = document.getElementById('ollama-status');
+                if (data.ollama_connected) {
+                    statusElement.className = 'ollama-status ollama-connected';
+                    statusElement.innerHTML = '<i class="fas fa-circle me-1"></i>Ollama Connected';
+                } else {
+                    statusElement.className = 'ollama-status ollama-disconnected';
+                    statusElement.innerHTML = '<i class="fas fa-circle me-1"></i>Ollama Disconnected';
+                }
+                
+                // Update local models count
+                document.getElementById('local-models-count').textContent = data.local_models || 0;
+                
+                // Update P2P network status
+                if (data.p2p_network) {
+                    document.getElementById('p2p-status').textContent = 
+                        data.p2p_network.enabled ? 'Enabled' : 'Disabled';
+                    document.getElementById('p2p-peers').textContent = 
+                        data.p2p_network.network_stats.peer_count || 0;
+                }
+                
+            } catch (error) {
+                console.error('Error checking Ollama status:', error);
+                const statusElement = document.getElementById('ollama-status');
+                statusElement.className = 'ollama-status ollama-disconnected';
+                statusElement.innerHTML = '<i class="fas fa-circle me-1"></i>Ollama Error';
+            }
+        }
+        
+        async function refreshStats() {
+            try {
+                const response = await fetch('/api/personal-ai/stats');
+                const data = await response.json();
+                
+                document.getElementById('cache-hit-rate').textContent = 
+                    Math.round(data.cache_hit_rate * 100) + '%';
+                document.getElementById('memories-count').textContent = data.total_memories || 0;
+                document.getElementById('preferences-count').textContent = data.total_preferences || 0;
+                
+            } catch (error) {
+                console.error('Error refreshing stats:', error);
+            }
+        }
+        
+        async function loadPersonalMemory() {
+            try {
+                const response = await fetch('/api/personal-ai/memory');
+                const data = await response.json();
+                
+                // Update memories
+                const memoryPanel = document.getElementById('memory-panel');
+                if (data.memories && data.memories.length > 0) {
+                    memoryPanel.innerHTML = data.memories.map(memory => `
+                        <div class="memory-item">
+                            <strong>${memory.key}</strong>
+                            <p class="mb-1">${memory.value}</p>
+                            <small class="text-muted">${memory.category} • ${memory.created_at}</small>
+                        </div>
+                    `).join('');
+                }
+                
+                // Update preferences
+                const preferencesPanel = document.getElementById('preferences-panel');
+                if (data.preferences && data.preferences.length > 0) {
+                    preferencesPanel.innerHTML = data.preferences.map(pref => `
+                        <div class="preference-item">
+                            <strong>${pref.preference}:</strong> ${pref.value}
+                            <small class="d-block">Strength: ${Math.round(pref.strength * 100)}%</small>
+                        </div>
+                    `).join('');
+                }
+                
+            } catch (error) {
+                console.error('Error loading personal memory:', error);
+            }
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message || isProcessing) return;
+            
+            isProcessing = true;
+            input.value = '';
+            
+            // Add user message to chat
+            addMessage('user', message);
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            // Analyze query for UI feedback
+            analyzeQuery(message);
+            
+            try {
+                const response = await fetch('/api/personal-ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        routing_strategy: document.getElementById('routing-strategy').value,
+                        local_model: document.getElementById('local-model').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    addMessage('system', `Error: ${data.error}`);
+                } else {
+                    // Add assistant response
+                    addMessage('assistant', data.response, data.routing_result);
+                    
+                    // Generate voice response if enabled
+                    if (voiceEnabled) {
+                        generateVoiceResponse(data.response);
+                    }
+                    
+                    // Update chat history
+                    chatHistory.push({ user: message, assistant: data.response });
+                }
+                
+            } catch (error) {
+                addMessage('system', `Network error: ${error.message}`);
+            } finally {
+                hideTypingIndicator();
+                isProcessing = false;
+            }
+        }
+        
+        function addMessage(type, content, routingResult = null) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            let routingBadge = '';
+            let messageMeta = '';
+            
+            if (routingResult) {
+                const decision = routingResult.decision;
+                const badgeClass = `routing-${decision.replace('_', '-')}`;
+                routingBadge = `<span class="badge ${badgeClass} routing-badge">${decision.toUpperCase()}</span><br>`;
+                
+                messageMeta = `
+                    <div class="message-meta">
+                        Model: ${routingResult.model_used} | 
+                        Latency: ${routingResult.latency.toFixed(2)}s | 
+                        Confidence: ${Math.round(routingResult.confidence * 100)}%
+                        ${routingResult.cached ? ' | <i class="fas fa-save"></i> Cached' : ''}
+                    </div>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                ${routingBadge}
+                ${content}
+                ${messageMeta}
+                ${type === 'assistant' ? `
+                    <div class="feedback-actions">
+                        <button class="btn btn-sm btn-outline-success" onclick="provideFeedback('positive')">
+                            <i class="fas fa-thumbs-up"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="provideFeedback('negative')">
+                            <i class="fas fa-thumbs-down"></i>
+                        </button>
+                    </div>
+                ` : ''}
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        function showTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'block';
+        }
+        
+        function hideTypingIndicator() {
+            document.getElementById('typing-indicator').style.display = 'none';
+        }
+        
+        function analyzeQuery(query) {
+            // Simple client-side analysis for UI feedback
+            const complexityKeywords = {
+                trivial: ['hi', 'hello', 'thanks', 'yes', 'no'],
+                simple: ['what', 'when', 'where', 'who'],
+                moderate: ['how', 'why', 'explain'],
+                complex: ['analyze', 'compare', 'create'],
+                expert: ['optimize', 'implement', 'architecture']
+            };
+            
+            let complexity = 'simple';
+            let complexityScore = 0.2;
+            
+            const queryLower = query.toLowerCase();
+            
+            for (const [level, keywords] of Object.entries(complexityKeywords)) {
+                const matches = keywords.filter(keyword => queryLower.includes(keyword)).length;
+                if (matches > 0) {
+                    complexity = level;
+                    complexityScore = {
+                        trivial: 0.1,
+                        simple: 0.3,
+                        moderate: 0.5,
+                        complex: 0.7,
+                        expert: 0.9
+                    }[level];
+                    break;
+                }
+            }
+            
+            // Update complexity indicator
+            const complexityFill = document.getElementById('complexity-fill');
+            complexityFill.className = `complexity-fill complexity-${complexity}`;
+            complexityFill.style.width = `${complexityScore * 100}%`;
+            
+            // Update privacy indicator
+            const privacyKeywords = ['personal', 'private', 'my', 'i', 'me'];
+            const privacyScore = Math.min(1.0, 
+                privacyKeywords.filter(keyword => queryLower.includes(keyword)).length / 3);
+            
+            const privacyFill = document.getElementById('privacy-fill');
+            privacyFill.style.width = `${privacyScore * 100}%`;
+            document.getElementById('privacy-score').textContent = privacyScore.toFixed(1);
+        }
+        
+        function clearChat() {
+            document.getElementById('chat-container').innerHTML = `
+                <div class="message system">
+                    <i class="fas fa-robot me-2"></i>
+                    Personal AI Assistant ready. I can help you with questions, tasks, and remember your preferences.
+                </div>
+            `;
+            chatHistory = [];
+        }
+        
+        function addMemory() {
+            const modal = new bootstrap.Modal(document.getElementById('memoryModal'));
+            modal.show();
+        }
+        
+        function setPreference() {
+            const modal = new bootstrap.Modal(document.getElementById('preferenceModal'));
+            modal.show();
+        }
+        
+        async function saveMemory() {
+            const category = document.getElementById('memory-category').value;
+            const key = document.getElementById('memory-key').value;
+            const value = document.getElementById('memory-value').value;
+            const context = document.getElementById('memory-context').value;
+            
+            if (!category || !key || !value) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/personal-ai/memory', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        category: category,
+                        key: key,
+                        value: value,
+                        context: context
+                    })
+                });
+                
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('memoryModal')).hide();
+                    loadPersonalMemory();
+                    
+                    // Clear form
+                    document.getElementById('memory-category').value = '';
+                    document.getElementById('memory-key').value = '';
+                    document.getElementById('memory-value').value = '';
+                    document.getElementById('memory-context').value = '';
+                } else {
+                    alert('Failed to save memory');
+                }
+                
+            } catch (error) {
+                alert('Error saving memory: ' + error.message);
+            }
+        }
+        
+        async function savePreference() {
+            const category = document.getElementById('preference-category').value;
+            const key = document.getElementById('preference-key').value;
+            const value = document.getElementById('preference-value').value;
+            const strength = document.getElementById('preference-strength').value;
+            
+            if (!key || !value) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/personal-ai/preference', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        category: category,
+                        preference: key,
+                        value: value,
+                        strength: parseFloat(strength)
+                    })
+                });
+                
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('preferenceModal')).hide();
+                    loadPersonalMemory();
+                    
+                    // Clear form
+                    document.getElementById('preference-category').value = '';
+                    document.getElementById('preference-key').value = '';
+                    document.getElementById('preference-value').value = '';
+                    document.getElementById('preference-strength').value = 0.8;
+                } else {
+                    alert('Failed to save preference');
+                }
+                
+            } catch (error) {
+                alert('Error saving preference: ' + error.message);
+            }
+        }
+        
+        // Voice-related functions
+        async function loadVoiceSettings() {
+            try {
+                const response = await fetch('/api/personal-ai/voice/settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    voiceSettings = settings;
+                    voiceEnabled = settings.enabled === 'true';
+                    
+                    // Update UI
+                    updateVoiceToggleButton();
+                    
+                    // Update modal with settings
+                    document.getElementById('elevenLabsApiKey').value = settings.api_key || '';
+                    document.getElementById('voiceModel').value = settings.model || 'elevenlabs-tts-multilingual';
+                    document.getElementById('voiceSelection').value = settings.voice || 'default';
+                    document.getElementById('voiceEnabled').checked = voiceEnabled;
+                }
+            } catch (error) {
+                console.error('Error loading voice settings:', error);
+            }
+        }
+        
+        function toggleVoiceSettings() {
+            const modal = new bootstrap.Modal(document.getElementById('voiceSettingsModal'));
+            modal.show();
+        }
+        
+        function toggleVoiceChat() {
+            voiceEnabled = !voiceEnabled;
+            updateVoiceToggleButton();
+            
+            // Update settings
+            voiceSettings.enabled = voiceEnabled;
+            saveVoiceSettings();
+        }
+        
+        function updateVoiceToggleButton() {
+            const btn = document.getElementById('voice-toggle-btn');
+            const icon = btn.querySelector('i');
+            
+            if (voiceEnabled) {
+                btn.className = 'btn btn-success';
+                icon.className = 'fas fa-volume-up me-1';
+                btn.innerHTML = '<i class="fas fa-volume-up me-1"></i>TTS On';
+            } else {
+                btn.className = 'btn btn-outline-info';
+                icon.className = 'fas fa-volume-mute me-1';
+                btn.innerHTML = '<i class="fas fa-volume-mute me-1"></i>TTS Off';
+            }
+        }
+        
+        async function saveVoiceSettings() {
+            const apiKey = document.getElementById('elevenLabsApiKey').value;
+            const model = document.getElementById('voiceModel').value;
+            const voice = document.getElementById('voiceSelection').value;
+            const enabled = document.getElementById('voiceEnabled').checked;
+            
+            try {
+                const response = await fetch('/api/personal-ai/voice/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_key: apiKey,
+                        model: model,
+                        voice: voice,
+                        enabled: enabled
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        voiceSettings = { api_key: apiKey, model: model, voice: voice, enabled: enabled };
+                        voiceEnabled = enabled;
+                        updateVoiceToggleButton();
+                        
+                        // Close modal
+                        bootstrap.Modal.getInstance(document.getElementById('voiceSettingsModal')).hide();
+                        
+                        // Show success message
+                        alert('Voice settings saved successfully!');
+                    } else {
+                        alert('Failed to save voice settings: ' + result.error);
+                    }
+                } else {
+                    alert('Failed to save voice settings');
+                }
+                
+            } catch (error) {
+                alert('Error saving voice settings: ' + error.message);
+            }
+        }
+        
+        async function generateVoiceResponse(text) {
+            if (!voiceEnabled || !voiceSettings.api_key) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/personal-ai/voice/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        voice_settings: voiceSettings
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        console.log('Voice generated successfully');
+                        // Here you would typically play the audio
+                        // For now, just show a success message
+                        addMessage('system', 'Voice response generated successfully!');
+                    } else {
+                        console.error('Voice generation failed:', result.error);
+                    }
+                } else {
+                    console.error('Failed to generate voice response');
+                }
+                
+            } catch (error) {
+                console.error('Error generating voice response:', error);
+            }
+        }
+        
+        async function testOllama() {
+            try {
+                const response = await fetch('/api/personal-ai/test-ollama', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Ollama test successful!');
+                    checkOllamaStatus();
+                } else {
+                    alert('Ollama test failed: ' + data.error);
+                }
+                
+            } catch (error) {
+                alert('Error testing Ollama: ' + error.message);
+            }
+        }
+        
+        async function provideFeedback(type) {
+            // Simple feedback for now
+            console.log(`Feedback: ${type}`);
+            // Could implement more sophisticated feedback collection
+        }
+        
+        function viewPersonalContext() {
+            loadPersonalMemory();
+            alert('Personal context refreshed!');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peer Teaching Learning Demo - ML Router</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .demo-step {
+            background: var(--bs-dark);
+            border: 1px solid var(--bs-secondary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .demo-step h3 {
+            color: var(--bs-primary);
+            margin-bottom: 15px;
+        }
+        .agent-card {
+            background: var(--bs-secondary);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .lesson-card {
+            background: var(--bs-info);
+            color: white;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .knowledge-flow {
+            display: flex;
+            align-items: center;
+            margin: 15px 0;
+        }
+        .knowledge-flow .arrow {
+            margin: 0 15px;
+            font-size: 1.5em;
+            color: var(--bs-success);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: var(--bs-primary);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .demo-output {
+            background: var(--bs-dark);
+            border: 1px solid var(--bs-secondary);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .learning-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="fas fa-chalkboard-teacher me-2"></i>
+                    Peer Teaching Learning Demonstration
+                </h1>
+                <p class="text-center text-muted mb-4">
+                    Watch how agents learn from each other through federated knowledge sharing and collaborative intelligence
+                </p>
+            </div>
+        </div>
+
+        <!-- Step 1: Agent Registration -->
+        <div class="demo-step">
+            <h3><i class="fas fa-user-plus me-2"></i>Step 1: Agent Registration</h3>
+            <p>Specialized agents register with unique capabilities and expertise domains.</p>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="agent-card">
+                        <h5><i class="fas fa-calculator me-2"></i>Alice - Math Solver</h5>
+                        <p><strong>Specialization:</strong> Mathematics</p>
+                        <p><strong>Capabilities:</strong> Algebra, Calculus, Statistics</p>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="agent-card">
+                        <h5><i class="fas fa-code me-2"></i>Bob - Code Helper</h5>
+                        <p><strong>Specialization:</strong> Programming</p>
+                        <p><strong>Capabilities:</strong> Python, Debugging, Algorithms</p>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="agent-card">
+                        <h5><i class="fas fa-pen me-2"></i>Carol - Writing Assistant</h5>
+                        <p><strong>Specialization:</strong> Writing</p>
+                        <p><strong>Capabilities:</strong> Grammar, Style, Editing</p>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Lesson Contribution -->
+        <div class="demo-step">
+            <h3><i class="fas fa-book me-2"></i>Step 2: Lesson Contribution</h3>
+            <p>Agents contribute lessons based on their successful experiences and strategies.</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="lesson-card">
+                        <h5><i class="fas fa-square-root-alt me-2"></i>Alice's Lesson</h5>
+                        <p><strong>Title:</strong> Solving Quadratic Equations</p>
+                        <p><strong>Strategy:</strong> Factor-first approach with discriminant checking</p>
+                        <p><strong>Effectiveness:</strong> 95%</p>
+                        <div class="mt-2">
+                            <span class="badge bg-light text-dark">Mathematics</span>
+                            <span class="badge bg-light text-dark">Strategy</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="lesson-card">
+                        <h5><i class="fas fa-edit me-2"></i>Carol's Lesson</h5>
+                        <p><strong>Title:</strong> Active Voice Conversion</p>
+                        <p><strong>Strategy:</strong> Identify passive constructions and transform</p>
+                        <p><strong>Effectiveness:</strong> 88%</p>
+                        <div class="mt-2">
+                            <span class="badge bg-light text-dark">Writing</span>
+                            <span class="badge bg-light text-dark">Pattern</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Knowledge Discovery -->
+        <div class="demo-step">
+            <h3><i class="fas fa-search me-2"></i>Step 3: Knowledge Discovery & Adoption</h3>
+            <p>Agents discover relevant lessons from peers and adopt successful strategies.</p>
+            
+            <div class="knowledge-flow">
+                <div class="agent-card" style="flex: 1;">
+                    <h6><i class="fas fa-search me-2"></i>Bob searches for "mathematics"</h6>
+                    <p>Looking for math-related lessons to improve problem-solving</p>
+                </div>
+                <div class="arrow">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+                <div class="lesson-card" style="flex: 1;">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Finds Alice's Lesson</h6>
+                    <p>Discovers "Solving Quadratic Equations" with 95% effectiveness</p>
+                    <span class="badge bg-success">Adopted!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Federated Learning -->
+        <div class="demo-step">
+            <h3><i class="fas fa-network-wired me-2"></i>Step 4: Federated Knowledge Sharing</h3>
+            <p>Agents contribute anonymized knowledge for collective learning improvement.</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-secondary">
+                        <div class="card-body">
+                            <h6><i class="fas fa-share-alt me-2"></i>Alice Contributes</h6>
+                            <p><strong>Domain:</strong> Quadratic Equations</p>
+                            <p><strong>Approach:</strong> Factor-first with formula backup</p>
+                            <p><strong>Performance:</strong> 95% accuracy, 80% speed</p>
+                            <p><strong>Insights:</strong> Check discriminant first, factoring is faster</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-secondary">
+                        <div class="card-body">
+                            <h6><i class="fas fa-download me-2"></i>Bob Retrieves</h6>
+                            <p><strong>Query:</strong> Math problem-solving strategies</p>
+                            <p><strong>Received:</strong> Anonymous best practices</p>
+                            <p><strong>Applied:</strong> Factor-first approach in code optimization</p>
+                            <p><strong>Result:</strong> 15% improvement in algorithm efficiency</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Multi-Agent Collaboration -->
+        <div class="demo-step">
+            <h3><i class="fas fa-users me-2"></i>Step 5: Multi-Agent Collaboration</h3>
+            <p>Agents work together on complex tasks, sharing insights and reaching consensus.</p>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card bg-primary">
+                        <div class="card-body text-white">
+                            <h6><i class="fas fa-comments me-2"></i>Collaborative Session</h6>
+                            <p><strong>Task:</strong> "What's the best way to teach calculus to beginners?"</p>
+                            <p><strong>Participants:</strong> Alice (Math), Carol (Writing), Bob (Code)</p>
+                            <p><strong>Method:</strong> Confidence-weighted consensus</p>
+                            <p><strong>Result:</strong> "Use visual aids with step-by-step approach"</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-success">
+                        <div class="card-body text-white">
+                            <h6><i class="fas fa-handshake me-2"></i>Consensus Reached</h6>
+                            <p><strong>Confidence:</strong> 85%</p>
+                            <p><strong>Lessons Generated:</strong> 3</p>
+                            <p><strong>Cross-corrections:</strong> 2</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 6: Learning Analytics -->
+        <div class="demo-step">
+            <h3><i class="fas fa-chart-line me-2"></i>Step 6: Learning Analytics</h3>
+            <p>System tracks learning progress and measures collaborative effectiveness.</p>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">5</div>
+                    <div>Active Agents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">12</div>
+                    <div>Lessons Shared</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">67%</div>
+                    <div>Adoption Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">92%</div>
+                    <div>Success Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Demo Controls -->
+        <div class="demo-step">
+            <h3><i class="fas fa-play me-2"></i>Interactive Demo</h3>
+            <p>Run the peer teaching demonstration to see the learning process in action.</p>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <button class="btn btn-primary btn-lg w-100" onclick="runDemo()">
+                        <i class="fas fa-play me-2"></i>Run Learning Demo
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-secondary btn-lg w-100" onclick="showStats()">
+                        <i class="fas fa-chart-bar me-2"></i>View Statistics
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-success btn-lg w-100" onclick="clearDemo()">
+                        <i class="fas fa-refresh me-2"></i>Reset Demo
+                    </button>
+                </div>
+            </div>
+            
+            <div id="demo-output" class="demo-output" style="display: none;">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Running peer teaching demonstration...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Learning Features -->
+        <div class="demo-step">
+            <h3><i class="fas fa-graduation-cap me-2"></i>Key Learning Features</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Agent specialization and capability mapping
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Cross-domain lesson discovery and adoption
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Federated learning with privacy preservation
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Multi-agent debate and consensus building
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Continuous improvement through peer feedback
+                        </li>
+                        <li class="list-group-item d-flex align-items-center">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            Comprehensive analytics and success tracking
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function runDemo() {
+            const outputDiv = document.getElementById('demo-output');
+            outputDiv.style.display = 'block';
+            outputDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Running peer teaching demonstration...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/peer-teaching/demo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.text();
+                    outputDiv.innerHTML = `<div class="text-success">✅ Demo completed successfully!</div><pre>${result}</pre>`;
+                } else {
+                    outputDiv.innerHTML = `<div class="text-danger">❌ Demo failed. Please check the console for details.</div>`;
+                }
+            } catch (error) {
+                outputDiv.innerHTML = `<div class="text-danger">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function showStats() {
+            const outputDiv = document.getElementById('demo-output');
+            outputDiv.style.display = 'block';
+            outputDiv.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading statistics...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/peer-teaching/stats');
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    outputDiv.innerHTML = `
+                        <div class="text-success">📊 Peer Teaching Statistics</div>
+                        <pre>${JSON.stringify(stats, null, 2)}</pre>
+                    `;
+                } else {
+                    outputDiv.innerHTML = `<div class="text-danger">❌ Failed to load statistics.</div>`;
+                }
+            } catch (error) {
+                outputDiv.innerHTML = `<div class="text-danger">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function clearDemo() {
+            const outputDiv = document.getElementById('demo-output');
+            outputDiv.style.display = 'none';
+            outputDiv.innerHTML = '';
+        }
+        
+        // Add subtle animations to demo steps
+        document.addEventListener('DOMContentLoaded', function() {
+            const steps = document.querySelectorAll('.demo-step');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            });
+            
+            steps.forEach(step => {
+                step.style.opacity = '0';
+                step.style.transform = 'translateY(20px)';
+                step.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(step);
+            });
+        });
+    </script>
+</body>
+</html>

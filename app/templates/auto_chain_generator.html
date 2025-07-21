@@ -1,0 +1,623 @@
+{% extends "base.html" %}
+
+{% block title %}Auto Chain Generator - ML Query Router{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>
+                    <i class="fas fa-link text-primary me-2"></i>
+                    Auto Chain Generator
+                </h1>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" onclick="loadTemplates()">
+                        <i class="fas fa-layer-group me-1"></i>Templates
+                    </button>
+                    <button class="btn btn-outline-info" onclick="loadStats()">
+                        <i class="fas fa-chart-bar me-1"></i>Stats
+                    </button>
+                </div>
+            </div>
+            
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Auto Chain Generator</strong> - Dynamically generate multi-step agent chains per query. 
+                Input a complex query and get an optimized chain of AI agents to process it step by step.
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Query Input Panel -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-keyboard me-2"></i>Query Input
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="queryInput" class="form-label">Enter your query:</label>
+                        <textarea 
+                            id="queryInput" 
+                            class="form-control" 
+                            rows="4" 
+                            placeholder="Example: Summarize and debate this document about AI ethics"
+                            style="font-size: 16px;"
+                        ></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="analyzeQuery()">
+                            <i class="fas fa-search me-1"></i>Analyze Query
+                        </button>
+                        <button class="btn btn-success" onclick="generateChain()">
+                            <i class="fas fa-link me-1"></i>Generate Chain
+                        </button>
+                        <button class="btn btn-warning" onclick="executeChain()">
+                            <i class="fas fa-play me-1"></i>Execute Chain
+                        </button>
+                    </div>
+                    
+                    <div id="queryStatus" class="mt-3" style="display: none;">
+                        <div class="alert alert-info">
+                            <i class="fas fa-spinner fa-spin me-2"></i>
+                            Processing query...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Example Queries -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Example Queries
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <button class="list-group-item list-group-item-action" onclick="setQuery('Summarize and debate this document about quantum computing')">
+                            <strong>Summarize and debate this document</strong>
+                            <br><small class="text-muted">→ RAG → Classifier → Summarizer → Counter-arguer → Critic</small>
+                        </button>
+                        <button class="list-group-item list-group-item-action" onclick="setQuery('Research and analyze the latest AI trends')">
+                            <strong>Research and analyze the latest AI trends</strong>
+                            <br><small class="text-muted">→ RAG → Research → Analysis → Synthesis</small>
+                        </button>
+                        <button class="list-group-item list-group-item-action" onclick="setQuery('Create a comprehensive marketing strategy for a new product')">
+                            <strong>Create a comprehensive marketing strategy</strong>
+                            <br><small class="text-muted">→ Classification → Planning → Generation → Critique → Validation</small>
+                        </button>
+                        <button class="list-group-item list-group-item-action" onclick="setQuery('Compare different programming languages for web development')">
+                            <strong>Compare programming languages</strong>
+                            <br><small class="text-muted">→ RAG → Extraction → Comparison → Synthesis</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="col-md-6">
+            <!-- Query Analysis Results -->
+            <div class="card" id="analysisCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-analytics me-2"></i>Query Analysis
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="analysisResults"></div>
+                </div>
+            </div>
+            
+            <!-- Generated Chain -->
+            <div class="card" id="chainCard" style="display: none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-sitemap me-2"></i>Generated Chain
+                    </h5>
+                    <span id="chainMeta" class="badge bg-secondary"></span>
+                </div>
+                <div class="card-body">
+                    <div id="chainVisualization"></div>
+                </div>
+            </div>
+            
+            <!-- Execution Results -->
+            <div class="card" id="executionCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-play-circle me-2"></i>Execution Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="executionResults"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Templates Modal -->
+    <div class="modal fade" id="templatesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chain Templates</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="templatesContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Stats Modal -->
+    <div class="modal fade" id="statsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chain Generator Statistics</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="statsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentChain = null;
+
+function setQuery(query) {
+    document.getElementById('queryInput').value = query;
+}
+
+function showStatus(message) {
+    const statusDiv = document.getElementById('queryStatus');
+    statusDiv.innerHTML = `<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>${message}</div>`;
+    statusDiv.style.display = 'block';
+}
+
+function hideStatus() {
+    document.getElementById('queryStatus').style.display = 'none';
+}
+
+async function analyzeQuery() {
+    const query = document.getElementById('queryInput').value.trim();
+    if (!query) {
+        alert('Please enter a query');
+        return;
+    }
+    
+    showStatus('Analyzing query...');
+    
+    try {
+        const response = await fetch('/api/chains/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: query })
+        });
+        
+        const data = await response.json();
+        hideStatus();
+        
+        if (response.ok) {
+            displayAnalysis(data.analysis);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        hideStatus();
+        alert('Network error: ' + error.message);
+    }
+}
+
+function displayAnalysis(analysis) {
+    const analysisCard = document.getElementById('analysisCard');
+    const resultsDiv = document.getElementById('analysisResults');
+    
+    const html = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Query Characteristics</h6>
+                <ul class="list-unstyled">
+                    <li><strong>Intent:</strong> <span class="badge bg-primary">${analysis.intent}</span></li>
+                    <li><strong>Domain:</strong> <span class="badge bg-info">${analysis.domain}</span></li>
+                    <li><strong>Complexity:</strong> 
+                        <div class="progress mt-1" style="height: 10px;">
+                            <div class="progress-bar" role="progressbar" style="width: ${analysis.complexity * 100}%"></div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Requirements</h6>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-${analysis.requires_rag ? 'check text-success' : 'times text-danger'} me-1"></i> RAG Retrieval</li>
+                    <li><i class="fas fa-${analysis.requires_debate ? 'check text-success' : 'times text-danger'} me-1"></i> Debate/Counter-arguments</li>
+                    <li><i class="fas fa-${analysis.requires_research ? 'check text-success' : 'times text-danger'} me-1"></i> Additional Research</li>
+                    <li><i class="fas fa-${analysis.requires_creativity ? 'check text-success' : 'times text-danger'} me-1"></i> Creative Generation</li>
+                </ul>
+            </div>
+        </div>
+        <div class="mt-3">
+            <h6>Expected Processing</h6>
+            <p><strong>Estimated Steps:</strong> ${analysis.estimated_steps}</p>
+            <p><strong>Output Format:</strong> <span class="badge bg-secondary">${analysis.output_format}</span></p>
+        </div>
+    `;
+    
+    resultsDiv.innerHTML = html;
+    analysisCard.style.display = 'block';
+}
+
+async function generateChain() {
+    const query = document.getElementById('queryInput').value.trim();
+    if (!query) {
+        alert('Please enter a query');
+        return;
+    }
+    
+    showStatus('Generating agent chain...');
+    
+    try {
+        const response = await fetch('/api/chains/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: query })
+        });
+        
+        const data = await response.json();
+        hideStatus();
+        
+        if (response.ok) {
+            currentChain = data.chain;
+            displayChain(data.chain);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        hideStatus();
+        alert('Network error: ' + error.message);
+    }
+}
+
+function displayChain(chain) {
+    const chainCard = document.getElementById('chainCard');
+    const chainMeta = document.getElementById('chainMeta');
+    const visualizationDiv = document.getElementById('chainVisualization');
+    
+    // Update meta information
+    chainMeta.textContent = `${chain.steps.length} steps • $${chain.estimated_cost.toFixed(4)} • ${chain.estimated_time.toFixed(1)}s`;
+    
+    // Create chain visualization
+    let html = '<div class="chain-visualization">';
+    
+    chain.steps.forEach((step, index) => {
+        const isLast = index === chain.steps.length - 1;
+        
+        html += `
+            <div class="step-container mb-3">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="card-title">
+                                    <span class="badge bg-primary me-2">${index + 1}</span>
+                                    ${step.step_type.replace('_', ' ').toUpperCase()}
+                                </h6>
+                                <p class="card-text">${step.description}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-robot me-1"></i>${step.agent_name}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge bg-secondary">$${step.parameters.estimated_cost.toFixed(4)}</div>
+                                <div class="badge bg-info">${step.parameters.estimated_time.toFixed(1)}s</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ${!isLast ? '<div class="text-center my-2"><i class="fas fa-arrow-down text-primary"></i></div>' : ''}
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    // Add summary
+    html += `
+        <div class="chain-summary mt-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Total Steps</h6>
+                        <span class="badge bg-primary fs-6">${chain.steps.length}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Estimated Cost</h6>
+                        <span class="badge bg-success fs-6">$${chain.estimated_cost.toFixed(4)}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Estimated Time</h6>
+                        <span class="badge bg-info fs-6">${chain.estimated_time.toFixed(1)}s</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Complexity</h6>
+                        <span class="badge bg-warning fs-6">${(chain.complexity_score * 100).toFixed(0)}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    visualizationDiv.innerHTML = html;
+    chainCard.style.display = 'block';
+}
+
+async function executeChain() {
+    const query = document.getElementById('queryInput').value.trim();
+    if (!query) {
+        alert('Please enter a query');
+        return;
+    }
+    
+    showStatus('Executing agent chain...');
+    
+    try {
+        const response = await fetch('/api/chains/execute', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: query })
+        });
+        
+        const data = await response.json();
+        hideStatus();
+        
+        if (response.ok) {
+            displayExecutionResults(data);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        hideStatus();
+        alert('Network error: ' + error.message);
+    }
+}
+
+function displayExecutionResults(execution) {
+    const executionCard = document.getElementById('executionCard');
+    const resultsDiv = document.getElementById('executionResults');
+    
+    let html = `
+        <div class="execution-summary mb-4">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Success Rate</h6>
+                        <span class="badge bg-${execution.success_rate > 0.8 ? 'success' : 'warning'} fs-6">${(execution.success_rate * 100).toFixed(0)}%</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Total Cost</h6>
+                        <span class="badge bg-success fs-6">$${execution.total_cost.toFixed(4)}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Total Time</h6>
+                        <span class="badge bg-info fs-6">${execution.total_time.toFixed(1)}s</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h6>Steps</h6>
+                        <span class="badge bg-primary fs-6">${execution.results.length}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    html += '<div class="execution-steps">';
+    
+    execution.results.forEach((result, index) => {
+        const statusClass = result.success ? 'success' : 'danger';
+        const statusIcon = result.success ? 'check' : 'times';
+        
+        html += `
+            <div class="card mb-3 border-${statusClass}">
+                <div class="card-header bg-${statusClass} text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas fa-${statusIcon} me-2"></i>
+                            Step ${index + 1}: ${result.step_id}
+                        </span>
+                        <span class="badge bg-light text-dark">${result.execution_time.toFixed(2)}s</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    ${result.success ? 
+                        `<div class="output-content">
+                            <h6>Output:</h6>
+                            <div class="bg-light p-3 rounded">${result.output}</div>
+                            <small class="text-muted mt-2 d-block">
+                                Tokens: ${result.tokens_used} • Cost: $${result.cost.toFixed(4)}
+                            </small>
+                        </div>` : 
+                        `<div class="alert alert-danger">
+                            <strong>Error:</strong> ${result.error_message}
+                        </div>`
+                    }
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    resultsDiv.innerHTML = html;
+    executionCard.style.display = 'block';
+}
+
+async function loadTemplates() {
+    try {
+        const response = await fetch('/api/chains/templates');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayTemplates(data.templates);
+        } else {
+            alert('Error loading templates: ' + data.error);
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+}
+
+function displayTemplates(templates) {
+    const templatesContent = document.getElementById('templatesContent');
+    
+    let html = '<div class="row">';
+    
+    Object.values(templates).forEach(template => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title">${template.name.replace('_', ' ').toUpperCase()}</h6>
+                        <p class="card-text">${template.description}</p>
+                        <div class="template-steps">
+                            ${template.steps.map(step => `<span class="badge bg-secondary me-1">${step}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    templatesContent.innerHTML = html;
+    
+    new bootstrap.Modal(document.getElementById('templatesModal')).show();
+}
+
+async function loadStats() {
+    try {
+        const response = await fetch('/api/chains/stats');
+        const data = await response.json();
+        
+        if (response.ok) {
+            displayStats(data.stats);
+        } else {
+            alert('Error loading stats: ' + data.error);
+        }
+    } catch (error) {
+        alert('Network error: ' + error.message);
+    }
+}
+
+function displayStats(stats) {
+    const statsContent = document.getElementById('statsContent');
+    
+    const html = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6>System Configuration</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Available Templates:</strong> ${stats.available_templates}</li>
+                            <li><strong>Step Types:</strong> ${stats.step_types}</li>
+                            <li><strong>Available Models:</strong> ${stats.model_count}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6>Component Status</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-${stats.components_available.rag_chat ? 'check text-success' : 'times text-danger'} me-1"></i> RAG Chat</li>
+                            <li><i class="fas fa-${stats.components_available.collaborative_router ? 'check text-success' : 'times text-danger'} me-1"></i> Collaborative Router</li>
+                            <li><i class="fas fa-${stats.components_available.classifier ? 'check text-success' : 'times text-danger'} me-1"></i> ML Classifier</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    statsContent.innerHTML = html;
+    
+    new bootstrap.Modal(document.getElementById('statsModal')).show();
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default query
+    document.getElementById('queryInput').value = 'Summarize and debate this document about artificial intelligence ethics and safety';
+});
+</script>
+
+<style>
+.chain-visualization {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.step-container {
+    position: relative;
+}
+
+.execution-steps {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.output-content {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.template-steps {
+    margin-top: 10px;
+}
+
+.template-steps .badge {
+    font-size: 0.7em;
+}
+
+.chain-summary {
+    border-top: 1px solid #dee2e6;
+    padding-top: 20px;
+}
+
+.execution-summary {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 20px;
+}
+</style>
+{% endblock %}

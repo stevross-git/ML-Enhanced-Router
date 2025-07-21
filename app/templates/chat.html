@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Modal AI Chat - ML Router</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            background-color: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        .message.user {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .message.assistant {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .message.system {
+            background-color: #ffeaa7;
+            color: #2d3436;
+            font-style: italic;
+        }
+        .chat-input {
+            border-top: 1px solid #dee2e6;
+            padding: 1rem;
+            background-color: white;
+        }
+        .file-upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .file-upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .file-upload-area.dragover {
+            border-color: #007bff;
+            background-color: #e7f3ff;
+        }
+        .uploaded-files {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .uploaded-file {
+            background-color: #e9ecef;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .uploaded-file .remove-file {
+            cursor: pointer;
+            color: #dc3545;
+        }
+        .model-selector {
+            margin-bottom: 1rem;
+        }
+        .typing-indicator {
+            display: none;
+            padding: 0.5rem;
+            color: #6c757d;
+            font-style: italic;
+        }
+        .typing-indicator.active {
+            display: block;
+        }
+        .voice-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .voice-btn {
+            border: none;
+            background: none;
+            color: #6c757d;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .voice-btn:hover {
+            color: #007bff;
+        }
+        .voice-btn.active {
+            color: #dc3545;
+        }
+        .multimodal-tabs {
+            margin-bottom: 1rem;
+        }
+        .media-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .generation-controls {
+            display: none;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .generation-controls.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot me-2"></i>
+                ML Router
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/agents">Agents</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/collaborate">Collaborate</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/multimodal">Multi-Modal</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/chat">Chat</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/api-keys">API Keys</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <!-- Chat Interface -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-comments me-2"></i>
+                            Multi-Modal AI Chat
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chatMessages">
+                                <div class="message system">
+                                    <i class="fas fa-robot me-2"></i>
+                                    Welcome to the Multi-Modal AI Chat! You can send text, upload images, documents, and audio files for analysis.
+                                </div>
+                            </div>
+                            <div class="typing-indicator" id="typingIndicator">
+                                <i class="fas fa-spinner fa-spin me-2"></i>
+                                AI is thinking...
+                            </div>
+                            <div class="chat-input">
+                                <!-- Multi-Modal Tabs -->
+                                <div class="multimodal-tabs">
+                                    <ul class="nav nav-tabs nav-fill" id="modalityTabs" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="text-tab" data-bs-toggle="tab" data-bs-target="#text-input" type="button" role="tab">
+                                                <i class="fas fa-keyboard me-2"></i>Text
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="image-tab" data-bs-toggle="tab" data-bs-target="#image-input" type="button" role="tab">
+                                                <i class="fas fa-image me-2"></i>Image
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="audio-tab" data-bs-toggle="tab" data-bs-target="#audio-input" type="button" role="tab">
+                                                <i class="fas fa-microphone me-2"></i>Audio
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="document-tab" data-bs-toggle="tab" data-bs-target="#document-input" type="button" role="tab">
+                                                <i class="fas fa-file-alt me-2"></i>Document
+                                            </button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="generate-tab" data-bs-toggle="tab" data-bs-target="#generate-input" type="button" role="tab">
+                                                <i class="fas fa-magic me-2"></i>Generate
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="tab-content" id="modalityTabsContent">
+                                    <!-- Text Input -->
+                                    <div class="tab-pane fade show active" id="text-input" role="tabpanel">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                                            <div class="voice-controls">
+                                                <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceInput()">
+                                                    <i class="fas fa-microphone"></i>
+                                                </button>
+                                                <button class="voice-btn" onclick="clearChat()">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                            <button class="btn btn-primary" onclick="sendMessage()">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Image Input -->
+                                    <div class="tab-pane fade" id="image-input" role="tabpanel">
+                                        <div class="file-upload-area" onclick="document.getElementById('imageFileInput').click()">
+                                            <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                                            <p>Click to upload images or drag and drop</p>
+                                            <small class="text-muted">Supports: JPG, PNG, GIF, WebP, BMP</small>
+                                        </div>
+                                        <input type="file" id="imageFileInput" accept="image/*" multiple hidden onchange="handleImageUpload(event)">
+                                        <div class="uploaded-files" id="uploadedImages"></div>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="imageQueryInput" placeholder="What would you like to know about this image?">
+                                            <button class="btn btn-primary" onclick="analyzeImage()">
+                                                <i class="fas fa-search me-2"></i>Analyze
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Audio Input -->
+                                    <div class="tab-pane fade" id="audio-input" role="tabpanel">
+                                        <div class="file-upload-area" onclick="document.getElementById('audioFileInput').click()">
+                                            <i class="fas fa-music fa-2x mb-2"></i>
+                                            <p>Click to upload audio files or drag and drop</p>
+                                            <small class="text-muted">Supports: MP3, WAV, OGG, M4A, FLAC</small>
+                                        </div>
+                                        <input type="file" id="audioFileInput" accept="audio/*" multiple hidden onchange="handleAudioUpload(event)">
+                                        <div class="uploaded-files" id="uploadedAudio"></div>
+                                        <div class="input-group">
+                                            <select class="form-select" id="audioAnalysisType">
+                                                <option value="transcribe">Transcribe Audio</option>
+                                                <option value="analyze">Analyze Content</option>
+                                                <option value="summarize">Summarize</option>
+                                            </select>
+                                            <button class="btn btn-primary" onclick="processAudio()">
+                                                <i class="fas fa-play me-2"></i>Process
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Document Input -->
+                                    <div class="tab-pane fade" id="document-input" role="tabpanel">
+                                        <div class="file-upload-area" onclick="document.getElementById('documentFileInput').click()">
+                                            <i class="fas fa-file-upload fa-2x mb-2"></i>
+                                            <p>Click to upload documents or drag and drop</p>
+                                            <small class="text-muted">Supports: PDF, DOCX, TXT, MD, HTML, CSV</small>
+                                        </div>
+                                        <input type="file" id="documentFileInput" accept=".pdf,.docx,.txt,.md,.html,.csv" multiple hidden onchange="handleDocumentUpload(event)">
+                                        <div class="uploaded-files" id="uploadedDocuments"></div>
+                                        <div class="input-group">
+                                            <select class="form-select" id="documentAnalysisType">
+                                                <option value="summary">Summarize</option>
+                                                <option value="keywords">Extract Keywords</option>
+                                                <option value="sentiment">Analyze Sentiment</option>
+                                                <option value="entities">Extract Entities</option>
+                                                <option value="classification">Classify Content</option>
+                                                <option value="structure">Analyze Structure</option>
+                                            </select>
+                                            <button class="btn btn-primary" onclick="analyzeDocument()">
+                                                <i class="fas fa-search me-2"></i>Analyze
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Generation Input -->
+                                    <div class="tab-pane fade" id="generate-input" role="tabpanel">
+                                        <div class="generation-controls active">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Generation Type</label>
+                                                        <select class="form-select" id="generationType" onchange="updateGenerationOptions()">
+                                                            <option value="image">Generate Image</option>
+                                                            <option value="audio">Generate Speech</option>
+                                                            <option value="text">Generate Text</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Quality/Style</label>
+                                                        <select class="form-select" id="generationQuality">
+                                                            <option value="standard">Standard</option>
+                                                            <option value="high">High Quality</option>
+                                                            <option value="artistic">Artistic</option>
+                                                            <option value="professional">Professional</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Description/Prompt</label>
+                                                <textarea class="form-control" id="generationPrompt" rows="3" placeholder="Describe what you want to generate..."></textarea>
+                                            </div>
+                                            <button class="btn btn-success" onclick="generateContent()">
+                                                <i class="fas fa-magic me-2"></i>Generate
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-md-3">
+                <!-- Model Selector -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-brain me-2"></i>
+                            AI Model
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <select class="form-select" id="modelSelector" onchange="updateModel()">
+                            <option value="">Loading models...</option>
+                        </select>
+                        <div class="mt-2">
+                            <small class="text-muted" id="modelInfo">Select a model to see details</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            Settings
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Temperature</label>
+                            <input type="range" class="form-range" id="temperatureSlider" min="0" max="2" step="0.1" value="0.7" oninput="updateTemperature()">
+                            <div class="text-center">
+                                <small class="text-muted">
+                                    <span id="temperatureValue">0.7</span>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Max Tokens</label>
+                            <input type="number" class="form-control" id="maxTokensInput" value="1000" min="100" max="4000">
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableRAG" checked>
+                            <label class="form-check-label" for="enableRAG">
+                                Enable RAG
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableStreaming">
+                            <label class="form-check-label" for="enableStreaming">
+                                Stream Response
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Chat Stats
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="mb-2">
+                                    <strong id="messageCount">0</strong>
+                                </div>
+                                <small class="text-muted">Messages</small>
+                            </div>
+                            <div class="col-6">
+                                <div class="mb-2">
+                                    <strong id="tokenCount">0</strong>
+                                </div>
+                                <small class="text-muted">Tokens</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>
