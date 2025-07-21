@@ -260,4 +260,94 @@ class AIModelManager:
                 # Remove from memory
                 del self.models[model_id]
                 
+                # Remove from database
+                try:
+                    db_model = db.session.query(MLModelRegistry).filter_by(id=model_id).first()
+                    if db_model:
+                        db.session.delete(db_model)
+                        db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    current_app.logger.warning(f"Failed to remove model from database: {e}")
+                
+                current_app.logger.info(f"Removed model: {model_id}")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            current_app.logger.error(f"Failed to remove model: {e}")
+            return False
+    
+    def _save_model_to_db(self, model):
+        """Save model to database"""
+        try:
+            model_data = {
+                'id': model.id,
+                'name': model.name,
+                'provider': model.provider.value if hasattr(model.provider, 'value') else str(model.provider),
+                'model_id': model.model_name,
+                'config': {
+                    'endpoint': getattr(model, 'endpoint', ''),
+                    'api_key_env': getattr(model, 'api_key_env', ''),
+                    'max_tokens': getattr(model, 'max_tokens', 4096),
+                    'temperature': getattr(model, 'temperature', 0.7),
+                    'top_p': getattr(model, 'top_p', 1.0),
+                    'context_window': getattr(model, 'context_window', 4096),
+                    'supports_streaming': getattr(model, 'supports_streaming', False),
+                    'supports_system_message': getattr(model, 'supports_system_message', True),
+                    'supports_vision': getattr(model, 'supports_vision', False),
+                    'supports_audio': getattr(model, 'supports_audio', False),
+                    'supports_functions': getattr(model, 'supports_functions', False),
+                    'deployment_type': getattr(model, 'deployment_type', 'cloud'),
+                    'input_modalities': getattr(model, 'input_modalities', ['text']),
+                    'output_modalities': getattr(model, 'output_modalities', ['text']),
+                    'custom_headers': getattr(model, 'custom_headers', {})
+                },
+                'cost_per_token': getattr(model, 'cost_per_1k_tokens', 0.0),
+                'is_active': getattr(model, 'is_active', False),
+                'model_type': getattr(model, 'model_type', 'text'),
+                'capabilities': getattr(model, 'capabilities', []),
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }
+            
+            # Check if model already exists
+            existing_model = db.session.query(MLModelRegistry).filter_by(id=model.id).first()
+            
+            if existing_model:
+                # Update existing model
+                for key, value in model_data.items():
+                    if key not in ['id', 'created_at']:
+                        setattr(existing_model, key, value)
+            else:
+                # Create new model
+                db_model = MLModelRegistry(**model_data)
+                db.session.add(db_model)
+            
+            db.session.commit()
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Failed to save model to database: {e}")
+
+
+# Singleton instance
+_ai_model_manager = None
+
+def get_ai_model_manager() -> AIModelManager:
+    """Get singleton AI model manager instance"""
+    global _ai_model_manager
+    if _ai_model_manager is None:
+        _ai_model_manager = AIModelManager()
+        if current_app:
+            _ai_model_manager.initialize()
+    return _ai_model_manager
+
+def init_ai_model_manager(app):
+    """Initialize AI model manager with Flask app"""
+    service = get_ai_model_manager()
+    service.initialize()
+    return service
+                
                 
