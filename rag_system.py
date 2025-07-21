@@ -93,7 +93,7 @@ class RAGSystem:
                 file_hash = hashlib.sha256(file_content).hexdigest()
             
             # Import models here to avoid circular imports
-            from models import Document, DocumentChunk, RAGQuery
+            from app.models.rag import Document, DocumentChunk, RAGQuery
             
             # Check if document already exists
             existing_doc = self.db.session.query(Document).filter_by(file_hash=file_hash).first()
@@ -211,7 +211,7 @@ class RAGSystem:
         """Process document by creating chunks and embeddings"""
         try:
             # Import models here to avoid circular imports
-            from models import DocumentChunk
+            from app.models.rag import DocumentChunk
             
             if not self.collection:
                 logger.error("ChromaDB collection not initialized")
@@ -298,7 +298,7 @@ class RAGSystem:
                 return []
             
             # Import models here to avoid circular imports
-            from models import RAGQuery
+            from app.models.rag import RAGQuery
             
             # Generate query hash for caching
             query_hash = hashlib.sha256(query.encode()).hexdigest()
@@ -399,7 +399,7 @@ Please provide a detailed response based on the above context. If the context do
         """Get statistics about the document collection"""
         try:
             # Import models here to avoid circular imports
-            from models import Document, DocumentChunk, RAGQuery
+            from app.models.rag import Document, DocumentChunk, RAGQuery
             from sqlalchemy import func
             
             total_docs = self.db.session.query(Document).count()

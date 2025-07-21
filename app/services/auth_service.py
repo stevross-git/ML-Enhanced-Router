@@ -13,7 +13,8 @@ from flask import current_app, request, session, g
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models.auth import User, UserSession, APIKey
+from app.models.user import User
+from app.models.auth import UserSession, APIKey
 from app.utils.exceptions import AuthenticationError, AuthorizationError, ValidationError
 
 

@@ -61,7 +61,7 @@ class AICacheManager:
         try:
             if self.db is not None:
                 # Import models lazily to avoid circular imports
-                from models import AICacheEntry, AICacheStats
+                from app.models.cache import AICacheEntry, AICacheStats
                 self.AICacheEntry = AICacheEntry
                 self.AICacheStats = AICacheStats
                 logger.debug("AI Cache models initialized successfully")

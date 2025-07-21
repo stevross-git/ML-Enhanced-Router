@@ -12,117 +12,6 @@ import secrets
 
 from .base import Base, TimestampMixin, generate_id
 
-class User(Base, TimestampMixin):
-    """User account model"""
-    
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_id)
-    
-    # Basic user information
-    username: Mapped[str] = mapped_column(String(80), unique=True, nullable=False, index=True)
-    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    
-    # User details
-    first_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    last_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    
-    # Account status
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
-    
-    # Role and permissions
-    role: Mapped[str] = mapped_column(String(20), default='user', index=True)  # user, admin, superuser
-    permissions: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    
-    # Login tracking
-    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    login_count: Mapped[int] = mapped_column(Integer, default=0)
-    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    
-    # Additional metadata
-    user_key_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    
-    # Relationships
-    api_keys: Mapped[list["APIKey"]] = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
-    sessions: Mapped[list["UserSession"]] = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
-    
-    def __repr__(self):
-        return f"<User {self.username}>"
-    
-    def set_password(self, password: str):
-        """Set password hash"""
-        self.password_hash = generate_password_hash(password)
-    
-    def check_password(self, password: str) -> bool:
-        """Check password against hash"""
-        return check_password_hash(self.password_hash, password)
-    
-    def is_locked(self) -> bool:
-        """Check if account is locked"""
-        return self.locked_until and self.locked_until > datetime.utcnow()
-    
-    def lock_account(self, duration_minutes: int = 30):
-        """Lock account for specified duration"""
-        self.locked_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
-    
-    def unlock_account(self):
-        """Unlock account"""
-        self.locked_until = None
-        self.failed_login_attempts = 0
-    
-    def record_login(self, success: bool):
-        """Record login attempt"""
-        if success:
-            self.last_login = datetime.utcnow()
-            self.login_count += 1
-            self.failed_login_attempts = 0
-        else:
-            self.failed_login_attempts += 1
-            if self.failed_login_attempts >= 5:  # Lock after 5 failed attempts
-                self.lock_account()
-    
-    def has_permission(self, permission: str) -> bool:
-        """Check if user has specific permission"""
-        if self.role == 'superuser':
-            return True
-        if not self.permissions:
-            return False
-        return permission in self.permissions
-    
-    def generate_jwt_token(self, secret_key: str, expires_delta: timedelta = None) -> str:
-        """Generate JWT token for user"""
-        if expires_delta is None:
-            expires_delta = timedelta(hours=1)
-        
-        payload = {
-            'user_id': self.id,
-            'username': self.username,
-            'role': self.role,
-            'exp': datetime.utcnow() + expires_delta,
-            'iat': datetime.utcnow()
-        }
-        
-        return jwt.encode(payload, secret_key, algorithm='HS256')
-    
-    def to_dict(self):
-        """Convert to dictionary representation"""
-        return {
-            'id': self.id,
-            'username': self.username,
-            'email': self.email,
-            'first_name': self.first_name,
-            'last_name': self.last_name,
-            'is_active': self.is_active,
-            'is_verified': self.is_verified,
-            'role': self.role,
-            'permissions': self.permissions,
-            'last_login': self.last_login.isoformat() if self.last_login else None,
-            'login_count': self.login_count,
-            'created_at': self.created_at.isoformat(),
-            'metadata': self.user_metadata
-        }
-
 class APIKey(Base, TimestampMixin):
     """API key model for external access"""
     
@@ -135,7 +24,6 @@ class APIKey(Base, TimestampMixin):
     
     # User association
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey('user.id'), nullable=False, index=True)
-    user: Mapped["User"] = relationship("User", back_populates="api_keys")
     
     # Key status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
@@ -206,7 +94,6 @@ class UserSession(Base, TimestampMixin):
     
     # User association
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey('user.id'), nullable=False, index=True)
-    user: Mapped["User"] = relationship("User", back_populates="sessions")
     
     # Session metadata
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)  # IPv6 compatible
@@ -256,7 +143,6 @@ class UserSession(Base, TimestampMixin):
 # Create indexes for performance
 from sqlalchemy import Index
 
-Index('idx_user_email_active', User.email, User.is_active)
 Index('idx_apikey_user_active', APIKey.user_id, APIKey.is_active)
 Index('idx_session_user_active', UserSession.user_id, UserSession.is_active)
 Index('idx_session_expires', UserSession.expires_at)

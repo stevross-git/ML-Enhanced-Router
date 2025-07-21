@@ -6,7 +6,7 @@ import pytest
 import json
 from unittest.mock import patch, Mock
 
-from app.models.auth import User
+from app.models.user import User
 
 
 class TestMainRoutes:

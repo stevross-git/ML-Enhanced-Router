@@ -7,7 +7,8 @@ from datetime import datetime
 
 from app.models.query import QueryLog
 from app.models.agent import Agent, AgentCapability
-from app.models.auth import User, UserSession
+from app.models.user import User
+from app.models.auth import UserSession
 from app.models.cache import AICacheEntry
 from app.models.rag import Document, DocumentChunk
 
