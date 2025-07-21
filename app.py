@@ -46,6 +46,9 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 # Initialize extensions
 db.init_app(app)
 
+# Global variable to track active SSE connections
+active_sse_connections = {}
+
 # Import other modules after db is initialized to avoid circular imports
 from ml_router import MLEnhancedQueryRouter
 from config import EnhancedRouterConfig
@@ -2017,6 +2020,149 @@ def get_session_context(session_id):
     except Exception as e:
         logger.error(f"Error getting session context: {e}")
         return jsonify({'error': str(e)}), 500
+    
+    
+@app.route('/api/shared-memory/sessions/<session_id>/stream')
+def stream_session_updates(session_id):
+    """Server-Sent Events endpoint for real-time session updates"""
+    
+    def event_stream():
+        """Generator function for SSE events"""
+        global shared_memory_manager
+        
+        if not shared_memory_manager:
+            yield f"data: {json.dumps({'error': 'Shared memory not initialized'})}\n\n"
+            return
+        
+        # Send initial session data
+        try:
+            context = shared_memory_manager.get_shared_context(session_id)
+            yield f"data: {json.dumps({'type': 'initial', 'context': context})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            return
+        
+        # Store this connection for updates
+        connection_id = str(uuid.uuid4())
+        if session_id not in active_sse_connections:
+            active_sse_connections[session_id] = {}
+        active_sse_connections[session_id][connection_id] = True
+        
+        try:
+            last_message_count = 0
+            
+            while active_sse_connections.get(session_id, {}).get(connection_id, False):
+                try:
+                    # Check for new messages
+                    messages = shared_memory_manager.get_session_messages(session_id)
+                    current_count = len(messages)
+                    
+                    if current_count > last_message_count:
+                        # Send new messages
+                        new_messages = messages[last_message_count:]
+                        for message in new_messages:
+                            message_data = {
+                                'type': 'message',
+                                'message': message.to_dict()
+                            }
+                            yield f"data: {json.dumps(message_data)}\n\n"
+                        
+                        last_message_count = current_count
+                    
+                    # Send heartbeat every 10 seconds
+                    yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
+                    
+                    time.sleep(2)  # Check for updates every 2 seconds
+                    
+                except Exception as e:
+                    logger.error(f"Error in SSE stream: {e}")
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    break
+                    
+        finally:
+            # Clean up connection
+            if session_id in active_sse_connections and connection_id in active_sse_connections[session_id]:
+                del active_sse_connections[session_id][connection_id]
+                if not active_sse_connections[session_id]:
+                    del active_sse_connections[session_id]
+    
+    return Response(
+        event_stream(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+        }
+    )
+
+@app.route('/api/shared-memory/sessions/<session_id>/messages/latest')
+def get_latest_messages(session_id):
+    """Get the latest messages from a session (for polling fallback)"""
+    try:
+        global shared_memory_manager
+        if not shared_memory_manager:
+            return jsonify({'error': 'Shared memory manager not initialized'}), 500
+        
+        # Get query parameters
+        since = request.args.get('since')  # timestamp
+        limit = int(request.args.get('limit', 10))
+        
+        messages = shared_memory_manager.get_session_messages(session_id)
+        
+        # Filter by timestamp if provided
+        if since:
+            try:
+                since_time = datetime.fromisoformat(since.replace('Z', '+00:00'))
+                messages = [msg for msg in messages if msg.timestamp > since_time]
+            except ValueError:
+                pass  # Invalid timestamp, ignore filter
+        
+        # Limit results
+        messages = messages[-limit:]
+        
+        return jsonify({
+            'session_id': session_id,
+            'messages': [msg.to_dict() for msg in messages],
+            'count': len(messages),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting latest messages: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Enhanced shared memory manager to support real-time notifications
+def enhance_shared_memory_notifications():
+    """Enhance the shared memory manager with real-time notifications"""
+    global shared_memory_manager
+    
+    if not shared_memory_manager:
+        return
+    
+    # Store original add_message method
+    original_add_message = shared_memory_manager.add_message
+    
+    def enhanced_add_message(session_id: str, agent_id: str, agent_name: str, 
+                           message_type, content: str, 
+                           parent_id: Optional[str] = None,
+                           metadata: Dict[str, Any] = None) -> str:
+        """Enhanced add_message that triggers real-time notifications"""
+        
+        # Call original method
+        message_id = original_add_message(
+            session_id, agent_id, agent_name, message_type, content, parent_id, metadata
+        )
+        
+        # Trigger notification for real-time updates
+        # This will be picked up by the SSE stream
+        logger.debug(f"Real-time update: New message {message_id} in session {session_id}")
+        
+        return message_id
+    
+    # Replace the method
+    shared_memory_manager.add_message = enhanced_add_message
+    logger.info("Enhanced shared memory with real-time notifications")
 
 @app.route('/collaborate')
 def collaborate_page():

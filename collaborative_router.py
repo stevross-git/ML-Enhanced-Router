@@ -304,6 +304,7 @@ class CollaborativeRouter:
                 
                 # Store external LLM response in shared memory
                 self.shared_memory.add_message(
+                    session_id=session_id,
                     agent_id="external_llm",
                     agent_name=f"External LLM ({external_llm_response['provider']})",
                     message_type=MessageType.EXTERNAL_LLM_RESPONSE,

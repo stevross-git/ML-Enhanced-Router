@@ -2,6 +2,8 @@
 AI Model Integration Service
 Supports major AI providers, local Ollama, and custom endpoints
 """
+import traceback
+import sys
 
 import json
 import logging
@@ -845,16 +847,7 @@ class AIModelManager:
     
     async def _handle_ollama(self, model: AIModel, query: str, system_message: str, stream: bool = False) -> Dict[str, Any]:
         """
-        Handle Ollama (local) API requests with support for both streaming and non-streaming modes
-        
-        Args:
-            model: AIModel configuration
-            query: User query
-            system_message: System message (optional)
-            stream: Whether to use streaming mode (default: False for backward compatibility)
-        
-        Returns:
-            Dict containing response, status, model info, and usage statistics
+        Enhanced Ollama handler with comprehensive error logging and debugging
         """
         headers = {
             "Content-Type": "application/json"
@@ -879,24 +872,53 @@ class AIModelManager:
         }
         
         logger.debug(f"Ollama request - Model: {model.model_name}, Stream: {stream}, Endpoint: {model.endpoint}")
+        logger.debug(f"Ollama payload: {json.dumps(payload, indent=2)}")
         
         try:
+            # Add connection verification
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
+                # First, check if Ollama is running
+                try:
+                    async with session.get(f"{model.endpoint.replace('/api/chat', '')}/api/tags") as health_check:
+                        if health_check.status != 200:
+                            logger.error(f"Ollama health check failed: {health_check.status}")
+                            return {
+                                "error": f"Ollama service unhealthy: HTTP {health_check.status}",
+                                "status": "error",
+                                "model": model.id
+                            }
+                except Exception as health_error:
+                    logger.error(f"Ollama health check exception: {health_error}")
+                    logger.error(f"Health check traceback: {traceback.format_exc()}")
+                    return {
+                        "error": f"Cannot connect to Ollama: {str(health_error)}",
+                        "status": "error",
+                        "model": model.id
+                    }
+                
+                # Make the actual request
                 async with session.post(model.endpoint, headers=headers, json=payload) as response:
+                    logger.debug(f"Ollama response status: {response.status}")
+                    logger.debug(f"Ollama response headers: {dict(response.headers)}")
+                    
                     if response.status == 200:
                         if stream:
-                            # Handle streaming response
                             return await self._handle_ollama_streaming(response, model)
                         else:
-                            # Handle non-streaming response
                             return await self._handle_ollama_non_streaming(response, model)
                     else:
-                        # Handle error response
+                        # Enhanced error handling
                         try:
-                            error_data = await response.json()
-                            error_message = error_data.get("error", f"HTTP {response.status}")
-                        except:
-                            error_message = f"HTTP {response.status} - {response.reason}"
+                            error_text = await response.text()
+                            logger.error(f"Ollama API error response: {error_text}")
+                            try:
+                                error_data = json.loads(error_text)
+                                error_message = error_data.get("error", f"HTTP {response.status}")
+                            except json.JSONDecodeError:
+                                error_message = f"HTTP {response.status} - {error_text[:200]}"
+                        except Exception as read_error:
+                            logger.error(f"Failed to read error response: {read_error}")
+                            error_message = f"HTTP {response.status} - Unable to read response"
                         
                         logger.error(f"Ollama API error: {error_message}")
                         return {
@@ -907,25 +929,109 @@ class AIModelManager:
                         
         except aiohttp.ClientConnectorError as e:
             logger.error(f"Cannot connect to Ollama at {model.endpoint}: {e}")
+            logger.error(f"Connection error traceback: {traceback.format_exc()}")
             return {
-                "error": "Cannot connect to Ollama. Make sure Ollama is running on localhost:11434",
+                "error": f"Cannot connect to Ollama at {model.endpoint}. Make sure Ollama is running and accessible. Error: {str(e)}",
                 "status": "error",
                 "model": model.id
             }
         except aiohttp.ServerTimeoutError as e:
             logger.error(f"Ollama request timeout: {e}")
+            logger.error(f"Timeout error traceback: {traceback.format_exc()}")
             return {
-                "error": "Request timeout. The model may be taking too long to respond.",
+                "error": f"Request timeout. The model may be taking too long to respond. Error: {str(e)}",
                 "status": "error",
                 "model": model.id
             }
         except Exception as e:
-            logger.error(f"Unexpected error in Ollama handler: {e}")
+            # Enhanced exception logging
+            logger.error(f"Unexpected error in Ollama handler: {str(e)}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Exception args: {e.args}")
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+            
+            # Additional debugging info
+            logger.error(f"Model info: {model.id}, {model.model_name}, {model.endpoint}")
+            logger.error(f"Python version: {sys.version}")
+            logger.error(f"Query length: {len(query)}")
+            logger.error(f"System message length: {len(system_message) if system_message else 0}")
+            
             return {
-                "error": f"Unexpected error: {str(e)}",
+                "error": f"Unexpected error: {str(e)} (Type: {type(e).__name__})",
+                "status": "error",
+                "model": model.id,
+                "debug_info": {
+                    "exception_type": type(e).__name__,
+                    "exception_args": str(e.args),
+                    "model_endpoint": model.endpoint,
+                    "query_length": len(query)
+                }
+            }
+
+async def _handle_ollama_non_streaming(self, response, model: AIModel) -> Dict[str, Any]:
+    """
+    Enhanced non-streaming response handler with better error logging
+    """
+    try:
+        # Read raw response first for debugging
+        raw_response = await response.text()
+        logger.debug(f"Raw Ollama response: {raw_response[:500]}...")
+        
+        # Parse JSON
+        try:
+            data = json.loads(raw_response)
+        except json.JSONDecodeError as json_error:
+            logger.error(f"Failed to parse Ollama JSON response: {json_error}")
+            logger.error(f"Raw response causing JSON error: {raw_response}")
+            return {
+                "error": f"Invalid JSON response from Ollama: {str(json_error)}",
                 "status": "error",
                 "model": model.id
             }
+        
+        # Extract response content with validation
+        if "message" in data and "content" in data["message"]:
+            content = data["message"]["content"]
+            if not content or not isinstance(content, str):
+                logger.warning(f"Empty or invalid content from Ollama: {content}")
+                content = "[Empty response from model]"
+        else:
+            logger.error(f"Unexpected Ollama response format: {data}")
+            logger.error(f"Available keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+            return {
+                "error": f"Unexpected response format from Ollama. Expected 'message.content', got: {list(data.keys()) if isinstance(data, dict) else type(data)}",
+                "status": "error",
+                "model": model.id
+            }
+        
+        # Extract usage statistics with defaults
+        usage_stats = {
+            "total_duration": data.get("total_duration", 0),
+            "load_duration": data.get("load_duration", 0),
+            "prompt_eval_count": data.get("prompt_eval_count", 0),
+            "eval_count": data.get("eval_count", 0),
+            "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+            "eval_duration": data.get("eval_duration", 0)
+        }
+        
+        logger.debug(f"Ollama response processed successfully. Content length: {len(content)}")
+        
+        return {
+            "response": content,
+            "status": "success",
+            "model": model.id,
+            "usage": usage_stats,
+            "streaming": False
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing non-streaming Ollama response: {str(e)}")
+        logger.error(f"Processing error traceback: {traceback.format_exc()}")
+        return {
+            "error": f"Error processing response: {str(e)}",
+            "status": "error",
+            "model": model.id
+        }
     
     async def _handle_ollama_streaming(self, response, model: AIModel) -> Dict[str, Any]:
         """

@@ -239,7 +239,7 @@ class ExternalLLMManager:
                 api_key_env="ANTHROPIC_API_KEY",
                 endpoint="https://api.anthropic.com/v1/messages",
                 model_name="claude-3-opus-20240229",
-                max_tokens=8192,
+                max_tokens=4096,
                 temperature=0.7,
                 cost_per_1k_tokens=0.075,
                 rate_limit_rpm=60,
