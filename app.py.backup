@@ -535,23 +535,41 @@ def submit_query():
         if not router:
             return jsonify({'error': 'Router not initialized'}), 503
         
-        # Process query asynchronously
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # FIXED: Process query asynchronously in background thread (NON-BLOCKING)
+        def process_query_in_thread():
+            """Process async query in dedicated thread"""
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(router.route_query(query, user_id))
+            except Exception as e:
+                logger.error(f"Query routing error: {e}")
+                raise e
+            finally:
+                loop.close()
+        
+        # Use ThreadPoolExecutor for non-blocking async processing
+        import concurrent.futures
         
         try:
-            result = loop.run_until_complete(router.route_query(query, user_id))
-            return jsonify(result)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                # Submit to thread pool with timeout
+                future = executor.submit(process_query_in_thread)
+                result = future.result(timeout=30)  # 30 second timeout
+                return jsonify(result)
+                
+        except concurrent.futures.TimeoutError:
+            logger.error(f"Query processing timeout for: {query[:100]}...")
+            return jsonify({'error': 'Query processing timeout'}), 408
         except Exception as e:
-            logger.error(f"Query routing error: {e}")
+            logger.error(f"Query processing failed: {e}")
             return jsonify({'error': 'Failed to process query'}), 500
-        finally:
-            loop.close()
             
     except Exception as e:
         logger.error(f"API error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
-
+    
+    
 @app.route('/api/agents', methods=['GET'])
 def get_agents():
     """Get list of available agents"""
