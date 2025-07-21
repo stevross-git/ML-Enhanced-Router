@@ -16,7 +16,7 @@ import numpy as np
 from sqlalchemy import text
 
 from app.extensions import db
-from app.models.rag import RAGDocument, RAGChunk, RAGQuery, RAGResult
+from app.models.rag import Document, DocumentChunk, RAGQuery
 from app.utils.exceptions import RAGError, ValidationError, ServiceError
 
 
@@ -51,7 +51,7 @@ class RAGService:
             current_app.logger.error(f"RAG service initialization failed: {e}")
             self.initialized = False
     
-    def index_document(self, document_path: str, metadata: Dict[str, Any] = None) -> str:
+    def index_document(self, document_path: str, metadata: Dict[str, Any] | None = None) -> str:
         """
         Index a document for RAG retrieval
         
@@ -79,19 +79,21 @@ class RAGService:
             
             doc_hash = hashlib.sha256(content.encode()).hexdigest()
             
-            existing_doc = RAGDocument.query.filter_by(content_hash=doc_hash).first()
+            existing_doc = Document.query.filter_by(file_hash=doc_hash).first()
             if existing_doc:
                 current_app.logger.info(f"Document already indexed: {existing_doc.id}")
                 return existing_doc.id
             
-            document = RAGDocument(
+            document = Document(
+                title=os.path.basename(document_path),
                 filename=os.path.basename(document_path),
-                file_path=document_path,
+                file_hash=doc_hash,
                 content=content,
-                content_hash=doc_hash,
-                metadata=metadata or {},
-                created_at=datetime.utcnow(),
-                is_active=True
+                content_type='txt',
+                file_size=len(content.encode('utf-8')),
+                document_metadata=metadata or {},
+                word_count=len(content.split()),
+                character_count=len(content)
             )
             
             db.session.add(document)
@@ -102,13 +104,14 @@ class RAGService:
             for i, chunk_text in enumerate(chunks):
                 embeddings = self._generate_embeddings(chunk_text)
                 
-                chunk = RAGChunk(
+                chunk = DocumentChunk(
                     document_id=document.id,
                     chunk_index=i,
                     content=chunk_text,
-                    embeddings=embeddings.tolist() if isinstance(embeddings, np.ndarray) else embeddings,
-                    created_at=datetime.utcnow(),
-                    is_active=True
+                    chunk_hash=DocumentChunk.generate_chunk_hash(chunk_text, document.id, i),
+                    start_char=0,
+                    end_char=len(chunk_text),
+                    word_count=len(chunk_text.split())
                 )
                 
                 db.session.add(chunk)
@@ -125,7 +128,7 @@ class RAGService:
                 raise
             raise RAGError(f"Failed to index document: {str(e)}")
     
-    def search_documents(self, query: str, limit: int = None) -> List[Dict[str, Any]]:
+    def search_documents(self, query: str, limit: int | None = None) -> List[Dict[str, Any]]:
         """
         Search for relevant documents using vector similarity
         
@@ -192,9 +195,8 @@ class RAGService:
             context_text = self._prepare_context(context_chunks)
             
             rag_query = RAGQuery(
-                query=query,
-                context_chunks=len(context_chunks),
-                created_at=datetime.utcnow()
+                query_text=query,
+                results_found=len(context_chunks)
             )
             
             db.session.add(rag_query)
@@ -202,15 +204,8 @@ class RAGService:
             
             response = self._generate_response(query, context_text)
             
-            rag_result = RAGResult(
-                query_id=rag_query.id,
-                response=response,
-                context_used=context_text,
-                confidence_score=self._calculate_confidence(context_chunks),
-                created_at=datetime.utcnow()
-            )
+            confidence_score = self._calculate_confidence(context_chunks)
             
-            db.session.add(rag_result)
             db.session.commit()
             
             return {
@@ -218,8 +213,8 @@ class RAGService:
                 'query': query,
                 'response': response,
                 'context_chunks': context_chunks,
-                'confidence_score': rag_result.confidence_score,
-                'timestamp': rag_result.created_at.isoformat()
+                'confidence_score': confidence_score,
+                'timestamp': datetime.utcnow().isoformat()
             }
             
         except Exception as e:
@@ -238,8 +233,8 @@ class RAGService:
         """
         try:
             stats = {
-                'total_documents': RAGDocument.query.filter_by(is_active=True).count(),
-                'total_chunks': RAGChunk.query.filter_by(is_active=True).count(),
+                'total_documents': Document.query.count(),
+                'total_chunks': DocumentChunk.query.count(),
                 'total_queries': RAGQuery.query.count(),
                 'avg_chunks_per_document': 0,
                 'recent_queries': 0
@@ -270,15 +265,11 @@ class RAGService:
             True if successful, False otherwise
         """
         try:
-            document = RAGDocument.query.get(document_id)
+            document = Document.query.get(document_id)
             if not document:
                 return False
             
-            document.is_active = False
-            
-            RAGChunk.query.filter_by(document_id=document_id).update({
-                'is_active': False
-            })
+            DocumentChunk.query.filter_by(document_id=document_id).delete()
             
             db.session.commit()
             
@@ -326,9 +317,9 @@ class RAGService:
         import random
         return [random.random() for _ in range(384)]  # Typical embedding dimension
     
-    def _vector_search(self, query_embeddings: List[float], limit: int) -> List[Tuple[RAGChunk, float]]:
+    def _vector_search(self, query_embeddings: List[float], limit: int) -> List[Tuple[DocumentChunk, float]]:
         """Search for similar vectors (placeholder)"""
-        chunks = RAGChunk.query.filter_by(is_active=True).limit(limit).all()
+        chunks = DocumentChunk.query.limit(limit).all()
         results = []
         
         for chunk in chunks:

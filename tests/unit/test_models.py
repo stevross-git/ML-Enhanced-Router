@@ -9,7 +9,7 @@ from app.models.query import QueryLog
 from app.models.agent import Agent, AgentCapability
 from app.models.auth import User, UserSession
 from app.models.cache import AICacheEntry
-from app.models.rag import RAGDocument, RAGChunk
+from app.models.rag import Document, DocumentChunk
 
 
 class TestQueryModel:
@@ -134,14 +134,16 @@ class TestRAGModel:
     
     def test_rag_document_creation(self, db_session):
         """Test creating a RAG document"""
-        document = RAGDocument(
+        document = Document(
+            title="test.txt",
             filename="test.txt",
-            file_path="/path/to/test.txt",
+            file_hash="abc123",
             content="Test document content",
-            content_hash="abc123",
-            metadata={"test": True},
-            created_at=datetime.utcnow(),
-            is_active=True
+            content_type="txt",
+            file_size=100,
+            document_metadata={"test": True},
+            word_count=3,
+            character_count=20
         )
         
         db_session.add(document)
@@ -153,26 +155,29 @@ class TestRAGModel:
     
     def test_rag_chunk_relationship(self, db_session):
         """Test RAG document-chunk relationship"""
-        document = RAGDocument(
+        document = Document(
+            title="test.txt",
             filename="test.txt",
-            file_path="/path/to/test.txt",
+            file_hash="abc123",
             content="Test document content",
-            content_hash="abc123",
-            metadata={"test": True},
-            created_at=datetime.utcnow(),
-            is_active=True
+            content_type="txt",
+            file_size=100,
+            document_metadata={"test": True},
+            word_count=3,
+            character_count=20
         )
         
         db_session.add(document)
         db_session.flush()
         
-        chunk = RAGChunk(
+        chunk = DocumentChunk(
             document_id=document.id,
             chunk_index=0,
             content="Test chunk content",
-            embeddings=[0.1, 0.2, 0.3],
-            created_at=datetime.utcnow(),
-            is_active=True
+            chunk_hash="chunk123",
+            start_char=0,
+            end_char=18,
+            word_count=3
         )
         
         db_session.add(chunk)
