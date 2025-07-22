@@ -16,8 +16,18 @@ import aiohttp
 import requests
 from datetime import datetime
 from ai_cache import get_cache_manager
+from flask import Blueprint, request, jsonify, current_app, Response
+from ..services.ai_models import (
+    get_ai_model_manager, 
+    get_comprehensive_manager,
+    is_comprehensive_system_available,
+    get_model_count
+)
+from ..utils.decorators import rate_limit, validate_json, require_auth
+from ..utils.exceptions import ValidationError, ServiceError
 
 logger = logging.getLogger(__name__)
+models_bp = Blueprint('models', __name__)
 
 class AIProvider(Enum):
     """Supported AI providers"""
