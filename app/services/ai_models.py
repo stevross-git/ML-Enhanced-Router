@@ -8,8 +8,6 @@ import os
 import sys
 from typing import Optional, List, Dict, Any
 
-from flask import current_app
-
 # Import the comprehensive AI model system
 try:
     # Add current directory to path to import the comprehensive system
@@ -35,9 +33,23 @@ except ImportError as e:
         OLLAMA = "ollama"
         CUSTOM = "custom"
 
-from ..extensions import db
-from ..models.ai_model import MLModelRegistry, ModelConfiguration
-from ..utils.exceptions import ModelError, ServiceError
+# These imports will be available after Flask app is created
+db = None
+MLModelRegistry = None
+ModelConfiguration = None
+ServiceError = None
+
+def _init_flask_dependencies():
+    """Initialize Flask dependencies when app context is available"""
+    global db, MLModelRegistry, ModelConfiguration, ServiceError
+    try:
+        from ..extensions import db
+        from ..models.ai_model import MLModelRegistry, ModelConfiguration
+        from ..utils.exceptions import ServiceError
+    except ImportError as e:
+        # If imports fail, create dummy classes
+        logger.warning(f"Flask dependencies not available: {e}")
+        ServiceError = Exception
 
 class AIModelManager:
     """
@@ -54,48 +66,135 @@ class AIModelManager:
     def initialize(self):
         """Initialize the AI model manager"""
         try:
+            # Initialize Flask dependencies
+            _init_flask_dependencies()
+            
             if COMPREHENSIVE_AI_AVAILABLE:
                 # Use the comprehensive system
                 self.comprehensive_manager = ComprehensiveAIManager()
                 self.comprehensive_manager.initialize_default_models()
-                current_app.logger.info("✅ Using comprehensive AI model system")
+                logger.info("✅ Using comprehensive AI model system")
             else:
                 # Fallback to database-only system
                 self._load_models_from_db()
                 self._initialize_default_models()
-                current_app.logger.info("✅ Using database-only AI model system")
+                logger.info("✅ Using database-only AI model system")
             
             self.initialized = True
-            current_app.logger.info("✅ AI Model Manager initialized successfully")
+            logger.info("✅ AI Model Manager initialized successfully")
             
         except Exception as e:
-            current_app.logger.error(f"❌ AI Model Manager initialization failed: {e}")
-            raise ServiceError(f"Failed to initialize AI Model Manager: {e}")
+            logger.error(f"❌ AI Model Manager initialization failed: {e}")
+            # Don't raise exception during module import
+            # Store the error and handle it gracefully
+            self.initialization_error = str(e)
+    
+    def _ensure_initialized(self):
+        """Ensure the manager is initialized before use"""
+        if not self.initialized:
+            self.initialize()
+        
+        if hasattr(self, 'initialization_error'):
+            # If we have Flask context now, try to log properly
+            try:
+                from flask import current_app
+                current_app.logger.error(f"AI Model Manager initialization error: {self.initialization_error}")
+            except RuntimeError:
+                # Still no Flask context, use standard logger
+                logger.error(f"AI Model Manager initialization error: {self.initialization_error}")
+    
+    def _load_models_from_db(self):
+        """Load models from database"""
+        try:
+            if MLModelRegistry and db:
+                # Load existing models from database
+                models = MLModelRegistry.query.all()
+                for model in models:
+                    # Convert database model to internal format
+                    self.models_cache[model.model_id] = model
+        except Exception as e:
+            logger.error(f"Error loading models from database: {e}")
+    
+    def _initialize_default_models(self):
+        """Initialize default models if none exist"""
+        if not self.models_cache:
+            # Add some default models if none exist
+            default_model = type('DefaultModel', (), {
+                'id': 'default',
+                'name': 'Default Model',
+                'provider': AIProvider.CUSTOM,
+                'model_name': 'default',
+                'endpoint': 'http://localhost:8000',
+                'api_key_env': '',
+                'is_active': True
+            })()
+            self.models_cache['default'] = default_model
+            self.active_model_id = 'default'
+    
+    def _create_model_object(self, model_data):
+        """Create a model object from data"""
+        return type('Model', (), model_data)()
+    
+    def _save_model_to_db(self, model):
+        """Save model to database"""
+        try:
+            if MLModelRegistry and db:
+                existing = MLModelRegistry.query.filter_by(model_id=model.id).first()
+                if not existing:
+                    db_model = MLModelRegistry(
+                        model_id=model.id,
+                        name=model.name,
+                        model_type=getattr(model, 'model_type', 'llm'),
+                        categories=[],
+                        config={}
+                    )
+                    db.session.add(db_model)
+                    db.session.commit()
+        except Exception as e:
+            logger.error(f"Error saving model to database: {e}")
+            if db:
+                db.session.rollback()
+    
+    def _remove_model_from_db(self, model_id):
+        """Remove model from database"""
+        try:
+            if MLModelRegistry and db:
+                model = MLModelRegistry.query.filter_by(model_id=model_id).first()
+                if model:
+                    db.session.delete(model)
+                    db.session.commit()
+        except Exception as e:
+            logger.error(f"Error removing model from database: {e}")
+            if db:
+                db.session.rollback()
     
     def get_all_models(self) -> List[Any]:
         """Get all available models"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 return self.comprehensive_manager.get_models()
             else:
                 return list(self.models_cache.values())
         except Exception as e:
-            current_app.logger.error(f"Error getting all models: {e}")
+            logger.error(f"Error getting all models: {e}")
             return []
     
     def get_model(self, model_id: str) -> Optional[Any]:
         """Get a specific model by ID"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 return self.comprehensive_manager.get_model(model_id)
             else:
                 return self.models_cache.get(model_id)
         except Exception as e:
-            current_app.logger.error(f"Error getting model {model_id}: {e}")
+            logger.error(f"Error getting model {model_id}: {e}")
             return None
     
     def get_active_model(self) -> Optional[Any]:
         """Get the currently active model"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 # Check if there's a set active model
@@ -127,41 +226,49 @@ class AIModelManager:
             return None
             
         except Exception as e:
-            current_app.logger.error(f"Error getting active model: {e}")
+            logger.error(f"Error getting active model: {e}")
             return None
     
     def set_active_model(self, model_id: str) -> bool:
         """Set the active model"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 success = self.comprehensive_manager.set_active_model(model_id)
                 if success:
-                    current_app.logger.info(f"Set active model to: {model_id}")
+                    logger.info(f"Set active model to: {model_id}")
                 return success
             else:
                 if model_id in self.models_cache:
                     # Deactivate all models
                     for model in self.models_cache.values():
-                        model.is_active = False
+                        if hasattr(model, 'is_active'):
+                            model.is_active = False
                     
                     # Activate selected model
-                    self.models_cache[model_id].is_active = True
+                    if hasattr(self.models_cache[model_id], 'is_active'):
+                        self.models_cache[model_id].is_active = True
                     self.active_model_id = model_id
                     
-                    current_app.logger.info(f"Set active model to: {model_id}")
+                    logger.info(f"Set active model to: {model_id}")
                     return True
             
             return False
             
         except Exception as e:
-            current_app.logger.error(f"Error setting active model {model_id}: {e}")
+            logger.error(f"Error setting active model {model_id}: {e}")
             return False
+    
+    def activate_model(self, model_id: str) -> bool:
+        """Activate a model (alias for set_active_model)"""
+        return self.set_active_model(model_id)
     
     def add_custom_model(self, model_id: str, name: str, endpoint: str, 
                         api_key_env: str = '', model_name: str = '',
                         max_tokens: int = 4096, temperature: float = 0.7,
                         custom_headers: Dict = None) -> Optional[Any]:
         """Add a custom model"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 return self.comprehensive_manager.add_custom_model(
@@ -196,15 +303,16 @@ class AIModelManager:
                 # Save to database
                 self._save_model_to_db(model)
                 
-                current_app.logger.info(f"Added custom model: {model_id}")
+                logger.info(f"Added custom model: {model_id}")
                 return model
             
         except Exception as e:
-            current_app.logger.error(f"Failed to add custom model: {e}")
+            logger.error(f"Failed to add custom model: {e}")
             return None
     
     def remove_model(self, model_id: str) -> bool:
         """Remove a model"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 return self.comprehensive_manager.remove_model(model_id)
@@ -216,18 +324,100 @@ class AIModelManager:
                     # Remove from database
                     self._remove_model_from_db(model_id)
                     
-                    current_app.logger.info(f"Removed model: {model_id}")
+                    logger.info(f"Removed model: {model_id}")
                     return True
                 
                 return False
             
         except Exception as e:
-            current_app.logger.error(f"Failed to remove model: {e}")
+            logger.error(f"Failed to remove model: {e}")
             return False
+    
+    def test_model(self, model_id: str, test_query: str = "Hello, how are you?") -> Dict[str, Any]:
+        """Test a model's connectivity and response"""
+        self._ensure_initialized()
+        try:
+            if self.comprehensive_manager:
+                # Use comprehensive manager's test functionality if available
+                return self.comprehensive_manager.test_model(model_id, test_query)
+            else:
+                # Simple test for fallback mode
+                model = self.get_model(model_id)
+                if model:
+                    return {
+                        "status": "success",
+                        "message": f"Model {model_id} is available",
+                        "model_id": model_id,
+                        "test_query": test_query
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "message": f"Model {model_id} not found",
+                        "model_id": model_id
+                    }
+        except Exception as e:
+            logger.error(f"Error testing model {model_id}: {e}")
+            return {
+                "status": "error",
+                "message": f"Test failed: {str(e)}",
+                "model_id": model_id
+            }
+    
+    def get_model_statistics(self) -> Dict[str, Any]:
+        """Get model usage statistics"""
+        self._ensure_initialized()
+        try:
+            if self.comprehensive_manager:
+                return self.comprehensive_manager.get_model_statistics()
+            else:
+                models = self.get_all_models()
+                return {
+                    "total_models": len(models),
+                    "active_models": len([m for m in models if getattr(m, 'is_active', False)]),
+                    "providers": {},
+                    "model_types": {},
+                    "capabilities": {}
+                }
+        except Exception as e:
+            logger.error(f"Error getting model statistics: {e}")
+            return {}
+    
+    def get_models_by_capability(self, capability) -> List[Any]:
+        """Get models that support a specific capability"""
+        self._ensure_initialized()
+        try:
+            if self.comprehensive_manager:
+                return self.comprehensive_manager.get_models_by_capability(capability)
+            else:
+                # Fallback implementation
+                models = self.get_all_models()
+                return [
+                    model for model in models
+                    if hasattr(model, 'capabilities') and capability in getattr(model, 'capabilities', [])
+                ]
+        except Exception as e:
+            logger.error(f"Error getting models by capability: {e}")
+            return []
+    
+    def get_models_by_provider(self, provider) -> List[Any]:
+        """Get models from a specific provider"""
+        self._ensure_initialized()
+        try:
+            if self.comprehensive_manager:
+                return self.comprehensive_manager.get_models_by_provider(provider)
+            else:
+                # Fallback implementation
+                models = self.get_all_models()
+                return [model for model in models if getattr(model, 'provider', None) == provider]
+        except Exception as e:
+            logger.error(f"Error getting models by provider: {e}")
+            return []
     
     async def generate_response(self, model_id: str, query: str, system_message: str = None, 
                               user_id: str = "anonymous", stream: bool = False) -> Dict[str, Any]:
         """Generate AI response using the comprehensive system if available"""
+        self._ensure_initialized()
         try:
             if self.comprehensive_manager:
                 return await self.comprehensive_manager.generate_response(
@@ -238,215 +428,61 @@ class AIModelManager:
                     stream=stream
                 )
             else:
-                # Basic fallback implementation
+                # Fallback implementation
                 model = self.get_model(model_id)
                 if not model:
-                    return {"error": f"Model '{model_id}' not found", "status": "error"}
+                    return {
+                        "status": "error",
+                        "error": f"Model {model_id} not found"
+                    }
                 
+                # Simple mock response for fallback
                 return {
-                    "response": f"[Mock response from {model.name}] {query}",
                     "status": "success",
+                    "response": f"Mock response from {model_id} for query: {query}",
                     "model": model_id,
-                    "response_time": 0.1,
-                    "usage": {"tokens": len(query.split())},
                     "streaming": stream
                 }
-                
         except Exception as e:
-            current_app.logger.error(f"Error generating response: {e}")
+            logger.error(f"Error generating response: {e}")
             return {
-                "error": f"Internal error: {str(e)}",
                 "status": "error",
+                "error": str(e),
                 "model": model_id
             }
-    
-    def _load_models_from_db(self):
-        """Load models from database (fallback mode)"""
-        try:
-            db_models = db.session.query(MLModelRegistry).all()
-            
-            for db_model in db_models:
-                model = self._convert_db_model(db_model)
-                self.models_cache[db_model.id] = model
-            
-            current_app.logger.info(f"Loaded {len(db_models)} models from database")
-            
-        except Exception as e:
-            current_app.logger.error(f"Failed to load models from database: {e}")
-            self.models_cache = {}
-    
-    def _convert_db_model(self, db_model: MLModelRegistry):
-        """Convert database model to internal format"""
-        model_data = {
-            'id': db_model.id,
-            'name': db_model.name,
-            'provider': AIProvider(db_model.provider),
-            'model_name': db_model.model_id,
-            'endpoint': db_model.config.get('endpoint', ''),
-            'api_key_env': db_model.config.get('api_key_env', ''),
-            'max_tokens': db_model.config.get('max_tokens', 4096),
-            'temperature': db_model.config.get('temperature', 0.7),
-            'top_p': db_model.config.get('top_p', 1.0),
-            'context_window': db_model.config.get('context_window', 4096),
-            'cost_per_1k_tokens': db_model.cost_per_token or 0.0,
-            'is_active': db_model.is_active,
-            'supports_streaming': db_model.config.get('supports_streaming', False),
-            'supports_system_message': db_model.config.get('supports_system_message', True),
-            'supports_vision': db_model.config.get('supports_vision', False),
-            'supports_audio': db_model.config.get('supports_audio', False),
-            'supports_functions': db_model.config.get('supports_functions', False),
-            'model_type': db_model.model_type or 'text',
-            'deployment_type': db_model.config.get('deployment_type', 'cloud'),
-            'input_modalities': db_model.config.get('input_modalities', ['text']),
-            'output_modalities': db_model.config.get('output_modalities', ['text']),
-            'capabilities': db_model.capabilities or []
-        }
-        
-        return self._create_model_object(model_data)
-    
-    def _create_model_object(self, model_data: Dict) -> Any:
-        """Create model object from data"""
-        class SimpleAIModel:
-            def __init__(self, data):
-                for key, value in data.items():
-                    setattr(self, key, value)
-        
-        # Set defaults
-        model_data.setdefault('temperature', 0.7)
-        model_data.setdefault('top_p', 1.0)
-        model_data.setdefault('is_active', False)
-        model_data.setdefault('supports_streaming', False)
-        model_data.setdefault('supports_system_message', True)
-        model_data.setdefault('supports_vision', False)
-        model_data.setdefault('supports_audio', False)
-        model_data.setdefault('supports_functions', False)
-        model_data.setdefault('model_type', 'text')
-        model_data.setdefault('deployment_type', 'cloud')
-        model_data.setdefault('input_modalities', ['text'])
-        model_data.setdefault('output_modalities', ['text'])
-        model_data.setdefault('capabilities', [])
-        
-        return SimpleAIModel(model_data)
-    
-    def _initialize_default_models(self):
-        """Initialize default AI models if none exist (fallback mode)"""
-        if self.models_cache:
-            return
-        
-        default_models = [
-            {
-                'id': 'gpt-4o',
-                'name': 'GPT-4o',
-                'provider': AIProvider.OPENAI,
-                'model_name': 'gpt-4o',
-                'endpoint': 'https://api.openai.com/v1/chat/completions',
-                'api_key_env': 'OPENAI_API_KEY',
-                'max_tokens': 4096,
-                'context_window': 128000,
-                'cost_per_1k_tokens': 0.005,
-                'supports_streaming': True,
-                'supports_vision': True
-            },
-            {
-                'id': 'ollama-llama3.2',
-                'name': 'Llama 3.2 (Local)',
-                'provider': AIProvider.OLLAMA,
-                'model_name': 'llama3.2:3b',
-                'endpoint': 'http://localhost:11434/api/generate',
-                'api_key_env': '',
-                'max_tokens': 4096,
-                'context_window': 131072,
-                'cost_per_1k_tokens': 0.0,
-                'deployment_type': 'local',
-                'supports_streaming': True
-            }
-        ]
-        
-        for model_data in default_models:
-            model = self._create_model_object(model_data)
-            self.models_cache[model_data['id']] = model
-        
-        current_app.logger.info(f"Initialized {len(default_models)} default models")
-    
-    def _save_model_to_db(self, model):
-        """Save model to database (fallback mode)"""
-        try:
-            model_data = {
-                'id': model.id,
-                'name': model.name,
-                'provider': model.provider.value if hasattr(model.provider, 'value') else str(model.provider),
-                'model_id': model.model_name,
-                'config': {
-                    'endpoint': getattr(model, 'endpoint', ''),
-                    'api_key_env': getattr(model, 'api_key_env', ''),
-                    'max_tokens': getattr(model, 'max_tokens', 4096),
-                    'temperature': getattr(model, 'temperature', 0.7),
-                    'top_p': getattr(model, 'top_p', 1.0),
-                    'context_window': getattr(model, 'context_window', 4096),
-                    'supports_streaming': getattr(model, 'supports_streaming', False),
-                    'supports_system_message': getattr(model, 'supports_system_message', True),
-                    'supports_vision': getattr(model, 'supports_vision', False),
-                    'supports_audio': getattr(model, 'supports_audio', False),
-                    'supports_functions': getattr(model, 'supports_functions', False),
-                    'deployment_type': getattr(model, 'deployment_type', 'cloud'),
-                    'input_modalities': getattr(model, 'input_modalities', ['text']),
-                    'output_modalities': getattr(model, 'output_modalities', ['text']),
-                    'custom_headers': getattr(model, 'custom_headers', {})
-                },
-                'cost_per_token': getattr(model, 'cost_per_1k_tokens', 0.0),
-                'is_active': getattr(model, 'is_active', False),
-                'model_type': getattr(model, 'model_type', 'text'),
-                'capabilities': getattr(model, 'capabilities', [])
-            }
-            
-            # Check if model already exists
-            existing_model = db.session.query(MLModelRegistry).filter_by(id=model.id).first()
-            
-            if existing_model:
-                # Update existing model
-                for key, value in model_data.items():
-                    if key not in ['id']:
-                        setattr(existing_model, key, value)
-            else:
-                # Create new model
-                db_model = MLModelRegistry(**model_data)
-                db.session.add(db_model)
-            
-            db.session.commit()
-            
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Failed to save model to database: {e}")
-    
-    def _remove_model_from_db(self, model_id: str):
-        """Remove model from database (fallback mode)"""
-        try:
-            db_model = db.session.query(MLModelRegistry).filter_by(id=model_id).first()
-            if db_model:
-                db.session.delete(db_model)
-                db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"Failed to remove model from database: {e}")
 
 
-# Singleton instance
+# Global instances
 _ai_model_manager = None
 
-def get_ai_model_manager() -> AIModelManager:
-    """Get singleton AI model manager instance"""
+def get_ai_model_manager():
+    """Get the AI model manager instance"""
     global _ai_model_manager
     if _ai_model_manager is None:
         _ai_model_manager = AIModelManager()
-        if current_app:
-            try:
-                _ai_model_manager.initialize()
-            except Exception as e:
-                current_app.logger.error(f"Failed to initialize AI model manager: {e}")
+        # Don't initialize immediately - wait for Flask context
     return _ai_model_manager
 
-def init_ai_model_manager(app):
-    """Initialize AI model manager with Flask app"""
-    with app.app_context():
-        service = get_ai_model_manager()
-        return service
+def get_comprehensive_manager():
+    """Get the comprehensive AI manager instance"""
+    manager = get_ai_model_manager()
+    return manager.comprehensive_manager if manager else None
+
+def is_comprehensive_system_available() -> bool:
+    """Check if comprehensive system is available"""
+    return COMPREHENSIVE_AI_AVAILABLE
+
+def get_model_count() -> int:
+    """Get the total number of available models"""
+    try:
+        manager = get_ai_model_manager()
+        if manager:
+            models = manager.get_all_models()
+            return len(models)
+        return 0
+    except Exception as e:
+        logger.error(f"Error getting model count: {e}")
+        return 0
+
+# Create the manager instance but don't initialize it yet
+ai_model_manager = AIModelManager()

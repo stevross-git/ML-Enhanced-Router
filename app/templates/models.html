@@ -317,8 +317,7 @@ function displayModels() {
                     <span class="badge bg-info">${model.type}</span>
                 </td>
                 <td>
-                    ${model.categories.map(cat => `<span class="badge bg-secondary me-1">${cat}</span>`).join('')}
-                </td>
+                    ${(model.capabilities || []).map(cap => `<span class="badge bg-secondary me-1">${cap}</span>`).join('')}                </td>
                 <td>${statusBadge}</td>
                 <td>${accuracy}</td>
                 <td>${new Date(model.created_at).toLocaleDateString()}</td>

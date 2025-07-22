@@ -22,15 +22,16 @@ def register_blueprints(app: Flask):
     from .config import config_bp
     from .graphql import graphql_bp
     
-    # Register core blueprints with URL prefixes
-    app.register_blueprint(main_bp)
-    app.register_blueprint(api_bp, url_prefix='/api')
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(models_bp, url_prefix='/api/models')
-    app.register_blueprint(cache_bp, url_prefix='/api/cache')
-    app.register_blueprint(rag_bp, url_prefix='/api/rag')
-    app.register_blueprint(config_bp, url_prefix='/api/config')
-    app.register_blueprint(graphql_bp, url_prefix='/graphql')
+    # Register core blueprints 
+    # NOTE: Don't add url_prefix here if the blueprint already has one defined
+    app.register_blueprint(main_bp)  # No prefix needed
+    app.register_blueprint(api_bp, url_prefix='/api')  # Only if api_bp doesn't have prefix
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')    
+    app.register_blueprint(models_bp)  # models_bp already has url_prefix='/api/models'
+    app.register_blueprint(cache_bp, url_prefix='/api/cache')  # Only if cache_bp doesn't have prefix
+    app.register_blueprint(rag_bp, url_prefix='/api/rag')  # Only if rag_bp doesn't have prefix
+    app.register_blueprint(config_bp, url_prefix='/api/config')  # Only if config_bp doesn't have prefix
+    app.register_blueprint(graphql_bp, url_prefix='/graphql')  # Only if graphql_bp doesn't have prefix
     
     # Import advanced blueprints (only if they exist)
     try:

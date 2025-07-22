@@ -3,6 +3,7 @@ Agent Service
 Handles agent registration, management, and routing decisions
 """
 
+import asyncio
 import json
 import uuid
 from datetime import datetime, timedelta
@@ -13,7 +14,6 @@ from flask import current_app
 from sqlalchemy import func, and_
 
 from app.extensions import db
-from app.models.agent import Agent, AgentCapability, AgentMetrics, AgentSession
 from app.utils.exceptions import AgentError, ValidationError, ServiceError
 
 
@@ -53,6 +53,113 @@ class AgentService:
             current_app.logger.error(f"Agent service initialization failed: {e}")
             self.initialized = False
     
+    def get_all_agents(self) -> List:
+        """
+        Get all active agents
+        
+        Returns:
+            List of active Agent objects
+            
+        Raises:
+            AgentError: If service not initialized
+        """
+        if not self.initialized:
+            raise AgentError("Agent service not initialized")
+        
+        try:
+            # Import within method to avoid circular imports
+            from app.models.agent import Agent
+            agents = Agent.query.filter_by(is_active=True).all()
+            return agents
+            
+        except Exception as e:
+            current_app.logger.error(f"Error getting all agents: {e}")
+            return []
+
+    def get_agent(self, agent_id: str) -> Optional:
+        """
+        Get a specific agent by ID
+        
+        Args:
+            agent_id: The agent ID to look up
+            
+        Returns:
+            Agent object or None if not found
+            
+        Raises:
+            AgentError: If service not initialized
+        """
+        if not self.initialized:
+            raise AgentError("Agent service not initialized")
+        
+        try:
+            from app.models.agent import Agent
+            agent = Agent.query.filter_by(id=agent_id, is_active=True).first()
+            return agent
+            
+        except Exception as e:
+            current_app.logger.error(f"Error getting agent {agent_id}: {e}")
+            return None
+
+    async def check_agent_health(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Check the health status of a specific agent
+        
+        Args:
+            agent_id: The agent ID to check
+            
+        Returns:
+            Dict containing health status information
+            
+        Raises:
+            AgentError: If service not initialized
+        """
+        if not self.initialized:
+            raise AgentError("Agent service not initialized")
+        
+        try:
+            from app.models.agent import Agent, AgentMetrics
+            agent = Agent.query.filter_by(id=agent_id, is_active=True).first()
+            if not agent:
+                return {
+                    'status': 'not_found',
+                    'healthy': False,
+                    'message': 'Agent not found'
+                }
+            
+            # Basic health check
+            health_status = {
+                'status': agent.status,
+                'healthy': agent.status == AgentStatus.ACTIVE.value and agent.is_healthy,
+                'last_seen': agent.last_seen.isoformat() if agent.last_seen else None,
+                'active_sessions': agent.active_sessions,
+                'max_sessions': agent.max_concurrent_sessions,
+                'response_time': agent.avg_response_time,
+                'success_rate': agent.success_rate
+            }
+            
+            # Get recent metrics if available
+            latest_metrics = AgentMetrics.query.filter_by(agent_id=agent_id).order_by(
+                AgentMetrics.period_end.desc()
+            ).first()
+            
+            if latest_metrics:
+                health_status['response_time'] = latest_metrics.average_response_time
+                health_status['success_rate'] = (
+                    latest_metrics.successful_requests / 
+                    max(latest_metrics.total_requests, 1) * 100
+                )
+            
+            return health_status
+            
+        except Exception as e:
+            current_app.logger.error(f"Error checking agent health {agent_id}: {e}")
+            return {
+                'status': 'error',
+                'healthy': False,
+                'message': str(e)
+            }
+    
     def register_agent(self, agent_data: Dict[str, Any]) -> str:
         """
         Register a new agent
@@ -71,6 +178,8 @@ class AgentService:
             raise AgentError("Agent service not initialized")
         
         try:
+            from app.models.agent import Agent, AgentCapability, AgentMetrics
+            
             required_fields = ['name', 'type', 'endpoint', 'capabilities']
             for field in required_fields:
                 if not agent_data.get(field):
@@ -88,7 +197,6 @@ class AgentService:
                 status=AgentStatus.ACTIVE.value,
                 agent_metadata=agent_data.get('metadata', {}),
                 max_concurrent_sessions=agent_data.get('max_concurrent_sessions', self.max_concurrent_sessions),
-                created_at=datetime.utcnow(),
                 last_seen=datetime.utcnow(),
                 is_active=True
             )
@@ -105,22 +213,20 @@ class AgentService:
                     agent_id=agent_id,
                     capability=capability_name,
                     confidence_score=agent_data.get('confidence_scores', {}).get(capability_name, 1.0),
-                    created_at=datetime.utcnow(),
                     is_active=True
                 )
                 db.session.add(capability)
             
             metrics = AgentMetrics(
                 agent_id=agent_id,
-                agent_name=agent_data['name'],  # Added missing field
-                period_start=datetime.utcnow(),  # Added missing field
-                period_end=datetime.utcnow(),    # Added missing field
-                granularity='day',              # Added missing field
+                agent_name=agent_data['name'],
+                period_start=datetime.utcnow(),
+                period_end=datetime.utcnow(),
+                granularity='day',
                 total_requests=0,
                 successful_requests=0,
                 failed_requests=0,
-                average_response_time=0.0,
-                last_updated=datetime.utcnow()
+                average_response_time=0.0
             )
             db.session.add(metrics)
             
@@ -154,6 +260,8 @@ class AgentService:
             raise AgentError("Agent service not initialized")
         
         try:
+            from app.models.agent import Agent, AgentCapability, AgentMetrics
+            
             exclude_agents = exclude_agents or []
             
             query = db.session.query(Agent, AgentCapability, AgentMetrics).join(
@@ -274,6 +382,8 @@ class AgentService:
     def update_agent_status(self, agent_id: str, status: str, metadata: Dict[str, Any] = None) -> bool:
         """Update agent status"""
         try:
+            from app.models.agent import Agent
+            
             agent = Agent.query.get(agent_id)
             if not agent:
                 return False
@@ -282,7 +392,7 @@ class AgentService:
             agent.last_seen = datetime.utcnow()
             
             if metadata:
-                if agent.agent_metadata is None:  # FIXED: Proper indentation and field name
+                if agent.agent_metadata is None:
                     agent.agent_metadata = {}
                 agent.agent_metadata.update(metadata)
             
@@ -302,6 +412,8 @@ class AgentService:
     def get_agent_stats(self) -> Dict[str, Any]:
         """Get agent statistics"""
         try:
+            from app.models.agent import Agent, AgentCapability, AgentMetrics, AgentSession
+            
             stats = {
                 'total_agents': Agent.query.filter_by(is_active=True).count(),
                 'active_agents': Agent.query.filter_by(
@@ -349,6 +461,9 @@ class AgentService:
     def _load_agents_from_db(self):
         """Load existing agents from database into memory"""
         try:
+            # Import within method to avoid circular import issues
+            from app.models.agent import Agent, AgentCapability
+            
             agents = Agent.query.filter_by(is_active=True).all()
             for agent in agents:
                 self.registered_agents[agent.id] = agent
@@ -412,15 +527,16 @@ class AgentService:
     def _create_agent_session(self, agent_id: str, query: str, context: Dict[str, Any] = None) -> str:
         """Create new agent session"""
         try:
+            from app.models.agent import Agent, AgentSession
+            
             session_id = str(uuid.uuid4())
             
             session = AgentSession(
                 id=session_id,
                 agent_id=agent_id,
-                session_type='query',  # Added missing field
-                user_id=context.get('user_id') if context else None,  # Added missing field
+                session_type='query',
+                user_id=context.get('user_id') if context else None,
                 context=context or {},
-                created_at=datetime.utcnow(),
                 is_active=True
             )
             

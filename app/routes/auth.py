@@ -18,32 +18,24 @@ auth_bp = Blueprint('auth', __name__)
 def get_current_user():
     """Get current user info"""
     try:
-        auth_service = get_auth_service()
-        if not auth_service:
-            return jsonify({'error': 'Auth service not initialized'}), 503
-        
-        # For now, return the admin user
-        admin_user = auth_service.users.get('admin')
-        if not admin_user:
-            return jsonify({'status': 'error', 'error': 'No user found'}), 404
-        
+        # Temporary mock data for testing
         user_data = {
-            'id': admin_user.id,
-            'username': admin_user.username,
-            'email': admin_user.email,
-            'role': admin_user.role.value,
-            'api_key': admin_user.api_key,
-            'created_at': admin_user.created_at.isoformat(),
-            'last_login': admin_user.last_login.isoformat() if admin_user.last_login else None,
-            'is_active': admin_user.is_active,
-            'permissions': admin_user.permissions
+            'id': 'admin',
+            'username': 'admin',
+            'email': 'admin@example.com',
+            'role': 'admin',
+            'api_key': 'mock-api-key',
+            'created_at': '2025-01-01T00:00:00',
+            'last_login': None,
+            'is_active': True,
+            'permissions': ['read', 'write', 'admin']
         }
         
         return jsonify({'status': 'success', 'user': user_data})
         
     except Exception as e:
         current_app.logger.error(f"Error getting current user: {e}")
-        return jsonify({'status': 'error', 'error': 'Failed to get current user'}), 500
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 @auth_bp.route('/users', methods=['GET'])
 @require_auth(roles=['admin'])

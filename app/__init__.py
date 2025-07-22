@@ -73,12 +73,14 @@ def _init_background_services(app):
                 from .services.ai_models import get_ai_model_manager
                 from .services.cache_service import get_cache_manager
                 from .services.rag_service import get_rag_service
+                from .services.agent_service import get_agent_service  # ADD THIS LINE
                 
                 # Initialize services
                 ml_router = get_ml_router()
                 ai_manager = get_ai_model_manager()
                 cache_manager = get_cache_manager()
                 rag_service = get_rag_service()
+                agent_service = get_agent_service()  # ADD THIS LINE
                 
                 app.logger.info("🤖 Background services initialized")
                 
@@ -86,5 +88,6 @@ def _init_background_services(app):
                 app.logger.error(f"❌ Background services initialization failed: {e}")
     
     # Start background initialization
+    import threading
     init_thread = threading.Thread(target=init_services, daemon=True)
     init_thread.start()
