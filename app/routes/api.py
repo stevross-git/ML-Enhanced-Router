@@ -166,6 +166,34 @@ def classify_query():
     except Exception as e:
         current_app.logger.error(f"Classification error: {e}")
         return jsonify({'error': 'Classification failed'}), 500
+    
+
+@api_bp.route('/collaborate/sessions', methods=['GET'])
+@rate_limit("100 per minute")
+def get_collaboration_sessions():
+    """Get collaboration sessions (placeholder for future feature)"""
+    return jsonify({
+        'status': 'success',
+        'sessions': [],
+        'message': 'Collaboration feature coming soon'
+    })
+
+@api_bp.route('/external-llm/metrics', methods=['GET'])
+@rate_limit("100 per minute")
+def get_external_llm_metrics():
+    """Get external LLM metrics (placeholder)"""
+    return jsonify({
+        'status': 'success',
+        'metrics': {
+            'total_requests': 0,
+            'successful_requests': 0,
+            'failed_requests': 0,
+            'average_response_time': 0.0,
+            'uptime': '100%',
+            'last_updated': datetime.utcnow().isoformat()
+        }
+    })
+
 
 @api_bp.route('/agents', methods=['GET'])
 @rate_limit("100 per minute")

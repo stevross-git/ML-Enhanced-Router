@@ -420,3 +420,19 @@ def system_admin():
     except Exception as e:
         current_app.logger.error(f"Error rendering system admin page: {e}")
         return render_template('error.html', error="Failed to load admin interface"), 500
+    
+@main_bp.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    from flask import send_from_directory
+    import os
+    
+    try:
+        return send_from_directory(
+            os.path.join(current_app.root_path, 'static'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
+    except Exception:
+        # Return a simple response if favicon doesn't exist
+        return '', 404

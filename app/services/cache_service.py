@@ -459,6 +459,98 @@ class CacheService:
         except Exception as e:
             db.session.rollback()
             current_app.logger.warning(f"Cache entry expiration error: {e}")
+            
+def get_stats(self) -> Dict[str, Any]:
+    """Get comprehensive cache statistics"""
+    try:
+        stats = {
+            'enabled': self.enabled,
+            'type': 'database' if self.enabled else 'disabled',
+            'ttl_seconds': self.ttl,
+            'max_size': self.max_size,
+            'total_entries': 0,
+            'valid_entries': 0,
+            'expired_entries': 0,
+            'hit_rate': 0.0,
+            'memory_usage': 0,
+            'redis_keys': 0,
+            'cache_prefix': getattr(self, 'cache_prefix', 'ml_router_cache:'),
+            'last_updated': datetime.utcnow().isoformat()
+        }
+        
+        if not self.enabled:
+            return stats
+        
+        try:
+            # Import models properly
+            from app.models.cache import AICacheEntry, AICacheStats
+            from app.extensions import db
+            
+            # Use db.session.query instead of Model.query
+            total_entries = db.session.query(AICacheEntry).filter_by(is_valid=True).count()
+            
+            # Count expired entries
+            expired_entries = db.session.query(AICacheEntry).filter(
+                AICacheEntry.expires_at < datetime.utcnow(),
+                AICacheEntry.is_valid == True
+            ).count()
+            
+            stats['total_entries'] = total_entries
+            stats['expired_entries'] = expired_entries
+            stats['valid_entries'] = total_entries - expired_entries
+            
+        except Exception as e:
+            current_app.logger.warning(f"Database stats error: {e}")
+        
+        # Redis statistics
+        if hasattr(self, 'redis_client') and self.redis_client:
+            try:
+                redis_info = self.redis_client.info()
+                stats['memory_usage'] = redis_info.get('used_memory', 0)
+                cache_keys = self.redis_client.keys(f"{stats['cache_prefix']}*")
+                stats['redis_keys'] = len(cache_keys)
+            except Exception as e:
+                current_app.logger.warning(f"Redis stats error: {e}")
+        
+        # Hit rate calculation
+        try:
+            from app.models.cache import AICacheStats
+            from sqlalchemy import func
+            
+            # Get recent cache statistics
+            recent_stats = db.session.query(AICacheStats).order_by(
+                AICacheStats.created_at.desc()
+            ).limit(10).all()
+            
+            if recent_stats:
+                total_requests = sum(s.total_requests for s in recent_stats)
+                total_hits = sum(s.cache_hits for s in recent_stats)
+                stats['hit_rate'] = round(
+                    (total_hits / total_requests * 100) if total_requests > 0 else 0, 2
+                )
+                
+        except Exception as e:
+            current_app.logger.warning(f"Hit rate calculation error: {e}")
+        
+        return stats
+        
+    except Exception as e:
+        current_app.logger.error(f"Cache stats error: {e}")
+        return {
+            'enabled': False, 
+            'error': str(e),
+            'type': 'error'
+        }
+
+# Also add this helper method to handle database operations safely
+
+def _safe_db_query(self, query_func, default_value=0, error_context="database query"):
+    """Safely execute database queries with error handling"""
+    try:
+        return query_func()
+    except Exception as e:
+        current_app.logger.warning(f"Safe DB query error in {error_context}: {e}")
+        return default_value
 
 
 # Singleton instance

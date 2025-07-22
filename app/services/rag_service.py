@@ -355,6 +355,131 @@ class RAGService:
             current_app.logger.info(f"RAG search: query='{query}', results={results_count}")
         except Exception as e:
             current_app.logger.warning(f"Search logging error: {e}")
+            
+            
+            
+
+def get_statistics(self) -> Dict[str, Any]:
+    """
+    Get RAG system statistics
+    
+    Returns:
+        Dict containing RAG system statistics
+    """
+    try:
+        if not self.initialized:
+            return {
+                'enabled': False,
+                'error': 'RAG service not initialized'
+            }
+        
+        from app.models.rag import Document, DocumentChunk, RAGQuery
+        from sqlalchemy import func
+        
+        stats = {
+            'enabled': True,
+            'status': 'active',
+            'documents': {
+                'total': 0,
+                'active': 0,
+                'recent': 0
+            },
+            'chunks': {
+                'total': 0,
+                'avg_per_document': 0.0
+            },
+            'queries': {
+                'total': 0,
+                'recent_24h': 0,
+                'avg_results_per_query': 0.0
+            },
+            'performance': {
+                'avg_search_time': 0.0,
+                'avg_relevance_score': 0.0
+            },
+            'storage': {
+                'vector_store_size': 0,
+                'total_content_length': 0
+            }
+        }
+        
+        try:
+            # Document statistics
+            stats['documents']['total'] = db.session.query(Document).count()
+            stats['documents']['active'] = db.session.query(Document).filter_by(is_active=True).count()
+            
+            # Recent documents (last 7 days)
+            week_ago = datetime.utcnow() - timedelta(days=7)
+            stats['documents']['recent'] = db.session.query(Document).filter(
+                Document.created_at >= week_ago
+            ).count()
+            
+        except Exception as e:
+            current_app.logger.warning(f"Document stats error: {e}")
+        
+        try:
+            # Chunk statistics
+            stats['chunks']['total'] = db.session.query(DocumentChunk).count()
+            
+            if stats['documents']['total'] > 0:
+                stats['chunks']['avg_per_document'] = round(
+                    stats['chunks']['total'] / stats['documents']['total'], 2
+                )
+            
+        except Exception as e:
+            current_app.logger.warning(f"Chunk stats error: {e}")
+        
+        try:
+            # Query statistics
+            stats['queries']['total'] = db.session.query(RAGQuery).count()
+            
+            # Recent queries (last 24 hours)
+            day_ago = datetime.utcnow() - timedelta(hours=24)
+            stats['queries']['recent_24h'] = db.session.query(RAGQuery).filter(
+                RAGQuery.created_at >= day_ago
+            ).count()
+            
+            # Average results per query
+            avg_results = db.session.query(func.avg(RAGQuery.results_found)).scalar()
+            if avg_results:
+                stats['queries']['avg_results_per_query'] = round(float(avg_results), 2)
+            
+        except Exception as e:
+            current_app.logger.warning(f"Query stats error: {e}")
+        
+        try:
+            # Performance metrics
+            avg_search_time = db.session.query(func.avg(RAGQuery.search_time)).scalar()
+            if avg_search_time:
+                stats['performance']['avg_search_time'] = round(float(avg_search_time), 3)
+            
+            avg_score = db.session.query(func.avg(RAGQuery.best_match_score)).scalar()
+            if avg_score:
+                stats['performance']['avg_relevance_score'] = round(float(avg_score), 3)
+                
+        except Exception as e:
+            current_app.logger.warning(f"Performance stats error: {e}")
+        
+        try:
+            # Storage metrics
+            total_content_length = db.session.query(
+                func.sum(func.length(DocumentChunk.content))
+            ).scalar()
+            if total_content_length:
+                stats['storage']['total_content_length'] = int(total_content_length)
+                
+        except Exception as e:
+            current_app.logger.warning(f"Storage stats error: {e}")
+        
+        return stats
+        
+    except Exception as e:
+        current_app.logger.error(f"RAG statistics error: {e}")
+        return {
+            'enabled': False,
+            'error': str(e),
+            'status': 'error'
+        }
 
 
 # Singleton instance

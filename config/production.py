@@ -4,9 +4,9 @@ Optimized settings for production deployment with Docker
 """
 
 import os
-from .base import Config
+from .base import BaseConfig
 
-class ProductionConfig(Config):
+class ProductionConfig(BaseConfig):
     """Production configuration with Docker database credentials"""
     
     # Database Configuration - matches docker-compose.yml
@@ -40,95 +40,81 @@ class ProductionConfig(Config):
     
     # Database Performance
     SQLALCHEMY_ENGINE_OPTIONS = {
+        **BaseConfig.SQLALCHEMY_ENGINE_OPTIONS,  # Inherit base engine options
         'pool_size': 20,
-        'pool_recycle': 3600,
-        'pool_pre_ping': True,
         'max_overflow': 30,
-        'pool_timeout': 30,
+        'pool_recycle': 1800,  # 30 minutes
+        'pool_pre_ping': True,
+        'echo': False  # Disable SQL logging in production
     }
     
-    # Caching
+    # Production optimizations
+    SQLALCHEMY_ECHO = False
+    SQLALCHEMY_RECORD_QUERIES = False
+    
+    # Cache Configuration
     CACHE_TYPE = 'redis'
-    CACHE_REDIS_URL = REDIS_URL
-    CACHE_DEFAULT_TIMEOUT = 3600
+    CACHE_DEFAULT_TIMEOUT = 300
+    CACHE_KEY_PREFIX = 'ml_router:'
     
-    # Rate Limiting
-    RATELIMIT_STORAGE_URL = REDIS_URL
-    RATELIMIT_ENABLED = True
+    # ML Production Settings
+    ML_MODEL_CACHE_SIZE = 1000
+    ML_INIT_TIMEOUT = 120
+    ML_INFERENCE_TIMEOUT = 60
     
-    # ML Router Configuration
-    ML_ROUTER_ENABLED = True
-    ML_ROUTER_MAX_TOKENS = 4096
-    ML_ROUTER_TEMPERATURE = 0.7
-    ML_ROUTER_TIMEOUT = 30
+    # Production logging
+    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+    LOG_FORMAT = '%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] - %(message)s'
     
-    # Authentication
-    AUTH_ENABLED = True
-    JWT_SECRET_KEY = SECRET_KEY
-    JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1 hour
-    JWT_REFRESH_TOKEN_EXPIRES = 86400  # 24 hours
+    # Production rate limiting
+    RATE_LIMIT_PER_MINUTE = 60
+    RATE_LIMIT_BURST = 100
     
-    # RAG Configuration
-    RAG_ENABLED = True
+    # File upload settings
+    UPLOAD_FOLDER = '/app/uploads'
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB
+    
+    # RAG settings for production
     RAG_CHUNK_SIZE = 1000
-    RAG_CHUNK_OVERLAP = 200
-    RAG_MAX_CHUNKS = 10
+    RAG_MAX_DOCUMENTS = 10000
     
-    # Email Configuration
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'localhost')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    # Monitoring
+    METRICS_ENABLED = True
+    PROFILER_ENABLED = False
+    
+    # Email settings
+    MAIL_SERVER = os.environ.get('MAIL_SERVER')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', '587'))
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     
-    # API Keys
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
-    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
-    COHERE_API_KEY = os.environ.get('COHERE_API_KEY')
-    HUGGINGFACE_API_KEY = os.environ.get('HUGGINGFACE_API_KEY')
-    
-    # Logging
-    LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-    LOG_TO_STDOUT = True
-    
-    # Performance
-    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file upload
-    REQUEST_TIMEOUT = 300  # 5 minutes
-    MAX_CONCURRENT_REQUESTS = 100
-    
-    # Monitoring
-    METRICS_ENABLED = True
-    HEALTH_CHECK_ENABLED = True
-    
-    # File Upload
-    UPLOAD_FOLDER = '/app/instance/uploads'
-    MAX_UPLOAD_SIZE = 25 * 1024 * 1024  # 25MB
-    
-    # Docker specific settings
-    DOCKER_ENV = True
-    USE_DOCKER_NETWORKING = True
+    # Gunicorn settings
+    WORKER_CLASS = 'sync'
+    WORKERS = os.environ.get('WEB_CONCURRENCY', '4')
+    WORKER_CONNECTIONS = 1000
+    MAX_REQUESTS = 1000
+    MAX_REQUESTS_JITTER = 50
+    TIMEOUT = 30
+    KEEPALIVE = 2
     
     @staticmethod
     def init_app(app):
-        """Initialize production-specific configurations"""
-        Config.init_app(app)
-        
-        # Create necessary directories
-        import os
-        os.makedirs('/app/instance', exist_ok=True)
-        os.makedirs('/app/logs', exist_ok=True)
-        os.makedirs('/app/instance/uploads', exist_ok=True)
-        
-        # Set up logging for production
+        """Initialize production-specific settings"""
+        # Configure production logging
         import logging
         from logging.handlers import RotatingFileHandler
         
         if not app.debug and not app.testing:
-            # File logging
+            # Create logs directory
+            import os
+            if not os.path.exists('logs'):
+                os.mkdir('logs')
+            
+            # Setup rotating file handler
             file_handler = RotatingFileHandler(
-                '/app/logs/ml_router.log',
-                maxBytes=10 * 1024 * 1024,  # 10MB
+                'logs/ml_router.log', 
+                maxBytes=10240000, 
                 backupCount=10
             )
             file_handler.setFormatter(logging.Formatter(
@@ -138,4 +124,9 @@ class ProductionConfig(Config):
             app.logger.addHandler(file_handler)
             
             app.logger.setLevel(logging.INFO)
-            app.logger.info('ML Router production startup')
+            app.logger.info('🚀 ML Router production startup')
+        
+        # Production-specific configurations
+        app.logger.info("🏭 Production mode activated")
+        app.logger.info(f"📊 Workers: {app.config.get('WORKERS')}")
+        app.logger.info(f"🔒 SSL: {app.config.get('SESSION_COOKIE_SECURE')}")
