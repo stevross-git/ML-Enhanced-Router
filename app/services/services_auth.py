@@ -58,7 +58,7 @@ class AuthService:
                 # Create default admin user
                 admin_user = User(
                     username='admin',
-                    email='admin@mlrouter.local',
+                    email='admin@peoplesainetwork.com',
                     role='admin',
                     is_active=True,
                     is_verified=True

@@ -99,7 +99,7 @@ services:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@mlrouter.local
+      PGADMIN_DEFAULT_EMAIL: admin@peoplesainetwork.com
       PGADMIN_DEFAULT_PASSWORD: admin_password
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:

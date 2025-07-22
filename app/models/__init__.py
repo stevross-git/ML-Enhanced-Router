@@ -99,7 +99,7 @@ def _create_default_user():
         
         admin_user = User(
             username='admin',
-            email='admin@mlrouter.local',
+            email='admin@peoplesainetwork.com',
             password_hash=generate_password_hash('admin123'),
             first_name='Admin',
             last_name='User',
