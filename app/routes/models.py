@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # STANDARD MODEL MANAGEMENT ENDPOINTS
 # ============================================================================
 
-@models_bp.route('', methods=['GET'])
+@models_bp.route('/', methods=['GET'])
 @rate_limit("100 per minute")
 def get_models():
     """Get all models - Frontend: GET /api/models"""
@@ -70,7 +70,7 @@ def get_models():
         logger.error(f"Error getting models: {e}")
         return jsonify({'status': 'error', 'error': 'Failed to get models'}), 500
 
-@models_bp.route('', methods=['POST'])
+@models_bp.route('/', methods=['POST'])
 @require_auth()
 @rate_limit("20 per hour")
 @validate_json(['name', 'provider', 'model_id'])
@@ -144,6 +144,171 @@ def create_model():
     except Exception as e:
         logger.error(f"Error creating model: {e}")
         return jsonify({'error': 'Failed to create model'}), 500
+    
+# app/routes/models.py - ADD THESE MISSING ENDPOINTS
+
+@models_bp.route('/active', methods=['GET'])
+@rate_limit("100 per minute")
+def get_active_model():
+    """Get currently active AI model"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        active_model = model_manager.get_active_model()
+        if not active_model:
+            return jsonify({'status': 'error', 'error': 'No active model'}), 404
+        
+        return jsonify({
+            'status': 'success',
+            'model': active_model.to_dict()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting active model: {e}")
+        return jsonify({'error': 'Failed to get active model'}), 500
+    
+# app/routes/models.py - ADD THESE MISSING ENDPOINTS
+
+@models_bp.route('/active', methods=['GET'])
+@rate_limit("100 per minute")
+def get_active_model():
+    """Get currently active AI model - Frontend: GET /api/models/active"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        active_model = model_manager.get_active_model()
+        if not active_model:
+            return jsonify({'status': 'error', 'error': 'No active model'}), 404
+        
+        return jsonify({
+            'status': 'success',
+            'model': active_model.to_dict()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting active model: {e}")
+        return jsonify({'error': 'Failed to get active model'}), 500
+
+@models_bp.route('/api-key-status', methods=['GET'])
+@rate_limit("100 per minute") 
+def get_api_key_status():
+    """Get API key status for all providers - Frontend: GET /api/models/api-key-status"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        status_info = model_manager.get_api_key_status()
+        
+        return jsonify({
+            'status': 'success',
+            'status_info': status_info
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting API key status: {e}")
+        return jsonify({'error': 'Failed to get API key status'}), 500
+
+@models_bp.route('/activate/<model_id>', methods=['POST'])
+@require_auth()
+@rate_limit("50 per hour")
+def activate_model(model_id):
+    """Activate specific model - Frontend: POST /api/models/activate/{id}"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        success = model_manager.activate_model(model_id)
+        if not success:
+            return jsonify({'error': 'Model not found'}), 404
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Model activated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error activating model {model_id}: {e}")
+        return jsonify({'error': 'Failed to activate model'}), 500
+
+@models_bp.route('/test/<model_id>', methods=['POST'])
+@require_auth()
+@rate_limit("20 per hour")
+def test_model(model_id):
+    """Test specific model - Frontend: POST /api/models/test/{id}"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        data = request.get_json() or {}
+        test_query = data.get('query', 'Hello! Can you confirm you are working correctly?')
+        
+        result = model_manager.test_model(model_id, test_query)
+        
+        return jsonify({
+            'status': 'success',
+            'response': result.get('response', 'Test completed'),
+            'model_id': model_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error testing model {model_id}: {e}")
+        return jsonify({'error': 'Failed to test model'}), 500
+
+@models_bp.route('/config', methods=['POST'])
+@require_auth()
+@rate_limit("50 per hour")
+def save_model_config():
+    """Save model configuration - Frontend: POST /api/models/config"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No configuration data provided'}), 400
+        
+        # Save configuration
+        success = model_manager.save_configuration(data)
+        
+        if success:
+            return jsonify({
+                'status': 'success',
+                'message': 'Configuration saved successfully'
+            })
+        else:
+            return jsonify({'error': 'Failed to save configuration'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error saving model config: {e}")
+        return jsonify({'error': 'Failed to save configuration'}), 500
+
+@models_bp.route('/api-key-status', methods=['GET'])
+@rate_limit("100 per minute") 
+def get_api_key_status():
+    """Get API key status for all providers"""
+    try:
+        model_manager = get_ai_model_manager()
+        if not model_manager:
+            return jsonify({'error': 'Model manager not initialized'}), 503
+        
+        status_info = model_manager.get_api_key_status()
+        
+        return jsonify({
+            'status': 'success',
+            'status_info': status_info
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting API key status: {e}")
+        return jsonify({'error': 'Failed to get API key status'}), 500
 
 @models_bp.route('/<model_id>', methods=['GET'])
 @rate_limit("100 per minute")

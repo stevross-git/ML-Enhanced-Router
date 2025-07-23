@@ -283,7 +283,7 @@
 
         async function loadModels() {
             try {
-                const response = await fetch('/api/ai-models');
+                const response = await fetch('/api/models');
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -299,7 +299,7 @@
 
         async function loadActiveModel() {
             try {
-                const response = await fetch('/api/ai-models/active');
+                const response = await fetch('/api/models/active');
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -315,7 +315,7 @@
 
         async function loadApiKeyStatus() {
             try {
-                const response = await fetch('/api/ai-models/api-key-status');
+                const response = await fetch('/api/models/api-key-status');
                 const data = await response.json();
                 
                 if (data.status === 'success') {
@@ -580,7 +580,7 @@
             }
             
             try {
-                const response = await fetch('/api/ai-models', {
+                const response = await fetch('/api/models', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -611,7 +611,7 @@
             };
             
             try {
-                const response = await fetch('/api/ai-models/config', {
+                const response = await fetch('/api/models/config', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
