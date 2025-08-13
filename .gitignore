@@ -43,3 +43,8 @@ rag_data/chroma.sqlite3
 cognitive_decisions.db
 uv.lock
 .env.production.peoplesainetwork
+.env.example
+.env.production
+.env.production.final
+.env.production.secure
+.env.production.template
