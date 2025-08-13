@@ -10,7 +10,13 @@ class BaseConfig:
     """Base configuration class with common settings"""
     
     # Flask Core Settings
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        import sys
+        if os.environ.get('FLASK_ENV') == 'production':
+            print("ERROR: SECRET_KEY environment variable must be set in production")
+            sys.exit(1)
+        SECRET_KEY = 'dev-secret-key-only-for-development'
     
     # Database Configuration
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -39,12 +45,27 @@ class BaseConfig:
     
     # Rate Limiting
     RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
-    RATE_LIMIT_PER_MINUTE = int(os.environ.get('RATE_LIMIT_PER_MINUTE', 100))
-    RATE_LIMIT_BURST = int(os.environ.get('RATE_LIMIT_BURST', 200))
+    RATE_LIMIT_PER_MINUTE = int(os.environ.get('RATE_LIMIT_PER_MINUTE', 60))
+    RATE_LIMIT_BURST = int(os.environ.get('RATE_LIMIT_BURST', 100))
+    
+    # Differentiated rate limits by endpoint type
+    RATE_LIMITS = {
+        'auth': '10 per minute',      # Authentication endpoints
+        'query': '30 per minute',     # AI query processing
+        'admin': '20 per minute',     # Administrative endpoints
+        'api': '60 per minute',       # General API endpoints
+        'public': '100 per minute'    # Public endpoints
+    }
     
     # Authentication
-    AUTH_ENABLED = os.environ.get('AUTH_ENABLED', 'false').lower() == 'true'
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or SECRET_KEY
+    AUTH_ENABLED = os.environ.get('AUTH_ENABLED', 'true').lower() == 'true'
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+    if not JWT_SECRET_KEY:
+        import sys
+        if os.environ.get('FLASK_ENV') == 'production':
+            print("ERROR: JWT_SECRET_KEY environment variable must be set in production")
+            sys.exit(1)
+        JWT_SECRET_KEY = SECRET_KEY
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
@@ -66,6 +87,11 @@ class BaseConfig:
     ALLOWED_EXTENSIONS = {
         'txt', 'pdf', 'doc', 'docx', 'md', 'html', 'json', 'csv', 'xlsx'
     }
+    
+    # Request Size Limits
+    MAX_JSON_PAYLOAD_SIZE = 1 * 1024 * 1024  # 1MB for JSON payloads
+    MAX_QUERY_LENGTH = 10000  # Maximum query length in characters
+    MAX_FORM_DATA_SIZE = 5 * 1024 * 1024   # 5MB for form data
     
     # Logging Configuration
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')

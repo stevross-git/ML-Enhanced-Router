@@ -234,8 +234,10 @@ class CacheService:
             
             try:
                 if pattern:
+                    # Escape pattern to prevent SQL injection
+                    escaped_pattern = pattern.replace('%', r'\%').replace('_', r'\_').replace('\\', r'\\')
                     query = AICacheEntry.query.filter(
-                        AICacheEntry.cache_key.like(f"{self.cache_prefix}{pattern}")
+                        AICacheEntry.cache_key.like(f"{self.cache_prefix}{escaped_pattern}", escape='\\')
                     )
                 else:
                     query = AICacheEntry.query.filter(

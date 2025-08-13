@@ -383,10 +383,97 @@ class AuthService:
         """Verify password against hash"""
         return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
     
+    def authenticate_jwt(self, token: str) -> Optional[Dict[str, Any]]:
+        """
+        Authenticate user with JWT token (wrapper for validate_jwt_token)
+        
+        Args:
+            token: JWT token string
+            
+        Returns:
+            User info dict or None if invalid
+        """
+        try:
+            user_info = self.validate_jwt_token(token)
+            return User.query.get(user_info['user_id'])
+        except AuthenticationError:
+            return None
+        except Exception as e:
+            current_app.logger.error(f"JWT authentication error: {str(e)}")
+            return None
+
+    def authenticate_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
+        """
+        Authenticate user with API key
+        
+        Args:
+            api_key: API key string
+            
+        Returns:
+            User info dict or None if invalid
+        """
+        try:
+            # Add rate limiting for API key attempts
+            if hasattr(g, 'api_key_attempts'):
+                if g.api_key_attempts > 5:
+                    return None
+            else:
+                g.api_key_attempts = 0
+            
+            g.api_key_attempts += 1
+            
+            api_key_record = APIKey.query.filter_by(
+                key_hash=self._hash_api_key(api_key),
+                is_active=True
+            ).first()
+            
+            if not api_key_record:
+                return None
+            
+            if api_key_record.expires_at and api_key_record.expires_at < datetime.utcnow():
+                api_key_record.is_active = False
+                db.session.commit()
+                return None
+            
+            user = User.query.get(api_key_record.user_id)
+            if not user or not user.is_active:
+                return None
+            
+            # Update last used
+            api_key_record.last_used = datetime.utcnow()
+            api_key_record.usage_count = (api_key_record.usage_count or 0) + 1
+            db.session.commit()
+            
+            return user
+            
+        except Exception as e:
+            current_app.logger.error(f"API key authentication error: {str(e)}")
+            return None
+
+    def get_user(self, user_id: int) -> Optional[User]:
+        """
+        Get user by ID
+        
+        Args:
+            user_id: User's ID
+            
+        Returns:
+            User object or None if not found
+        """
+        try:
+            return User.query.get(user_id)
+        except Exception as e:
+            current_app.logger.error(f"Get user error: {str(e)}")
+            return None
+
     def _hash_token(self, token: str) -> str:
         """Hash token for storage"""
         import hashlib
         return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+    def _hash_api_key(self, api_key: str) -> str:
+        """Hash API key for storage"""
+        return bcrypt.hashpw(api_key.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 # Singleton instance

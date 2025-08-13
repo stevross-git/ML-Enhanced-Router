@@ -4,9 +4,9 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ml_router_db
-      POSTGRES_USER: ml_router_user
-      POSTGRES_PASSWORD: ml_router_password
+      POSTGRES_DB: ${POSTGRES_DB:-ml_router_db}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER environment variable must be set}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD environment variable must be set}
       POSTGRES_HOST_AUTH_METHOD: md5
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -45,9 +45,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      # Database Configuration
-      DATABASE_URL: postgresql://ml_router_user:ml_router_password@db:5432/ml_router_db
-      SQLALCHEMY_DATABASE_URI: postgresql://ml_router_user:ml_router_password@db:5432/ml_router_db
+      # Database Configuration - uses environment variables
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ml_router_db}
+      SQLALCHEMY_DATABASE_URI: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-ml_router_db}
       
       # Redis Configuration
       REDIS_URL: redis://redis:6379/0
@@ -55,8 +55,8 @@ services:
       
       # Application Configuration
       FLASK_ENV: production
-      SECRET_KEY: your-super-secret-key-change-in-production
-      SESSION_SECRET: your-session-secret-key-change-in-production
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY environment variable must be set}
+      SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET environment variable must be set}
       
       # Security
       AUTH_ENABLED: "true"
@@ -100,7 +100,7 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@peoplesainetwork.com
-      PGADMIN_DEFAULT_PASSWORD: admin_password
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD environment variable must be set}
       PGADMIN_CONFIG_SERVER_MODE: "False"
     ports:
       - "8080:80"

@@ -39,11 +39,32 @@ def init_extensions(app):
     # Initialize rate limiting
     _init_rate_limiting(app)
     
-    # Initialize CORS
-    cors.init_app(app, resources={
-        r"/api/*": {"origins": "*"},
-        r"/graphql/*": {"origins": "*"}
-    })
+    # Initialize CORS with secure configuration
+    allowed_origins = app.config.get('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:8080'])
+    
+    # In production, only allow specific trusted domains
+    if app.config.get('FLASK_ENV') == 'production':
+        allowed_origins = app.config.get('CORS_ORIGINS', [])
+        if not allowed_origins:
+            app.logger.error("CORS_ORIGINS must be set in production")
+            # Fallback to deny all if not configured
+            allowed_origins = []
+    
+    cors.init_app(app, 
+        resources={
+            r"/api/*": {
+                "origins": allowed_origins,
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization", "X-API-Key"],
+                "supports_credentials": True
+            },
+            r"/graphql/*": {
+                "origins": allowed_origins,
+                "methods": ["GET", "POST", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": True
+            }
+        })
     
     # Initialize Redis (if available)
     _init_redis(app)

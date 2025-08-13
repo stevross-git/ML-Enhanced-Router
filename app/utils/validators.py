@@ -143,37 +143,95 @@ def validate_username(username: str) -> List[str]:
     
     return errors
 
-def validate_password(password: str) -> List[str]:
-    """Validate password strength"""
+def validate_password(password: str, strict: bool = True) -> List[str]:
+    """
+    Validate password strength
+    
+    Args:
+        password: Password to validate
+        strict: Whether to apply strict validation rules
+    """
     errors = []
     
     if not isinstance(password, str):
         errors.append("Password must be a string")
         return errors
     
-    if len(password) < 8:
-        errors.append("Password must be at least 8 characters")
+    # Basic length requirements
+    min_length = 12 if strict else 8
+    if len(password) < min_length:
+        errors.append(f"Password must be at least {min_length} characters")
     
     if len(password) > 128:
         errors.append("Password must be at most 128 characters")
     
-    # Check for at least one uppercase letter
-    if not re.search(r'[A-Z]', password):
-        errors.append("Password must contain at least one uppercase letter")
+    # Check for common weak patterns
+    weak_patterns = [
+        r'123456', r'password', r'qwerty', r'admin', r'root',
+        r'(.)\1{3,}',  # Repeated characters (4+ times)
+        r'012345', r'abcdef'
+    ]
     
-    # Check for at least one lowercase letter
-    if not re.search(r'[a-z]', password):
-        errors.append("Password must contain at least one lowercase letter")
+    for pattern in weak_patterns:
+        if re.search(pattern, password.lower()):
+            errors.append("Password contains common weak patterns")
+            break
     
-    # Check for at least one digit
-    if not re.search(r'\d', password):
-        errors.append("Password must contain at least one digit")
-    
-    # Check for at least one special character
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        errors.append("Password must contain at least one special character")
+    if strict:
+        # Strict requirements
+        if len(password) < 12:
+            errors.append("Password must be at least 12 characters in production")
+        
+        # Check for at least one uppercase letter
+        if not re.search(r'[A-Z]', password):
+            errors.append("Password must contain at least one uppercase letter")
+        
+        # Check for at least one lowercase letter
+        if not re.search(r'[a-z]', password):
+            errors.append("Password must contain at least one lowercase letter")
+        
+        # Check for at least one digit
+        if not re.search(r'\d', password):
+            errors.append("Password must contain at least one digit")
+        
+        # Check for at least one special character
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]', password):
+            errors.append("Password must contain at least one special character")
+        
+        # Check for at least two different character types
+        char_types = 0
+        if re.search(r'[A-Z]', password): char_types += 1
+        if re.search(r'[a-z]', password): char_types += 1
+        if re.search(r'\d', password): char_types += 1
+        if re.search(r'[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/~`]', password): char_types += 1
+        
+        if char_types < 3:
+            errors.append("Password must contain at least 3 different character types")
     
     return errors
+
+def enforce_password_policy():
+    """Decorator to enforce password policy on routes"""
+    def decorator(f):
+        import functools
+        from flask import request, jsonify, current_app
+        
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            if request.is_json:
+                data = request.get_json()
+                if data and 'password' in data:
+                    is_production = current_app.config.get('FLASK_ENV') == 'production'
+                    errors = validate_password(data['password'], strict=is_production)
+                    if errors:
+                        return jsonify({
+                            'error': 'Password does not meet security requirements',
+                            'password_errors': errors
+                        }), 400
+            
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def validate_model_config(config: Dict[str, Any]) -> List[str]:
     """Validate AI model configuration"""

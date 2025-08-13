@@ -18,6 +18,7 @@ auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
 @auth_bp.route('/current-user', methods=['GET'])
+@require_auth()
 @rate_limit("100 per minute")
 def get_current_user():
     """Get current user info"""
@@ -26,21 +27,30 @@ def get_current_user():
         if not auth_service:
             return jsonify({'error': 'Auth service not initialized'}), 503
         
-        # For now, return the admin user
-        admin_user = auth_service.users.get('admin')
-        if not admin_user:
-            return jsonify({'status': 'error', 'error': 'No user found'}), 404
+        # Get authenticated user from request context
+        from flask import g
+        if not hasattr(g, 'current_user') or not g.current_user:
+            return jsonify({'status': 'error', 'error': 'User not authenticated'}), 401
+        
+        # Get user by ID from authentication context
+        user_id = g.current_user.get('user_id') if isinstance(g.current_user, dict) else getattr(g.current_user, 'id', None)
+        if not user_id:
+            return jsonify({'status': 'error', 'error': 'Invalid user context'}), 401
+        
+        current_user = auth_service.get_user(user_id)
+        if not current_user:
+            return jsonify({'status': 'error', 'error': 'User not found'}), 404
         
         user_data = {
-            'id': admin_user.id,
-            'username': admin_user.username,
-            'email': admin_user.email,
-            'role': admin_user.role.value,
-            'api_key': admin_user.api_key,
-            'created_at': admin_user.created_at.isoformat(),
-            'last_login': admin_user.last_login.isoformat() if admin_user.last_login else None,
-            'is_active': admin_user.is_active,
-            'permissions': admin_user.permissions
+            'id': current_user.id,
+            'username': current_user.username,
+            'email': current_user.email,
+            'role': current_user.role.value,
+            # Removed: 'api_key': current_user.api_key,  # SECURITY: Never expose API keys
+            'created_at': current_user.created_at.isoformat(),
+            'last_login': current_user.last_login.isoformat() if current_user.last_login else None,
+            'is_active': current_user.is_active,
+            'permissions': current_user.permissions
         }
         
         return jsonify({'status': 'success', 'user': user_data})

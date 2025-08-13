@@ -11,6 +11,7 @@ from .extensions import init_extensions
 from .models import init_db
 from .routes import register_blueprints
 from .utils.exceptions import register_error_handlers
+from .middleware import SecurityMiddleware, CSRFProtection, RequestLimitsMiddleware
 from config import get_config
 
 def create_app(config_name='development'):
@@ -23,6 +24,11 @@ def create_app(config_name='development'):
     Returns:
         Flask application instance
     """
+    # Run production environment checks if in production
+    if config_name == 'production':
+        from .utils.production_checks import production_startup_checks
+        production_startup_checks()
+    
     # Create Flask app
     app = Flask(__name__)
     
@@ -44,6 +50,15 @@ def create_app(config_name='development'):
     
     # Register error handlers
     register_error_handlers(app)
+    
+    # Initialize security middleware
+    SecurityMiddleware(app)
+    
+    # Initialize CSRF protection
+    CSRFProtection(app)
+    
+    # Initialize request limits middleware
+    RequestLimitsMiddleware(app)
     
     # Initialize background services
     _init_background_services(app)

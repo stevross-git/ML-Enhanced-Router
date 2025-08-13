@@ -318,11 +318,18 @@ class RAGService:
         return [random.random() for _ in range(384)]  # Typical embedding dimension
     
     def _vector_search(self, query_embeddings: List[float], limit: int) -> List[Tuple[DocumentChunk, float]]:
-        """Search for similar vectors (placeholder)"""
-        chunks = DocumentChunk.query.limit(limit).all()
+        """Search for similar vectors with eager loading to prevent N+1 queries"""
+        from sqlalchemy.orm import joinedload
+        
+        # Use eager loading to prevent N+1 queries when accessing document relationship
+        chunks = DocumentChunk.query\
+            .options(joinedload(DocumentChunk.document))\
+            .limit(limit).all()
+            
         results = []
         
         for chunk in chunks:
+            # Calculate actual similarity score here when implementing real vector search
             score = random.uniform(0.5, 1.0)
             results.append((chunk, score))
         

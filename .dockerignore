@@ -1,0 +1,89 @@
+# Docker ignore file to prevent copying sensitive and unnecessary files
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Development
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Tests
+tests/
+test_*.py
+*_test.py
+pytest.ini
+.coverage
+htmlcov/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Cache
+.cache/
+.pytest_cache/
+
+# Node (if any)
+node_modules/
+npm-debug.log
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Sensitive files that should never be in containers
+secrets/
+.secrets
+private_keys/
+*.pem
+*.key
+*.cert
+config/secrets.py
+
+# Backup files
+*.bak
+*.backup
+backups/

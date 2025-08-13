@@ -392,8 +392,9 @@ def initialize_router():
             
     except Exception as e:
         logger.error(f"Failed to initialize ML Router: {e}")
-        import traceback
-        traceback.print_exc()
+        if os.environ.get('FLASK_ENV') == 'development':
+            import traceback
+            traceback.print_exc()
         router = None
 
 
@@ -5403,8 +5404,9 @@ with app.app_context():
 
         except Exception as e:
             logger.error(f"\u274C Async ML models initialization failed: {e}")
-            import traceback
-            traceback.print_exc()
+            if os.environ.get('FLASK_ENV') == 'development':
+                import traceback
+                traceback.print_exc()
         finally:
             if 'loop' in locals():
                 try:
@@ -5424,8 +5426,9 @@ with app.app_context():
 
         except Exception as e:
             logger.error(f"\u274C Router initialization failed: {e}")
-            import traceback
-            traceback.print_exc()
+            if os.environ.get('FLASK_ENV') == 'development':
+                import traceback
+                traceback.print_exc()
 
     initialization_thread = threading.Thread(target=start_router_initialization, daemon=True)
     initialization_thread.start()

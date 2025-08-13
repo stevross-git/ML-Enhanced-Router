@@ -29,8 +29,13 @@ class ProductionConfig(BaseConfig):
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL', 'redis://redis:6379/0')
     
     # Security - MUST be set in production
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'your-super-secret-key-change-in-production')
-    SESSION_SECRET = os.environ.get('SESSION_SECRET', 'your-session-secret-key-change-in-production')
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    if not SECRET_KEY:
+        raise RuntimeError("SECRET_KEY environment variable must be set in production")
+    
+    SESSION_SECRET = os.environ.get('SESSION_SECRET')
+    if not SESSION_SECRET:
+        raise RuntimeError("SESSION_SECRET environment variable must be set in production")
     
     # SSL and Security Headers
     PREFERRED_URL_SCHEME = 'https'

@@ -40,11 +40,11 @@ def require_auth(roles: Optional[List[str]] = None, optional: bool = False):
         def wrapper(*args, **kwargs):
             try:
                 # Check if authentication is enabled
-                if not current_app.config.get('AUTH_ENABLED', False):
+                if not current_app.config.get('AUTH_ENABLED', True):
                     if optional:
                         return f(*args, **kwargs)
-                    # If auth not enabled but required, skip auth check
-                    return f(*args, **kwargs)
+                    # If auth is disabled but required, deny access
+                    return jsonify({'error': 'Authentication is required but disabled in configuration'}), 503
                 
                 # Get authentication service
                 from ..services.auth_service import get_auth_service

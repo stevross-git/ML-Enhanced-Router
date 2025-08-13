@@ -16,12 +16,38 @@ class BaseMLRouterException(Exception):
         self.timestamp = datetime.now().isoformat()
         super().__init__(self.message)
     
-    def to_dict(self):
+    def to_dict(self, include_details=None):
         """Convert exception to dictionary representation"""
+        from flask import current_app
+        
+        # Sanitize message in production
+        message = self.message
+        details = self.details
+        
+        if current_app.config.get('FLASK_ENV') == 'production':
+            # In production, sanitize error messages
+            if include_details is False or (include_details is None and not current_app.config.get('DEBUG', False)):
+                # Generic messages for production
+                generic_messages = {
+                    'ValidationError': 'Invalid input provided',
+                    'AuthenticationError': 'Authentication failed',
+                    'AuthorizationError': 'Access denied',
+                    'ServiceError': 'Service temporarily unavailable',
+                    'ModelError': 'AI service unavailable',
+                    'CacheError': 'Service temporarily unavailable',
+                    'RAGError': 'Document service unavailable',
+                    'AgentError': 'AI service unavailable',
+                    'DatabaseError': 'Database service unavailable',
+                    'ExternalServiceError': 'External service unavailable'
+                }
+                
+                message = generic_messages.get(self.error_code, 'An error occurred')
+                details = {}  # Remove sensitive details in production
+        
         return {
             'error': self.error_code,
-            'message': self.message,
-            'details': self.details,
+            'message': message,
+            'details': details,
             'timestamp': self.timestamp
         }
 
@@ -180,22 +206,41 @@ def register_error_handlers(app):
     @app.errorhandler(500)
     def handle_internal_error(error):
         """Handle 500 errors"""
-        app.logger.error(f"Internal server error: {str(error)}")
-        return jsonify({
+        # Log the full error details but return sanitized response
+        app.logger.error(f"Internal server error: {str(error)}", exc_info=True)
+        
+        # Don't expose stack traces in production
+        error_response = {
             'error': 'InternalServerError',
             'message': 'An internal server error occurred',
             'timestamp': datetime.now().isoformat()
-        }), 500
+        }
+        
+        # Only include debug info in development
+        if app.config.get('DEBUG') and app.config.get('FLASK_ENV') != 'production':
+            error_response['debug_info'] = str(error)
+        
+        return jsonify(error_response), 500
     
     @app.errorhandler(Exception)
     def handle_unexpected_error(error):
         """Handle unexpected errors"""
+        # Log full details with stack trace
         app.logger.error(f"Unexpected error: {str(error)}", exc_info=True)
-        return jsonify({
+        
+        # Generic response to prevent information disclosure
+        error_response = {
             'error': 'UnexpectedError',
             'message': 'An unexpected error occurred',
             'timestamp': datetime.now().isoformat()
-        }), 500
+        }
+        
+        # Only include debug info in development
+        if app.config.get('DEBUG') and app.config.get('FLASK_ENV') != 'production':
+            error_response['debug_info'] = str(error)
+            error_response['error_type'] = type(error).__name__
+        
+        return jsonify(error_response), 500
 
 # Context managers for specific error handling
 class service_error_handler:

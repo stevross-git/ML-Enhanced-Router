@@ -463,16 +463,21 @@ class AgentService:
         try:
             # Import within method to avoid circular import issues
             from app.models.agent import Agent, AgentCapability
+            from sqlalchemy.orm import joinedload
             
-            agents = Agent.query.filter_by(is_active=True).all()
+            # Use eager loading to prevent N+1 queries
+            agents = Agent.query.filter_by(is_active=True)\
+                .options(joinedload(Agent.capabilities.and_(AgentCapability.is_active == True)))\
+                .all()
+                
             for agent in agents:
                 self.registered_agents[agent.id] = agent
                 
-                capabilities = AgentCapability.query.filter_by(
-                    agent_id=agent.id, 
-                    is_active=True
-                ).all()
-                self.agent_capabilities[agent.id] = [cap.capability for cap in capabilities]
+                # Access preloaded relationship - no additional query
+                self.agent_capabilities[agent.id] = [
+                    cap.capability for cap in agent.capabilities 
+                    if cap.is_active
+                ]
             
             current_app.logger.info(f"Loaded {len(agents)} agents from database")
             

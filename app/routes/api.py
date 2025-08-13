@@ -11,6 +11,7 @@ from ..services.ml_router import get_ml_router
 from ..services.ai_models import get_ai_model_manager
 from ..services.agent_service import get_agent_service
 from ..utils.decorators import rate_limit, require_auth, validate_json
+from ..middleware import validate_query_length
 from ..utils.validators import validate_query_request
 from ..utils.exceptions import ValidationError, ServiceError
 
@@ -18,7 +19,9 @@ from ..utils.exceptions import ValidationError, ServiceError
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/query', methods=['POST'])
-@rate_limit("100 per minute")
+@require_auth()
+@rate_limit("30 per minute")
+@validate_query_length()
 @validate_json(['query'])
 def process_query():
     """
@@ -73,6 +76,7 @@ def process_query():
         return jsonify({'error': 'Internal server error'}), 500
 
 @api_bp.route('/query/stream', methods=['POST'])
+@require_auth()
 @rate_limit("50 per minute")
 @validate_json(['query'])
 def stream_query():
@@ -135,6 +139,7 @@ def stream_query():
         return jsonify({'error': 'Failed to setup stream'}), 500
 
 @api_bp.route('/classify', methods=['POST'])
+@require_auth()
 @rate_limit("200 per minute")
 @validate_json(['query'])
 def classify_query():
@@ -169,6 +174,7 @@ def classify_query():
     
 
 @api_bp.route('/collaborate/sessions', methods=['GET'])
+@require_auth()
 @rate_limit("100 per minute")
 def get_collaboration_sessions():
     """Get collaboration sessions (placeholder for future feature)"""
@@ -179,6 +185,7 @@ def get_collaboration_sessions():
     })
 
 @api_bp.route('/external-llm/metrics', methods=['GET'])
+@require_auth()
 @rate_limit("100 per minute")
 def get_external_llm_metrics():
     """Get external LLM metrics (placeholder)"""
@@ -196,6 +203,7 @@ def get_external_llm_metrics():
 
 
 @api_bp.route('/agents', methods=['GET'])
+@require_auth()
 @rate_limit("100 per minute")
 def get_agents():
     """Get list of available agents"""
@@ -217,6 +225,7 @@ def get_agents():
         return jsonify({'error': 'Failed to get agents'}), 500
 
 @api_bp.route('/agents/<agent_id>', methods=['GET'])
+@require_auth()
 @rate_limit("200 per minute")
 def get_agent(agent_id):
     """Get specific agent details"""
@@ -260,6 +269,7 @@ def check_agent_health(agent_id):
         return jsonify({'error': 'Health check failed'}), 500
 
 @api_bp.route('/stats', methods=['GET'])
+@require_auth()
 @rate_limit("50 per minute")
 def get_system_stats():
     """Get system statistics"""
